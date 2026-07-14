@@ -5,11 +5,13 @@ services:
     plan: free
     region: singapore
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn -b 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 120 server:app
+    startCommand: gunicorn server:app --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 120
     envVars:
       - key: PYTHON_VERSION
-        value: "3.12.8"
+        value: "3.11.11"
       - key: SECRET_KEY
         generateValue: true
       - key: FORCE_HTTPS
         value: "1"
+      - key: PAYMENT_MODE
+        value: "instant_demo"

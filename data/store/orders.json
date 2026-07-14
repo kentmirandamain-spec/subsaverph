@@ -1,5 +1,34 @@
 [
   {
+    "id": "PH47D36C3D99",
+    "email": "kentmirandamain@gmail.com",
+    "name": "eyheawh",
+    "currency": "PHP",
+    "items": [
+      {
+        "id": "supergrok-1m",
+        "name": "SuperGrok 1 Month",
+        "monogram": "S1",
+        "qty": 1,
+        "price": 399.0,
+        "priceBase": "PHP",
+        "duration": "1 month access",
+        "codes": [
+          "SG1M-DEMO-YYYY-1002"
+        ]
+      }
+    ],
+    "status": "paid",
+    "paymentMode": "instant_demo",
+    "method": "card",
+    "stripeSessionId": null,
+    "stripePaymentIntent": null,
+    "providerRef": "demo-30dc53c6417144f6a901c39e38b84019",
+    "createdAt": "2026-07-14T11:04:46.001781Z",
+    "delivery": "instant",
+    "message": "Payment confirmed. Codes delivered instantly."
+  },
+  {
     "id": "PHAD162E068B",
     "email": "elaizamaevmateo@gmail.com",
     "name": "Emerut ni Kent",

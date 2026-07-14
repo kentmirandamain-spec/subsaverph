@@ -56,45 +56,52 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 
 
 def ensure_store() -> None:
-    STORE.mkdir(parents=True, exist_ok=True)
-    if not AUTH_FILE.exists():
-        AUTH_FILE.write_text(
-            json.dumps(
-                {
-                    "username": "admin",
-                    "password_hash": generate_password_hash("subsaverph"),
-                },
-                indent=2,
-            ),
-            encoding="utf-8",
-        )
-    if not SETTINGS_FILE.exists():
-        SETTINGS_FILE.write_text(
-            json.dumps(
-                {
-                    "siteName": "SubSaverPH",
-                    "tagline": "Premium plans. Lower cost.",
-                    "heroEyebrow": "SubSaverPH · Subscription access",
-                    "heroTitle": "Premium\nplans.\nLower\ncost.",
-                    "heroLead": "SuperGrok, Canva, CapCut, Netflix, and YouTube — prepaid discounts.",
-                    "footerText": "Discounted prepaid subscriptions.",
-                    "defaultCurrency": "PHP",
-                    "missionTitle": "Stack subscriptions without stacking full price",
-                    "missionText": "SuperGrok 7 days at ₱99 · SuperGrok 1 month at ₱399.",
-                },
-                indent=2,
-            ),
-            encoding="utf-8",
-        )
-    if not DEALS_FILE.exists():
-        DEALS_FILE.write_text("[]", encoding="utf-8")
-    if not INVENTORY_FILE.exists():
-        INVENTORY_FILE.write_text("{}", encoding="utf-8")
-    if not ORDERS_FILE.exists():
-        ORDERS_FILE.write_text("[]", encoding="utf-8")
-    pending_file = STORE / "pending_payments.json"
-    if not pending_file.exists():
-        pending_file.write_text("{}", encoding="utf-8")
+    try:
+        STORE.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        # Read-only FS edge case — continue with bundled defaults
+        return
+    try:
+        if not AUTH_FILE.exists():
+            AUTH_FILE.write_text(
+                json.dumps(
+                    {
+                        "username": "admin",
+                        "password_hash": generate_password_hash("subsaverph"),
+                    },
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+        if not SETTINGS_FILE.exists():
+            SETTINGS_FILE.write_text(
+                json.dumps(
+                    {
+                        "siteName": "SubSaverPH",
+                        "tagline": "Premium plans. Lower cost.",
+                        "heroEyebrow": "SubSaverPH · Subscription access",
+                        "heroTitle": "Premium\nplans.\nLower\ncost.",
+                        "heroLead": "SuperGrok, Canva, CapCut, Netflix, and YouTube — prepaid discounts.",
+                        "footerText": "Discounted prepaid subscriptions.",
+                        "defaultCurrency": "PHP",
+                        "missionTitle": "Stack subscriptions without stacking full price",
+                        "missionText": "SuperGrok 7 days at ₱99 · SuperGrok 1 month at ₱399.",
+                    },
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+        if not DEALS_FILE.exists():
+            DEALS_FILE.write_text("[]", encoding="utf-8")
+        if not INVENTORY_FILE.exists():
+            INVENTORY_FILE.write_text("{}", encoding="utf-8")
+        if not ORDERS_FILE.exists():
+            ORDERS_FILE.write_text("[]", encoding="utf-8")
+        pending_file = STORE / "pending_payments.json"
+        if not pending_file.exists():
+            pending_file.write_text("{}", encoding="utf-8")
+    except OSError:
+        pass
 
 
 def read_json(path: Path, default):

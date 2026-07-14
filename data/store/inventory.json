@@ -40,8 +40,9 @@
     },
     {
       "code": "SG1M-DEMO-YYYY-1002",
-      "status": "available",
-      "addedAt": "2026-07-14T00:00:00Z"
+      "status": "sold",
+      "addedAt": "2026-07-14T00:00:00Z",
+      "soldAt": "2026-07-14T11:04:46.000781Z"
     }
   ]
 }
