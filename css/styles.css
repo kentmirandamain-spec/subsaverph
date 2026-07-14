@@ -957,6 +957,63 @@ mark {
   border-color: #fff;
 }
 
+.pill.sold-out-pill {
+  background: #fff;
+  color: #000;
+  border-color: #fff;
+  letter-spacing: 0.14em;
+}
+
+.card.sold-out {
+  opacity: 0.72;
+}
+
+.card.sold-out .price strong {
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+
+.stock-line {
+  margin: 0;
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--mute);
+}
+
+.stock-line.is-sold-out,
+.is-sold-out {
+  color: #fff;
+  font-weight: 800;
+}
+
+.btn.sold-out-btn,
+.sold-out-btn {
+  background: transparent !important;
+  color: #fff !important;
+  border-color: rgba(255, 255, 255, 0.35) !important;
+  cursor: not-allowed !important;
+  opacity: 0.85;
+  letter-spacing: 0.16em;
+}
+
+.btn.sold-out-btn:hover,
+.sold-out-btn:hover {
+  background: transparent !important;
+  color: #fff !important;
+}
+
+.sold-out-big {
+  color: #fff !important;
+}
+
+.you-save.sold-out-banner {
+  background: #fff;
+  color: #000;
+  letter-spacing: 0.16em;
+}
+
 .cat {
   margin: 0;
   font-size: 0.62rem;
@@ -1419,6 +1476,63 @@ mark {
   font-size: 0.85rem !important;
   line-height: 1.4;
   margin: 16px 0 20px !important;
+}
+
+/* Payment method picker */
+.pay-methods {
+  display: grid;
+  gap: 8px;
+  margin: 8px 0 4px;
+}
+
+.pay-method {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: stretch !important;
+  gap: 12px !important;
+  margin: 0 !important;
+  cursor: pointer;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+  font-size: 0.9rem !important;
+  font-weight: 500 !important;
+  color: #fff !important;
+}
+
+.pay-method input {
+  margin-top: 14px;
+  accent-color: #fff;
+}
+
+.pay-method-box {
+  flex: 1;
+  border: 1px solid var(--line);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.pay-method-box strong {
+  font-size: 0.9rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.pay-method-box em {
+  font-style: normal;
+  font-size: 0.8rem;
+  color: var(--mute);
+}
+
+.pay-method input:checked + .pay-method-box {
+  border-color: #fff;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.pay-method:hover .pay-method-box {
+  border-color: rgba(255, 255, 255, 0.4);
 }
 
 .line {

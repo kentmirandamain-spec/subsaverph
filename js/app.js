@@ -41,6 +41,10 @@ const state = {
   toastT: null,
   settings: {},
   live: false,
+  paymentMode: "instant_demo",
+  stripeEnabled: false,
+  stripePublishableKey: "",
+  paymentMethods: [],
 };
 
 function parseRoute() {
@@ -116,22 +120,42 @@ function periodLabel(d) {
   return d.period ? ` / ${d.period}` : "";
 }
 
+/** True when inventory codes are known and none left */
+function isSoldOut(d) {
+  if (!d) return false;
+  // stockLeft comes from live API (inventory). If missing, not treated as sold out.
+  if (typeof d.stockLeft === "number") return d.stockLeft <= 0;
+  return false;
+}
+
+function stockLabel(d) {
+  if (isSoldOut(d)) return "SOLD OUT";
+  if (typeof d.stockLeft === "number") {
+    if (d.stockLeft <= 3) return `Only ${d.stockLeft} left`;
+    return `${d.stockLeft} in stock`;
+  }
+  return d.stock || "In stock";
+}
+
 function card(d, highlightQ = "") {
   const nameHtml = highlightQ ? highlightMatch(d.name, highlightQ) : escapeHtml(d.name);
   const tagHtml = highlightQ ? highlightMatch(d.tagline || "", highlightQ) : escapeHtml(d.tagline || "");
+  const soldOut = isSoldOut(d);
   return `
-    <article class="card">
+    <article class="card ${soldOut ? "sold-out" : ""}">
       <div class="card-accent"></div>
       <div class="card-top">
         <div class="mono-box">${escapeHtml(d.monogram)}</div>
         <div class="pills">
-          ${d.badge ? `<span class="pill">${escapeHtml(d.badge)}</span>` : ""}
-          <span class="pill on">−${off(d)}%</span>
+          ${soldOut ? `<span class="pill sold-out-pill">SOLD OUT</span>` : ""}
+          ${!soldOut && d.badge ? `<span class="pill">${escapeHtml(d.badge)}</span>` : ""}
+          ${!soldOut ? `<span class="pill on">−${off(d)}%</span>` : ""}
         </div>
       </div>
       <p class="cat">${escapeHtml(d.brand)} · ${escapeHtml(d.category)}</p>
       <h3><a href="#/deal/${d.id}">${nameHtml}</a></h3>
       <p class="tag">${tagHtml}</p>
+      <p class="stock-line ${soldOut ? "is-sold-out" : ""}">${escapeHtml(stockLabel(d))}</p>
       <div class="price">
         <div>
           <strong>${formatDealPrice(d, "price")}</strong><span class="per">${periodLabel(d)}</span>
@@ -141,7 +165,11 @@ function card(d, highlightQ = "") {
       </div>
       <div class="actions">
         <a class="btn sm" href="#/deal/${d.id}">Details</a>
-        <button class="btn sm solid" data-add="${d.id}">Add</button>
+        ${
+          soldOut
+            ? `<button class="btn sm sold-out-btn" type="button" disabled>SOLD OUT</button>`
+            : `<button class="btn sm solid" data-add="${d.id}">Add</button>`
+        }
       </div>
     </article>`;
 }
@@ -409,6 +437,7 @@ function viewDeal() {
   const isPhp = (d.priceBase || "USD") === "PHP";
   const yearly = d.period === "month" ? d.price * 12 : d.price;
   const yearlyWas = d.period === "month" ? d.original * 12 : d.original;
+  const soldOut = isSoldOut(d);
   return `
     <div class="page">
       <div class="page-inner">
@@ -416,14 +445,18 @@ function viewDeal() {
         <div class="detail">
           <div class="detail-panel">
             <div class="mono-box lg">${escapeHtml(d.monogram)}</div>
-            <div class="save-big">−${off(d)}%<span>Versus retail</span></div>
+            ${
+              soldOut
+                ? `<div class="save-big sold-out-big">SOLD OUT<span>No codes left in stock</span></div>`
+                : `<div class="save-big">−${off(d)}%<span>Versus retail</span></div>`
+            }
             ${isPhp ? `<p class="php-tag">Base price in PHP · shows exact ₱ when currency is PHP</p>` : ""}
             <ul class="list">
               ${d.includes.map((x) => `<li>${escapeHtml(x)}</li>`).join("")}
             </ul>
           </div>
           <div class="detail-info">
-            <p class="cat">${escapeHtml(d.brand)} · ${escapeHtml(d.category)} · ${escapeHtml(d.stock)}</p>
+            <p class="cat">${escapeHtml(d.brand)} · ${escapeHtml(d.category)} · <span class="${soldOut ? "is-sold-out" : ""}">${escapeHtml(stockLabel(d))}</span></p>
             <h1>${escapeHtml(d.name)}</h1>
             <p class="tag">${escapeHtml(d.tagline)}</p>
             <p class="muted" style="margin:8px 0 14px">★ ${d.rating} · ${d.reviews.toLocaleString()} reviews</p>
@@ -435,7 +468,11 @@ function viewDeal() {
                 <strong>${formatDealPrice(d, "price")}</strong><span class="per">${periodLabel(d)}</span>
                 <span class="was" style="display:block;margin-top:4px">${formatDealPrice(d, "original")} retail</span>
               </div>
-              <div class="you-save">Save ${formatDealPrice({ ...d, price: d.original - d.price, priceBase: d.priceBase }, "price")}</div>
+              ${
+                soldOut
+                  ? `<div class="you-save sold-out-banner">SOLD OUT</div>`
+                  : `<div class="you-save">Save ${formatDealPrice({ ...d, price: d.original - d.price, priceBase: d.priceBase }, "price")}</div>`
+              }
             </div>
             <p class="muted" style="font-size:0.8rem;letter-spacing:0.08em;text-transform:uppercase;font-weight:600">
               ${escapeHtml(d.duration)} · ${escapeHtml(d.delivery)}
@@ -450,8 +487,13 @@ function viewDeal() {
                 : ""
             }
             <div class="buy">
-              <button class="btn solid" data-add="${d.id}">Add to cart</button>
-              <button class="btn" data-buy-now="${d.id}">Buy now</button>
+              ${
+                soldOut
+                  ? `<button class="btn sold-out-btn" type="button" disabled>SOLD OUT</button>
+                     <p class="muted" style="width:100%;margin:8px 0 0">This plan has no codes left. Check back later or pick another product.</p>`
+                  : `<button class="btn solid" data-add="${d.id}">Add to cart</button>
+                     <button class="btn" data-buy-now="${d.id}">Buy now</button>`
+              }
             </div>
             <p class="fine">${escapeHtml(d.finePrint)}</p>
             <p class="rates" data-rates style="margin-top:12px">${ratesNote()}</p>
@@ -484,32 +526,72 @@ function viewHow() {
     </div>`;
 }
 
+function paymentMethodsList() {
+  const list = state.paymentMethods && state.paymentMethods.length
+    ? state.paymentMethods
+    : [
+        { id: "card", label: "Card", desc: "Visa / Mastercard" },
+        { id: "gcash", label: "GCash", desc: "Pay with GCash" },
+        { id: "paymaya", label: "Maya", desc: "Pay with Maya" },
+        { id: "paypal", label: "PayPal", desc: "PayPal" },
+        { id: "crypto", label: "Crypto", desc: "USDT, BTC, ETH" },
+        { id: "demo", label: "Demo", desc: "Test without real money" },
+      ];
+  return list;
+}
+
 function viewCheckout() {
   const cart = getCart();
   const t = cartTotals();
   if (!cart.length) {
     return `<div class="page"><div class="page-inner empty"><h2>Cart empty</h2><a class="btn solid" href="#/deals">Find a plan</a></div></div>`;
   }
+  const methods = paymentMethodsList();
+  const cancelled =
+    typeof location !== "undefined" && location.hash.includes("cancelled=1");
+  const methodRadios = methods
+    .map(
+      (m, i) => `
+      <label class="pay-method">
+        <input type="radio" name="method" value="${escapeHtml(m.id)}" ${i === 0 ? "checked" : ""} required />
+        <span class="pay-method-box">
+          <strong>${escapeHtml(m.label)}</strong>
+          <em>${escapeHtml(m.desc || "")}</em>
+        </span>
+      </label>`
+    )
+    .join("");
+
   return `
     <div class="page">
       <div class="page-inner">
         <p class="eyebrow">Payment</p>
         <h1 class="page-title">Checkout</h1>
+        <p class="muted" style="margin-bottom:16px">
+          Choose a payment method. After payment succeeds, codes are delivered
+          <strong style="color:#fff">instantly</strong> on the next screen.
+        </p>
+        ${cancelled ? `<p class="err" style="color:#ff8a8a;margin-bottom:12px">Payment cancelled. You can try again.</p>` : ""}
         <div class="checkout">
           <form id="payForm" class="form" novalidate>
             <h3>Contact</h3>
-            <label>Email for codes<input required type="email" name="email" placeholder="you@email.com" /></label>
+            <label>Email for delivery<input required type="email" name="email" placeholder="you@email.com" /></label>
+            <label>Full name<input required name="name" placeholder="Juan Dela Cruz" /></label>
             <h3>Payment currency</h3>
             <div id="pageFxMount" style="margin-bottom:16px"></div>
-            <h3>Card · demo only</h3>
-            <label>Name on card<input required name="name" placeholder="Juan Dela Cruz" /></label>
-            <label>Card number<input required name="card" placeholder="4242 4242 4242 4242" maxlength="19" /></label>
-            <div class="row2">
-              <label>Expiry<input required name="exp" placeholder="MM/YY" maxlength="5" /></label>
-              <label>CVC<input required name="cvc" placeholder="123" maxlength="4" /></label>
+            <h3>Payment method</h3>
+            <div class="pay-methods" role="radiogroup" aria-label="Payment method">
+              ${methodRadios}
             </div>
-            <label class="check"><input type="checkbox" required /> I understand this is a SubSaverPH demo — no real subscription is purchased.</label>
-            <button class="btn solid full" type="submit">Pay ${formatMoney(t.total)} · ${getCurrencyCode()}</button>
+            <p class="muted" style="margin:12px 0;font-size:0.8rem;text-transform:none;letter-spacing:0;font-weight:400">
+              Card → Stripe · GCash/Maya → PayMongo · PayPal · Crypto → NOWPayments.
+              Methods without API keys still appear in demo mode for testing.
+            </p>
+            <label class="check"><input type="checkbox" name="agree" required /> I agree to purchase digital codes; delivery is instant after payment.</label>
+            <p class="err" id="checkoutErr" style="color:#ff8a8a;font-size:0.85rem;min-height:1.2em"></p>
+            <button class="btn solid full" type="submit" id="payBtn">
+              Continue to pay · ${formatMoney(t.total)}
+            </button>
           </form>
           <aside class="summary">
             <h3 style="font-family:var(--display);letter-spacing:.12em;text-transform:uppercase;font-size:.8rem;margin:0 0 14px">Order</h3>
@@ -540,28 +622,100 @@ function viewCheckout() {
 
 function viewSuccess() {
   const order = JSON.parse(sessionStorage.getItem("subsaverph_last") || "null");
+  // hash format: #/success?session_id=cs_xxx or ?provider=paymongo&ref=...
+  const hashQuery = location.hash.includes("?")
+    ? location.hash.slice(location.hash.indexOf("?") + 1)
+    : "";
+  const params = new URLSearchParams(hashQuery);
+  const sessionId = params.get("session_id");
+  const provider = params.get("provider");
+  const ref = params.get("ref");
+
+  if (!order && sessionId) {
+    fetch(`/api/checkout/session/${encodeURIComponent(sessionId)}`, {
+      credentials: "same-origin",
+    })
+      .then((r) => r.json().then((d) => ({ ok: r.ok, d })))
+      .then(({ ok, d }) => {
+        if (!ok) throw new Error(d.error || "Could not load order");
+        sessionStorage.setItem("subsaverph_last", JSON.stringify(d.order));
+        clearCart();
+        updateBadge();
+        location.hash = "#/success";
+        render();
+      })
+      .catch((err) => {
+        const el = $("#app");
+        if (el) {
+          el.innerHTML = `<div class="success"><div class="success-card"><h1>Payment status</h1><p class="muted">${escapeHtml(err.message)}</p><p class="muted">If you were charged, contact support with your email.</p><a class="btn solid" href="#/deals">Back to deals</a></div></div>`;
+        }
+      });
+    return `
+      <div class="success">
+        <div class="success-card">
+          <div class="ok">…</div>
+          <h1>Confirming payment</h1>
+          <p class="muted">Retrieving your codes…</p>
+        </div>
+      </div>`;
+  }
+
+  if (!order && provider && ref) {
+    fetch(
+      `/api/checkout/complete?provider=${encodeURIComponent(provider)}&ref=${encodeURIComponent(ref)}`,
+      { credentials: "same-origin" }
+    )
+      .then((r) => r.json().then((d) => ({ ok: r.ok, d })))
+      .then(({ ok, d }) => {
+        if (!ok) throw new Error(d.error || "Could not complete order");
+        sessionStorage.setItem("subsaverph_last", JSON.stringify(d.order));
+        clearCart();
+        updateBadge();
+        location.hash = "#/success";
+        render();
+      })
+      .catch((err) => {
+        const el = $("#app");
+        if (el) {
+          el.innerHTML = `<div class="success"><div class="success-card"><h1>Confirming payment</h1><p class="muted">${escapeHtml(err.message)}</p><p class="muted">If you already paid, wait a few seconds and refresh, or contact support with your email.</p><button class="btn solid" type="button" onclick="location.reload()">Refresh</button></div></div>`;
+        }
+      });
+    return `
+      <div class="success">
+        <div class="success-card">
+          <div class="ok">…</div>
+          <h1>Confirming ${escapeHtml(provider)} payment</h1>
+          <p class="muted">Assigning your codes…</p>
+        </div>
+      </div>`;
+  }
+
   if (!order) {
     return `<div class="success"><div class="empty"><h2>No order</h2><a class="btn solid" href="#/deals">Shop</a></div></div>`;
   }
+  const lines = (order.items || [])
+    .map((i) => {
+      const codes = (i.codes || []).length
+        ? i.codes
+            .map(
+              (c) =>
+                `<div class="code-row"><span>${escapeHtml(i.monogram || "")} ${escapeHtml(i.name)}</span><code>${escapeHtml(c)}</code></div>`
+            )
+            .join("")
+        : `<div class="code-row"><span>${escapeHtml(i.name)}</span><code>No stock — contact support</code></div>`;
+      return codes;
+    })
+    .join("");
+
   return `
     <div class="success">
       <div class="success-card">
         <div class="ok">OK</div>
-        <h1>Order confirmed</h1>
-        <p class="muted">Order <strong style="color:#fff">${escapeHtml(order.id)}</strong><br/>Codes for <strong style="color:#fff">${escapeHtml(order.email)}</strong></p>
-        <p style="margin-top:12px;font-weight:600">${escapeHtml(order.currency)} · ${escapeHtml(order.totalFormatted)}</p>
-        <div class="codes">
-          ${order.items
-            .map(
-              (i, idx) => `
-            <div class="code-row">
-              <span>${escapeHtml(i.monogram)} ${escapeHtml(i.name)}</span>
-              <code>PH-${order.id.slice(-4)}-${String(idx + 1).padStart(2, "0")}-${Math.random().toString(36).slice(2, 8).toUpperCase()}</code>
-            </div>`
-            )
-            .join("")}
-        </div>
-        <p class="muted" style="font-size:0.8rem">Demo codes — will not activate real services.</p>
+        <h1>Order delivered</h1>
+        <p class="muted">Order <strong style="color:#fff">${escapeHtml(order.id)}</strong><br/>Sent to <strong style="color:#fff">${escapeHtml(order.email)}</strong></p>
+        <p style="margin-top:12px;font-weight:600">${escapeHtml(order.currency || getCurrencyCode())} · ${escapeHtml(order.paymentMode || "instant")} · Instant digital delivery</p>
+        <div class="codes">${lines}</div>
+        <p class="muted" style="font-size:0.8rem">Save these codes now. Redeem on the official service. Screenshot recommended.</p>
         <div class="cta" style="justify-content:center;margin-top:22px">
           <a class="btn solid" href="#/deals">More deals</a>
           <a class="btn" href="#/home">Home</a>
@@ -754,7 +908,12 @@ function render() {
 function bind() {
   $$("[data-add]").forEach((btn) => {
     btn.addEventListener("click", () => {
-      addDeal(getDeal(btn.dataset.add));
+      const deal = getDeal(btn.dataset.add);
+      if (isSoldOut(deal)) {
+        toast("SOLD OUT — no stock left");
+        return;
+      }
+      addDeal(deal);
       toast("Added to cart");
       updateBadge();
       openCart();
@@ -763,7 +922,12 @@ function bind() {
 
   $$("[data-buy-now]").forEach((btn) => {
     btn.addEventListener("click", () => {
-      addDeal(getDeal(btn.dataset.buyNow));
+      const deal = getDeal(btn.dataset.buyNow);
+      if (isSoldOut(deal)) {
+        toast("SOLD OUT — no stock left");
+        return;
+      }
+      addDeal(deal);
       location.hash = "#/checkout";
     });
   });
@@ -804,25 +968,70 @@ function bind() {
 
   const form = $("#payForm");
   if (form) {
-    form.addEventListener("submit", (e) => {
+    form.addEventListener("submit", async (e) => {
       e.preventDefault();
       if (!form.reportValidity()) return;
       const fd = new FormData(form);
-      const t = cartTotals();
-      const order = {
-        id: "PH" + Date.now().toString(36).toUpperCase(),
+      const errEl = $("#checkoutErr");
+      const btn = $("#payBtn");
+      if (errEl) errEl.textContent = "";
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = "Processing…";
+      }
+      const payload = {
         email: fd.get("email"),
         name: fd.get("name"),
-        items: getCart(),
-        total: t.total,
         currency: getCurrencyCode(),
-        totalFormatted: formatMoney(t.total),
+        method: fd.get("method") || "card",
+        items: getCart().map((i) => ({ id: i.id, qty: i.qty })),
       };
-      saveOrder(order);
-      sessionStorage.setItem("subsaverph_last", JSON.stringify(order));
-      clearCart();
-      updateBadge();
-      location.hash = "#/success";
+      try {
+        const res = await fetch("/api/checkout/start", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || "Checkout failed");
+
+        // Redirect providers: Stripe, PayMongo, PayPal, Crypto
+        if (data.url) {
+          sessionStorage.setItem(
+            "subsaverph_pending",
+            JSON.stringify({
+              email: payload.email,
+              currency: payload.currency,
+              method: payload.method,
+              ref: data.ref || null,
+              provider: data.provider || null,
+            })
+          );
+          window.location.href = data.url;
+          return;
+        }
+
+        // Demo / instant order
+        const order = data.order;
+        order.totalFormatted = formatMoney(cartTotals().total);
+        sessionStorage.setItem("subsaverph_last", JSON.stringify(order));
+        try {
+          saveOrder(order);
+        } catch {
+          /* optional */
+        }
+        clearCart();
+        updateBadge();
+        location.hash = "#/success";
+      } catch (err) {
+        if (errEl) errEl.textContent = err.message || "Checkout failed";
+        toast(err.message || "Checkout failed");
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = "Continue to pay";
+        }
+      }
     });
   }
 }
@@ -879,11 +1088,19 @@ async function loadLiveCatalog() {
         ...d,
         includes: Array.isArray(d.includes) ? d.includes : [],
         badge: d.badge || null,
+        // stockLeft from API inventory; 0 = SOLD OUT
+        stockLeft: typeof d.stockLeft === "number" ? d.stockLeft : Number(d.stockLeft) || 0,
       }));
     }
     if (data.settings) state.settings = data.settings;
     if (Array.isArray(data.brands)) window.BRANDS = data.brands;
     if (Array.isArray(data.categories)) window.CATEGORIES = data.categories;
+    state.paymentMode = data.paymentMode || "instant_demo";
+    state.stripeEnabled = !!data.stripeEnabled;
+    state.stripePublishableKey = data.stripePublishableKey || "";
+    state.paymentMethods = Array.isArray(data.paymentMethods)
+      ? data.paymentMethods
+      : [];
     state.live = true;
 
     // Apply host settings to chrome

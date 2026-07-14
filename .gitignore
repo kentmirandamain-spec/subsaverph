@@ -3,6 +3,8 @@ __pycache__/
 .venv/
 venv/
 .env
+.env.txt
+.env.local
 .idea/
 .vscode/
 tools/

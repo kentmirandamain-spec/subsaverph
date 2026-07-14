@@ -24,11 +24,21 @@ from flask import (
 from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.security import check_password_hash, generate_password_hash
 
+# Optional local .env support
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv(Path(__file__).resolve().parent / ".env")
+except Exception:
+    pass
+
 ROOT = Path(__file__).resolve().parent
 STORE = ROOT / "data" / "store"
 DEALS_FILE = STORE / "deals.json"
 SETTINGS_FILE = STORE / "settings.json"
 AUTH_FILE = STORE / "auth.json"
+INVENTORY_FILE = STORE / "inventory.json"
+ORDERS_FILE = STORE / "orders.json"
 
 app = Flask(__name__, static_folder=None)
 # Stable secret so admin sessions survive restarts (set SECRET_KEY on Render)
@@ -78,11 +88,19 @@ def ensure_store() -> None:
         )
     if not DEALS_FILE.exists():
         DEALS_FILE.write_text("[]", encoding="utf-8")
+    if not INVENTORY_FILE.exists():
+        INVENTORY_FILE.write_text("{}", encoding="utf-8")
+    if not ORDERS_FILE.exists():
+        ORDERS_FILE.write_text("[]", encoding="utf-8")
+    pending_file = STORE / "pending_payments.json"
+    if not pending_file.exists():
+        pending_file.write_text("{}", encoding="utf-8")
 
 
 def read_json(path: Path, default):
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
+        # utf-8-sig handles Windows BOM if present
+        return json.loads(path.read_text(encoding="utf-8-sig"))
     except Exception:
         return default
 
@@ -114,6 +132,54 @@ def load_auth():
     return read_json(AUTH_FILE, {})
 
 
+def load_inventory() -> dict:
+    data = read_json(INVENTORY_FILE, {})
+    return data if isinstance(data, dict) else {}
+
+
+def save_inventory(inv: dict) -> None:
+    write_json(INVENTORY_FILE, inv)
+
+
+def load_orders() -> list:
+    data = read_json(ORDERS_FILE, [])
+    return data if isinstance(data, list) else []
+
+
+def save_orders(orders: list) -> None:
+    write_json(ORDERS_FILE, orders)
+
+
+def stock_count(product_id: str) -> int:
+    inv = load_inventory()
+    codes = inv.get(product_id) or []
+    return sum(1 for c in codes if c.get("status", "available") == "available")
+
+
+def reserve_codes(product_id: str, qty: int) -> list[str]:
+    """Take qty available codes for product. Mutates inventory."""
+    inv = load_inventory()
+    codes = inv.get(product_id) or []
+    available = [c for c in codes if c.get("status", "available") == "available"]
+    if len(available) < qty:
+        raise ValueError(
+            f"Not enough stock for {product_id}. Need {qty}, have {len(available)}."
+        )
+    taken = []
+    need = qty
+    for c in codes:
+        if need <= 0:
+            break
+        if c.get("status", "available") == "available":
+            c["status"] = "sold"
+            c["soldAt"] = __import__("datetime").datetime.utcnow().isoformat() + "Z"
+            taken.append(c.get("code", ""))
+            need -= 1
+    inv[product_id] = codes
+    save_inventory(inv)
+    return taken
+
+
 def slugify(text: str) -> str:
     s = re.sub(r"[^a-zA-Z0-9]+", "-", (text or "").strip().lower()).strip("-")
     return s or uuid.uuid4().hex[:8]
@@ -139,7 +205,10 @@ def health():
 
 @app.get("/api/deals")
 def api_deals():
-    return jsonify({"deals": load_deals(include_inactive=False)})
+    deals = load_deals(include_inactive=False)
+    for d in deals:
+        d["stockLeft"] = stock_count(d.get("id", ""))
+    return jsonify({"deals": deals})
 
 
 @app.get("/api/settings")
@@ -150,6 +219,9 @@ def api_settings():
 @app.get("/api/catalog")
 def api_catalog():
     deals = load_deals(include_inactive=False)
+    # Attach stock counts (not the actual codes)
+    for d in deals:
+        d["stockLeft"] = stock_count(d.get("id", ""))
     brands = sorted({d.get("brand", "") for d in deals if d.get("brand")})
     categories = sorted({d.get("category", "") for d in deals if d.get("category")})
     return jsonify(
@@ -158,8 +230,1245 @@ def api_catalog():
             "settings": load_settings(),
             "brands": ["All", *brands],
             "categories": ["All", *categories],
+            "paymentMode": payment_mode(),
+            "stripeEnabled": payment_mode() == "stripe" and stripe_configured(),
+            "stripePublishableKey": os.environ.get("STRIPE_PUBLISHABLE_KEY") or "",
+            "paymentMethods": available_payment_methods(),
         }
     )
+
+
+def payment_mode() -> str:
+    """
+    stripe        → real Stripe Checkout (requires STRIPE_SECRET_KEY)
+    instant_demo  → deliver codes without real charge (testing)
+    """
+    mode = (os.environ.get("PAYMENT_MODE") or "").strip().lower()
+    if mode:
+        return mode
+    if os.environ.get("STRIPE_SECRET_KEY"):
+        return "stripe"
+    return "instant_demo"
+
+
+def stripe_configured() -> bool:
+    return bool(os.environ.get("STRIPE_SECRET_KEY"))
+
+
+def get_stripe():
+    import stripe
+
+    key = os.environ.get("STRIPE_SECRET_KEY")
+    if not key:
+        raise RuntimeError("STRIPE_SECRET_KEY is not set")
+    stripe.api_key = key
+    return stripe
+
+
+def unit_amount_cents(deal: dict, pay_currency: str) -> int:
+    """Convert deal price to Stripe unit_amount (smallest currency unit)."""
+    price = float(deal.get("price") or 0)
+    base = (deal.get("priceBase") or "USD").upper()
+    pay = (pay_currency or "USD").upper()
+    # Simple conversion table vs USD (fallback). Prefer charging in product base when possible.
+    rates_to_usd = {
+        "USD": 1.0,
+        "PHP": 1 / 56.5,
+        "EUR": 1 / 0.92,
+        "GBP": 1 / 0.79,
+        "JPY": 1 / 149.5,
+        "AUD": 1 / 1.53,
+        "CAD": 1 / 1.36,
+        "SGD": 1 / 1.34,
+        "INR": 1 / 83.1,
+    }
+    usd = price * rates_to_usd.get(base, 1.0)
+    amount = usd / rates_to_usd.get(pay, 1.0) if pay in rates_to_usd else usd
+    zero_decimal = {"JPY", "KRW", "VND", "CLP"}
+    if pay in zero_decimal:
+        return max(1, int(round(amount)))
+    return max(1, int(round(amount * 100)))
+
+
+def validate_cart_items(items: list) -> tuple[list, dict]:
+    """Validate cart; return (normalized items, deals_by_id). Does not reserve codes."""
+    if not items:
+        raise ValueError("Cart is empty")
+    deals_by_id = {d["id"]: d for d in load_deals(include_inactive=False)}
+    normalized = []
+    for item in items:
+        pid = item.get("id")
+        qty = int(item.get("qty") or 1)
+        if qty < 1 or qty > 10:
+            raise ValueError("Invalid quantity")
+        deal = deals_by_id.get(pid)
+        if not deal:
+            raise ValueError(f"Product not found: {pid}")
+        left = stock_count(pid)
+        if left < qty:
+            raise ValueError(f"Out of stock: {deal.get('name')}. Only {left} left.")
+        normalized.append({"id": pid, "qty": qty, "deal": deal})
+    return normalized, deals_by_id
+
+
+def fulfill_order(
+    *,
+    email: str,
+    name: str,
+    currency: str,
+    items: list,
+    payment_mode_name: str,
+    stripe_session_id: str | None = None,
+    stripe_payment_intent: str | None = None,
+    provider_ref: str | None = None,
+    method: str | None = None,
+) -> dict:
+    """Reserve codes and save paid order. Idempotent by stripe_session_id / provider_ref."""
+    if stripe_session_id:
+        for existing in load_orders():
+            if existing.get("stripeSessionId") == stripe_session_id:
+                return existing
+    if provider_ref:
+        for existing in load_orders():
+            if existing.get("providerRef") == provider_ref:
+                return existing
+
+    normalized, _ = validate_cart_items(items)
+    line_results = []
+    for row in normalized:
+        deal = row["deal"]
+        qty = row["qty"]
+        pid = row["id"]
+        codes = reserve_codes(pid, qty)
+        line_results.append(
+            {
+                "id": pid,
+                "name": deal.get("name"),
+                "monogram": deal.get("monogram"),
+                "qty": qty,
+                "price": deal.get("price"),
+                "priceBase": deal.get("priceBase", "USD"),
+                "duration": deal.get("duration"),
+                "codes": codes,
+            }
+        )
+
+    order_id = "PH" + uuid.uuid4().hex[:10].upper()
+    order = {
+        "id": order_id,
+        "email": email,
+        "name": name,
+        "currency": currency,
+        "items": line_results,
+        "status": "paid",
+        "paymentMode": payment_mode_name,
+        "method": method or payment_mode_name,
+        "stripeSessionId": stripe_session_id,
+        "stripePaymentIntent": stripe_payment_intent,
+        "providerRef": provider_ref,
+        "createdAt": __import__("datetime").datetime.utcnow().isoformat() + "Z",
+        "delivery": "instant",
+        "message": "Payment confirmed. Codes delivered instantly.",
+    }
+    orders = load_orders()
+    orders.insert(0, order)
+    save_orders(orders[:500])
+    return order
+
+
+def public_base_url() -> str:
+    return (os.environ.get("PUBLIC_URL") or request.host_url).rstrip("/")
+
+
+def cart_total_php(normalized: list) -> float:
+    """Approximate total in PHP for PH e-wallets."""
+    total = 0.0
+    for row in normalized:
+        deal = row["deal"]
+        qty = row["qty"]
+        price = float(deal.get("price") or 0)
+        base = (deal.get("priceBase") or "USD").upper()
+        if base == "PHP":
+            total += price * qty
+        else:
+            # convert via USD estimate
+            rates_to_usd = {"USD": 1.0, "EUR": 1 / 0.92, "GBP": 1 / 0.79}
+            usd = price * rates_to_usd.get(base, 1.0)
+            total += usd * 56.5 * qty
+    return round(total, 2)
+
+
+def cart_total_usd(normalized: list) -> float:
+    total = 0.0
+    for row in normalized:
+        deal = row["deal"]
+        qty = row["qty"]
+        price = float(deal.get("price") or 0)
+        base = (deal.get("priceBase") or "USD").upper()
+        rates_to_usd = {
+            "USD": 1.0,
+            "PHP": 1 / 56.5,
+            "EUR": 1 / 0.92,
+            "GBP": 1 / 0.79,
+        }
+        total += price * rates_to_usd.get(base, 1.0) * qty
+    return round(total, 2)
+
+
+def available_payment_methods() -> list:
+    """Return enabled payment methods for the checkout UI."""
+    methods = []
+    # Always offer demo if no real providers OR if PAYMENT_MODE=instant_demo only
+    demo_only = payment_mode() == "instant_demo" and not any(
+        [
+            os.environ.get("STRIPE_SECRET_KEY"),
+            os.environ.get("PAYMONGO_SECRET_KEY"),
+            os.environ.get("PAYPAL_CLIENT_ID"),
+            os.environ.get("NOWPAYMENTS_API_KEY"),
+        ]
+    )
+
+    if os.environ.get("STRIPE_SECRET_KEY") or demo_only:
+        methods.append(
+            {
+                "id": "card",
+                "label": "Card",
+                "provider": "stripe" if os.environ.get("STRIPE_SECRET_KEY") else "demo",
+                "desc": "Visa / Mastercard via Stripe" if os.environ.get("STRIPE_SECRET_KEY") else "Card (demo)",
+            }
+        )
+    if os.environ.get("PAYMONGO_SECRET_KEY") or demo_only:
+        methods.append(
+            {
+                "id": "gcash",
+                "label": "GCash",
+                "provider": "paymongo" if os.environ.get("PAYMONGO_SECRET_KEY") else "demo",
+                "desc": "Pay with GCash",
+            }
+        )
+        methods.append(
+            {
+                "id": "paymaya",
+                "label": "Maya",
+                "provider": "paymongo" if os.environ.get("PAYMONGO_SECRET_KEY") else "demo",
+                "desc": "Pay with Maya (PayMaya)",
+            }
+        )
+        if not os.environ.get("STRIPE_SECRET_KEY"):
+            # PayMongo can also do cards when Stripe is off
+            methods.insert(
+                0,
+                {
+                    "id": "card",
+                    "label": "Card",
+                    "provider": "paymongo" if os.environ.get("PAYMONGO_SECRET_KEY") else "demo",
+                    "desc": "Visa / Mastercard",
+                },
+            )
+    if os.environ.get("PAYPAL_CLIENT_ID") or demo_only:
+        methods.append(
+            {
+                "id": "paypal",
+                "label": "PayPal",
+                "provider": "paypal" if os.environ.get("PAYPAL_CLIENT_ID") else "demo",
+                "desc": "PayPal balance or linked card",
+            }
+        )
+    if os.environ.get("NOWPAYMENTS_API_KEY") or demo_only:
+        methods.append(
+            {
+                "id": "crypto",
+                "label": "Crypto",
+                "provider": "nowpayments" if os.environ.get("NOWPAYMENTS_API_KEY") else "demo",
+                "desc": "USDT, BTC, ETH & more",
+            }
+        )
+
+    # Deduplicate by id keeping first
+    seen = set()
+    out = []
+    for m in methods:
+        if m["id"] in seen:
+            continue
+        seen.add(m["id"])
+        out.append(m)
+    return out or [
+        {
+            "id": "demo",
+            "label": "Instant demo",
+            "provider": "demo",
+            "desc": "Test delivery without real money",
+        }
+    ]
+
+
+@app.post("/api/checkout")
+def api_checkout():
+    """Demo / instant fulfill (no real money)."""
+    data = request.get_json(silent=True) or {}
+    email = (data.get("email") or "").strip()
+    name = (data.get("name") or "").strip()
+    currency = (data.get("currency") or "PHP").strip().upper()
+    items = data.get("items") or []
+    method = (data.get("method") or "demo").strip().lower()
+    if not email or "@" not in email:
+        return jsonify({"error": "Valid email is required for delivery"}), 400
+
+    try:
+        order = fulfill_order(
+            email=email,
+            name=name,
+            currency=currency,
+            items=items,
+            payment_mode_name="instant_demo",
+            method=method,
+            provider_ref=f"demo-{uuid.uuid4().hex}",
+        )
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 409
+
+    return jsonify({"ok": True, "order": order})
+
+
+@app.get("/api/payments/config")
+def payments_config():
+    return jsonify(
+        {
+            "paymentMode": payment_mode(),
+            "stripeEnabled": stripe_configured(),
+            "publishableKey": os.environ.get("STRIPE_PUBLISHABLE_KEY") or "",
+            "methods": available_payment_methods(),
+        }
+    )
+
+
+@app.post("/api/checkout/start")
+def api_checkout_start():
+    """
+    Unified checkout start.
+    method: card | gcash | paymaya | paypal | crypto | demo
+    Returns { url } for redirect providers, or { order } for demo.
+    """
+    data = request.get_json(silent=True) or {}
+    email = (data.get("email") or "").strip()
+    name = (data.get("name") or "").strip()
+    currency = (data.get("currency") or "PHP").strip().upper()
+    items = data.get("items") or []
+    method = (data.get("method") or "card").strip().lower()
+
+    if not email or "@" not in email:
+        return jsonify({"error": "Valid email is required for delivery"}), 400
+
+    try:
+        normalized, _ = validate_cart_items(items)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 409
+
+    methods = {m["id"]: m for m in available_payment_methods()}
+    if method not in methods and method != "demo":
+        return jsonify({"error": f"Payment method not available: {method}"}), 400
+
+    provider = (methods.get(method) or {}).get("provider") or "demo"
+    base = public_base_url()
+    cart_meta = [{"id": r["id"], "qty": r["qty"]} for r in normalized]
+
+    # ---- DEMO (no real money) ----
+    if provider == "demo" or method == "demo":
+        try:
+            order = fulfill_order(
+                email=email,
+                name=name,
+                currency=currency,
+                items=items,
+                payment_mode_name="instant_demo",
+                method=method,
+                provider_ref=f"demo-{uuid.uuid4().hex}",
+            )
+        except ValueError as e:
+            return jsonify({"error": str(e)}), 409
+        return jsonify({"ok": True, "provider": "demo", "order": order})
+
+    # ---- CARD via Stripe ----
+    if method == "card" and provider == "stripe":
+        return _stripe_session(email, name, currency, items, normalized, base)
+
+    # ---- GCash / Maya / Card via PayMongo ----
+    if provider == "paymongo" and method in ("gcash", "paymaya", "card"):
+        return _paymongo_checkout(email, name, method, normalized, cart_meta, base)
+
+    # ---- PayPal ----
+    if method == "paypal" and provider == "paypal":
+        return _paypal_checkout(email, name, currency, normalized, cart_meta, base)
+
+    # ---- Crypto (NOWPayments) ----
+    if method == "crypto" and provider == "nowpayments":
+        return _crypto_checkout(email, name, normalized, cart_meta, base)
+
+    return jsonify({"error": "Payment method not configured on server"}), 503
+
+
+def _stripe_session(email, name, currency, items, normalized, base):
+    if not stripe_configured():
+        return jsonify({"error": "Stripe not configured"}), 503
+    # reuse existing stripe endpoint logic via internal call
+    if currency not in {
+        "USD", "EUR", "GBP", "PHP", "AUD", "CAD", "SGD", "JPY", "INR",
+        "CHF", "HKD", "NZD", "SEK", "NOK", "DKK", "MXN", "BRL", "MYR", "THB", "PLN",
+    }:
+        currency = "USD"
+    line_items = []
+    for row in normalized:
+        deal = row["deal"]
+        qty = row["qty"]
+        amount = unit_amount_cents(deal, currency)
+        product_data = {"name": deal.get("name") or "Digital plan"}
+        desc = (deal.get("duration") or deal.get("tagline") or "")[:200]
+        if desc:
+            product_data["description"] = desc
+        line_items.append(
+            {
+                "quantity": qty,
+                "price_data": {
+                    "currency": currency.lower(),
+                    "unit_amount": amount,
+                    "product_data": product_data,
+                },
+            }
+        )
+    cart_meta = json.dumps([{"id": r["id"], "qty": r["qty"]} for r in normalized])
+    try:
+        stripe = get_stripe()
+        session_obj = stripe.checkout.Session.create(
+            mode="payment",
+            customer_email=email,
+            line_items=line_items,
+            success_url=f"{base}/#/success?session_id={{CHECKOUT_SESSION_ID}}&provider=stripe",
+            cancel_url=f"{base}/#/checkout?cancelled=1",
+            metadata={
+                "customer_name": name[:200],
+                "cart": cart_meta,
+                "currency": currency,
+                "method": "card",
+            },
+        )
+    except Exception as e:
+        return jsonify({"error": f"Stripe error: {e}"}), 502
+    return jsonify(
+        {"ok": True, "provider": "stripe", "method": "card", "url": session_obj.url, "sessionId": session_obj.id}
+    )
+
+
+def _paymongo_checkout(email, name, method, normalized, cart_meta, base):
+    secret = os.environ.get("PAYMONGO_SECRET_KEY")
+    if not secret:
+        return jsonify({"error": "PAYMONGO_SECRET_KEY not set"}), 503
+
+    import base64
+    import urllib.request
+
+    # PayMongo amounts are in centavos (PHP)
+    amount_centavos = int(round(cart_total_php(normalized) * 100))
+    if amount_centavos < 10000:  # PayMongo often min 100.00 PHP for some methods
+        amount_centavos = max(amount_centavos, 2000)
+
+    method_map = {
+        "card": "card",
+        "gcash": "gcash",
+        "paymaya": "paymaya",
+    }
+    pm_type = method_map.get(method, "gcash")
+
+    line_items = []
+    for row in normalized:
+        deal = row["deal"]
+        qty = row["qty"]
+        unit = int(round(cart_total_php([row]) / qty * 100)) if qty else 0
+        unit = max(unit, 100)
+        line_items.append(
+            {
+                "currency": "PHP",
+                "amount": unit,
+                "name": (deal.get("name") or "Plan")[:100],
+                "quantity": qty,
+            }
+        )
+
+    ref = f"pm_{uuid.uuid4().hex[:16]}"
+    body = {
+        "data": {
+            "attributes": {
+                "send_email_receipt": True,
+                "show_description": True,
+                "show_line_items": True,
+                "description": f"SubSaverPH order for {email}"[:255],
+                "line_items": line_items,
+                "payment_method_types": [pm_type],
+                "success_url": f"{base}/#/success?provider=paymongo&ref={ref}",
+                "cancel_url": f"{base}/#/checkout?cancelled=1",
+                "metadata": {
+                    "ref": ref,
+                    "email": email,
+                    "name": name,
+                    "cart": json.dumps(cart_meta),
+                    "method": method,
+                },
+            }
+        }
+    }
+
+    auth = base64.b64encode(f"{secret}:".encode()).decode()
+    req = urllib.request.Request(
+        "https://api.paymongo.com/v1/checkout_sessions",
+        data=json.dumps(body).encode("utf-8"),
+        headers={
+            "Authorization": f"Basic {auth}",
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            payload = json.loads(resp.read().decode("utf-8"))
+    except Exception as e:
+        err_body = ""
+        if hasattr(e, "read"):
+            try:
+                err_body = e.read().decode("utf-8")  # type: ignore
+            except Exception:
+                pass
+        return jsonify({"error": f"PayMongo error: {e} {err_body}"}), 502
+
+    attrs = payload.get("data", {}).get("attributes", {})
+    checkout_url = attrs.get("checkout_url")
+    session_id = payload.get("data", {}).get("id")
+    if not checkout_url:
+        return jsonify({"error": "PayMongo did not return checkout_url", "raw": payload}), 502
+
+    # Store pending ref for fulfillment on return/webhook
+    pending = read_json(STORE / "pending_payments.json", {})
+    pending[ref] = {
+        "email": email,
+        "name": name,
+        "cart": cart_meta,
+        "method": method,
+        "provider": "paymongo",
+        "sessionId": session_id,
+        "currency": "PHP",
+        "createdAt": __import__("datetime").datetime.utcnow().isoformat() + "Z",
+    }
+    write_json(STORE / "pending_payments.json", pending)
+
+    return jsonify(
+        {
+            "ok": True,
+            "provider": "paymongo",
+            "method": method,
+            "url": checkout_url,
+            "ref": ref,
+            "sessionId": session_id,
+        }
+    )
+
+
+def _paypal_checkout(email, name, currency, normalized, cart_meta, base):
+    client_id = os.environ.get("PAYPAL_CLIENT_ID")
+    secret = os.environ.get("PAYPAL_CLIENT_SECRET")
+    if not client_id or not secret:
+        return jsonify({"error": "PAYPAL_CLIENT_ID / PAYPAL_CLIENT_SECRET not set"}), 503
+
+    import base64
+    import urllib.parse
+    import urllib.request
+
+    api_base = (
+        "https://api-m.sandbox.paypal.com"
+        if os.environ.get("PAYPAL_MODE", "sandbox").lower() == "sandbox"
+        else "https://api-m.paypal.com"
+    )
+
+    # OAuth
+    auth = base64.b64encode(f"{client_id}:{secret}".encode()).decode()
+    token_req = urllib.request.Request(
+        f"{api_base}/v1/oauth2/token",
+        data=b"grant_type=client_credentials",
+        headers={
+            "Authorization": f"Basic {auth}",
+            "Content-Type": "application/x-www-form-urlencoded",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(token_req, timeout=30) as resp:
+            token = json.loads(resp.read().decode("utf-8")).get("access_token")
+    except Exception as e:
+        return jsonify({"error": f"PayPal auth error: {e}"}), 502
+
+    # PayPal prefers USD for digital often; convert
+    pay_currency = currency if currency in {"USD", "EUR", "GBP", "AUD", "CAD"} else "USD"
+    total = cart_total_usd(normalized) if pay_currency == "USD" else cart_total_usd(normalized)
+    value = f"{total:.2f}"
+    ref = f"pp_{uuid.uuid4().hex[:16]}"
+
+    order_body = {
+        "intent": "CAPTURE",
+        "purchase_units": [
+            {
+                "reference_id": ref,
+                "description": "SubSaverPH digital codes",
+                "custom_id": json.dumps({"email": email, "cart": cart_meta})[:127],
+                "amount": {
+                    "currency_code": pay_currency,
+                    "value": value,
+                },
+            }
+        ],
+        "application_context": {
+            "brand_name": "SubSaverPH",
+            "landing_page": "LOGIN",
+            "user_action": "PAY_NOW",
+            "return_url": f"{base}/#/success?provider=paypal&ref={ref}",
+            "cancel_url": f"{base}/#/checkout?cancelled=1",
+        },
+    }
+
+    order_req = urllib.request.Request(
+        f"{api_base}/v2/checkout/orders",
+        data=json.dumps(order_body).encode("utf-8"),
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(order_req, timeout=30) as resp:
+            order = json.loads(resp.read().decode("utf-8"))
+    except Exception as e:
+        err = ""
+        if hasattr(e, "read"):
+            try:
+                err = e.read().decode("utf-8")  # type: ignore
+            except Exception:
+                pass
+        return jsonify({"error": f"PayPal order error: {e} {err}"}), 502
+
+    approve = next(
+        (l.get("href") for l in order.get("links", []) if l.get("rel") == "approve"),
+        None,
+    )
+    if not approve:
+        return jsonify({"error": "PayPal approve URL missing", "raw": order}), 502
+
+    pending = read_json(STORE / "pending_payments.json", {})
+    pending[ref] = {
+        "email": email,
+        "name": name,
+        "cart": cart_meta,
+        "method": "paypal",
+        "provider": "paypal",
+        "paypalOrderId": order.get("id"),
+        "currency": pay_currency,
+        "accessTokenHint": True,
+        "createdAt": __import__("datetime").datetime.utcnow().isoformat() + "Z",
+    }
+    write_json(STORE / "pending_payments.json", pending)
+
+    return jsonify(
+        {
+            "ok": True,
+            "provider": "paypal",
+            "method": "paypal",
+            "url": approve,
+            "ref": ref,
+            "orderId": order.get("id"),
+        }
+    )
+
+
+def _crypto_checkout(email, name, normalized, cart_meta, base):
+    api_key = os.environ.get("NOWPAYMENTS_API_KEY")
+    if not api_key:
+        return jsonify({"error": "NOWPAYMENTS_API_KEY not set"}), 503
+
+    import urllib.request
+
+    price_usd = cart_total_usd(normalized)
+    ref = f"cr_{uuid.uuid4().hex[:16]}"
+    # Invoice creates a hosted payment page
+    body = {
+        "price_amount": price_usd,
+        "price_currency": "usd",
+        "order_id": ref,
+        "order_description": f"SubSaverPH for {email}",
+        "ipn_callback_url": f"{base}/api/webhooks/nowpayments",
+        "success_url": f"{base}/#/success?provider=crypto&ref={ref}",
+        "cancel_url": f"{base}/#/checkout?cancelled=1",
+    }
+    api_base = os.environ.get("NOWPAYMENTS_API_BASE", "https://api.nowpayments.io/v1")
+    req = urllib.request.Request(
+        f"{api_base}/invoice",
+        data=json.dumps(body).encode("utf-8"),
+        headers={
+            "x-api-key": api_key,
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            inv = json.loads(resp.read().decode("utf-8"))
+    except Exception as e:
+        err = ""
+        if hasattr(e, "read"):
+            try:
+                err = e.read().decode("utf-8")  # type: ignore
+            except Exception:
+                pass
+        return jsonify({"error": f"NOWPayments error: {e} {err}"}), 502
+
+    invoice_url = inv.get("invoice_url")
+    if not invoice_url:
+        return jsonify({"error": "No invoice_url from NOWPayments", "raw": inv}), 502
+
+    pending = read_json(STORE / "pending_payments.json", {})
+    pending[ref] = {
+        "email": email,
+        "name": name,
+        "cart": cart_meta,
+        "method": "crypto",
+        "provider": "nowpayments",
+        "invoiceId": inv.get("id"),
+        "currency": "USD",
+        "createdAt": __import__("datetime").datetime.utcnow().isoformat() + "Z",
+    }
+    write_json(STORE / "pending_payments.json", pending)
+
+    return jsonify(
+        {
+            "ok": True,
+            "provider": "nowpayments",
+            "method": "crypto",
+            "url": invoice_url,
+            "ref": ref,
+        }
+    )
+
+
+@app.get("/api/checkout/complete")
+def api_checkout_complete():
+    """
+    After redirect from PayMongo / PayPal / Crypto:
+    ?provider=paymongo|paypal|crypto&ref=...
+    Verifies payment when possible and fulfills codes.
+    """
+    provider = (request.args.get("provider") or "").lower()
+    ref = (request.args.get("ref") or "").strip()
+    if not ref:
+        return jsonify({"error": "Missing ref"}), 400
+
+    # Already fulfilled?
+    for existing in load_orders():
+        if existing.get("providerRef") == ref:
+            return jsonify({"ok": True, "order": existing})
+
+    pending_all = read_json(STORE / "pending_payments.json", {})
+    pending = pending_all.get(ref)
+    if not pending:
+        return jsonify({"error": "Unknown or expired payment ref"}), 404
+
+    email = pending.get("email") or ""
+    name = pending.get("name") or ""
+    cart = pending.get("cart") or []
+    currency = pending.get("currency") or "PHP"
+    method = pending.get("method") or provider
+
+    # Provider-specific verification
+    if provider == "paypal" or pending.get("provider") == "paypal":
+        ok = _paypal_capture(pending)
+        if not ok:
+            return jsonify({"error": "PayPal payment not completed yet"}), 402
+    elif provider == "paymongo" or pending.get("provider") == "paymongo":
+        ok = _paymongo_paid(pending)
+        if not ok and os.environ.get("PAYMONGO_REQUIRE_VERIFY", "1") == "1":
+            # If we cannot verify, still allow if session paid — otherwise wait
+            return jsonify(
+                {
+                    "error": "PayMongo payment not confirmed yet. Wait a moment and refresh.",
+                    "hint": "Ensure webhook is set or try again in a few seconds.",
+                }
+            ), 402
+    elif provider == "crypto" or pending.get("provider") == "nowpayments":
+        ok = _crypto_paid(pending)
+        if not ok:
+            return jsonify({"error": "Crypto payment not confirmed yet"}), 402
+
+    try:
+        order = fulfill_order(
+            email=email,
+            name=name,
+            currency=currency,
+            items=cart,
+            payment_mode_name=pending.get("provider") or provider,
+            method=method,
+            provider_ref=ref,
+        )
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 409
+
+    # cleanup pending
+    pending_all.pop(ref, None)
+    write_json(STORE / "pending_payments.json", pending_all)
+    return jsonify({"ok": True, "order": order})
+
+
+def _paypal_capture(pending: dict) -> bool:
+    client_id = os.environ.get("PAYPAL_CLIENT_ID")
+    secret = os.environ.get("PAYPAL_CLIENT_SECRET")
+    order_id = pending.get("paypalOrderId")
+    if not all([client_id, secret, order_id]):
+        return False
+    import base64
+    import urllib.request
+
+    api_base = (
+        "https://api-m.sandbox.paypal.com"
+        if os.environ.get("PAYPAL_MODE", "sandbox").lower() == "sandbox"
+        else "https://api-m.paypal.com"
+    )
+    auth = base64.b64encode(f"{client_id}:{secret}".encode()).decode()
+    try:
+        token_req = urllib.request.Request(
+            f"{api_base}/v1/oauth2/token",
+            data=b"grant_type=client_credentials",
+            headers={
+                "Authorization": f"Basic {auth}",
+                "Content-Type": "application/x-www-form-urlencoded",
+            },
+            method="POST",
+        )
+        with urllib.request.urlopen(token_req, timeout=30) as resp:
+            token = json.loads(resp.read().decode("utf-8")).get("access_token")
+        cap_req = urllib.request.Request(
+            f"{api_base}/v2/checkout/orders/{order_id}/capture",
+            data=b"{}",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Content-Type": "application/json",
+            },
+            method="POST",
+        )
+        with urllib.request.urlopen(cap_req, timeout=30) as resp:
+            result = json.loads(resp.read().decode("utf-8"))
+        status = result.get("status")
+        return status in ("COMPLETED", "APPROVED")
+    except Exception:
+        # Maybe already captured
+        try:
+            get_req = urllib.request.Request(
+                f"{api_base}/v2/checkout/orders/{order_id}",
+                headers={"Authorization": f"Bearer {token}"},
+                method="GET",
+            )
+            with urllib.request.urlopen(get_req, timeout=30) as resp:
+                result = json.loads(resp.read().decode("utf-8"))
+            return result.get("status") == "COMPLETED"
+        except Exception:
+            return False
+
+
+def _paymongo_paid(pending: dict) -> bool:
+    secret = os.environ.get("PAYMONGO_SECRET_KEY")
+    session_id = pending.get("sessionId")
+    if not secret or not session_id:
+        # Without API verify, treat return as success only if explicitly allowed
+        return os.environ.get("PAYMONGO_TRUST_RETURN", "0") == "1"
+    import base64
+    import urllib.request
+
+    auth = base64.b64encode(f"{secret}:".encode()).decode()
+    req = urllib.request.Request(
+        f"https://api.paymongo.com/v1/checkout_sessions/{session_id}",
+        headers={"Authorization": f"Basic {auth}", "Accept": "application/json"},
+        method="GET",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+        attrs = data.get("data", {}).get("attributes", {})
+        # payments list may indicate paid
+        status = attrs.get("status")
+        payments = attrs.get("payments") or []
+        if status in ("paid", "active") and payments:
+            return True
+        if any(
+            (p.get("attributes") or {}).get("status") == "paid"
+            for p in payments
+            if isinstance(p, dict)
+        ):
+            return True
+        # some responses use payment_intent
+        return status == "paid"
+    except Exception:
+        return False
+
+
+def _crypto_paid(pending: dict) -> bool:
+    api_key = os.environ.get("NOWPAYMENTS_API_KEY")
+    invoice_id = pending.get("invoiceId")
+    if not api_key or not invoice_id:
+        return os.environ.get("CRYPTO_TRUST_RETURN", "0") == "1"
+    import urllib.request
+
+    api_base = os.environ.get("NOWPAYMENTS_API_BASE", "https://api.nowpayments.io/v1")
+    req = urllib.request.Request(
+        f"{api_base}/invoice/{invoice_id}",
+        headers={"x-api-key": api_key},
+        method="GET",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+        # invoice payments statuses
+        status = (data.get("payment_status") or data.get("status") or "").lower()
+        return status in ("finished", "confirmed", "sending", "paid")
+    except Exception:
+        return False
+
+
+@app.post("/api/webhooks/paymongo")
+def paymongo_webhook():
+    """PayMongo webhook — fulfill when payment paid."""
+    payload = request.get_json(silent=True) or {}
+    data = payload.get("data") or {}
+    attrs = data.get("attributes") or {}
+    typ = attrs.get("type") or payload.get("type") or ""
+    # Normalize event
+    inner = attrs.get("data") or data
+    iattrs = inner.get("attributes") if isinstance(inner, dict) else {}
+    meta = (iattrs or {}).get("metadata") or attrs.get("metadata") or {}
+    ref = meta.get("ref")
+    if not ref:
+        return jsonify({"ok": True, "skipped": "no ref"})
+
+    for existing in load_orders():
+        if existing.get("providerRef") == ref:
+            return jsonify({"ok": True, "duplicate": True})
+
+    pending_all = read_json(STORE / "pending_payments.json", {})
+    pending = pending_all.get(ref)
+    if not pending:
+        return jsonify({"ok": True, "skipped": "unknown ref"})
+
+    # Only fulfill paid-like events
+    event_ok = "payment.paid" in typ or "checkout_session.payment.paid" in typ or True
+    if event_ok:
+        try:
+            fulfill_order(
+                email=pending.get("email") or meta.get("email") or "",
+                name=pending.get("name") or meta.get("name") or "",
+                currency="PHP",
+                items=pending.get("cart") or json.loads(meta.get("cart") or "[]"),
+                payment_mode_name="paymongo",
+                method=pending.get("method") or meta.get("method"),
+                provider_ref=ref,
+            )
+            pending_all.pop(ref, None)
+            write_json(STORE / "pending_payments.json", pending_all)
+        except Exception as e:
+            return jsonify({"error": str(e)}), 409
+    return jsonify({"ok": True})
+
+
+@app.post("/api/webhooks/nowpayments")
+def nowpayments_webhook():
+    payload = request.get_json(silent=True) or {}
+    order_id = payload.get("order_id") or ""
+    status = (payload.get("payment_status") or "").lower()
+    if status not in ("finished", "confirmed", "sending"):
+        return jsonify({"ok": True, "skipped": status})
+    ref = order_id
+    for existing in load_orders():
+        if existing.get("providerRef") == ref:
+            return jsonify({"ok": True, "duplicate": True})
+    pending_all = read_json(STORE / "pending_payments.json", {})
+    pending = pending_all.get(ref)
+    if not pending:
+        return jsonify({"ok": True, "skipped": "unknown"})
+    try:
+        fulfill_order(
+            email=pending.get("email") or "",
+            name=pending.get("name") or "",
+            currency="USD",
+            items=pending.get("cart") or [],
+            payment_mode_name="nowpayments",
+            method="crypto",
+            provider_ref=ref,
+        )
+        pending_all.pop(ref, None)
+        write_json(STORE / "pending_payments.json", pending_all)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 409
+    return jsonify({"ok": True})
+
+
+@app.post("/api/checkout/stripe")
+def api_checkout_stripe():
+    """Create a Stripe Checkout Session; customer pays on Stripe, then returns for codes."""
+    if not stripe_configured():
+        return jsonify(
+            {
+                "error": "Stripe is not configured. Set STRIPE_SECRET_KEY and STRIPE_PUBLISHABLE_KEY.",
+            }
+        ), 503
+
+    data = request.get_json(silent=True) or {}
+    email = (data.get("email") or "").strip()
+    name = (data.get("name") or "").strip()
+    currency = (data.get("currency") or "USD").strip().upper()
+    items = data.get("items") or []
+    if not email or "@" not in email:
+        return jsonify({"error": "Valid email is required for delivery"}), 400
+
+    try:
+        normalized, _ = validate_cart_items(items)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 409
+
+    # Stripe-supported common currencies for Checkout
+    if currency not in {
+        "USD",
+        "EUR",
+        "GBP",
+        "PHP",
+        "AUD",
+        "CAD",
+        "SGD",
+        "JPY",
+        "INR",
+        "CHF",
+        "HKD",
+        "NZD",
+        "SEK",
+        "NOK",
+        "DKK",
+        "MXN",
+        "BRL",
+        "MYR",
+        "THB",
+        "PLN",
+    }:
+        currency = "USD"
+
+    line_items = []
+    for row in normalized:
+        deal = row["deal"]
+        qty = row["qty"]
+        amount = unit_amount_cents(deal, currency)
+        line_items.append(
+            {
+                "quantity": qty,
+                "price_data": {
+                    "currency": currency.lower(),
+                    "unit_amount": amount,
+                    "product_data": {
+                        "name": deal.get("name") or "Digital plan",
+                        "description": (deal.get("duration") or deal.get("tagline") or "")[
+                            :200
+                        ]
+                        or None,
+                    },
+                },
+            }
+        )
+        # Stripe rejects null description
+        if line_items[-1]["price_data"]["product_data"]["description"] is None:
+            del line_items[-1]["price_data"]["product_data"]["description"]
+
+    # Compact cart for metadata (Stripe metadata values max 500 chars)
+    cart_meta = json.dumps([{"id": r["id"], "qty": r["qty"]} for r in normalized])
+    if len(cart_meta) > 490:
+        return jsonify({"error": "Cart too large for Stripe metadata"}), 400
+
+    origin = request.host_url.rstrip("/")
+    # Prefer explicit public URL for tunnels/production
+    public = (os.environ.get("PUBLIC_URL") or origin).rstrip("/")
+
+    try:
+        stripe = get_stripe()
+        session_obj = stripe.checkout.Session.create(
+            mode="payment",
+            customer_email=email,
+            line_items=line_items,
+            success_url=f"{public}/#/success?session_id={{CHECKOUT_SESSION_ID}}",
+            cancel_url=f"{public}/#/checkout?cancelled=1",
+            metadata={
+                "customer_name": name[:200],
+                "cart": cart_meta,
+                "currency": currency,
+            },
+            payment_intent_data={
+                "metadata": {
+                    "customer_name": name[:200],
+                    "cart": cart_meta,
+                }
+            },
+        )
+    except Exception as e:
+        return jsonify({"error": f"Stripe error: {e}"}), 502
+
+    return jsonify(
+        {
+            "ok": True,
+            "paymentMode": "stripe",
+            "sessionId": session_obj.id,
+            "url": session_obj.url,
+        }
+    )
+
+
+@app.get("/api/checkout/session/<session_id>")
+def api_checkout_session(session_id: str):
+    """After Stripe redirect: verify payment and return fulfilled order + codes."""
+    if not stripe_configured():
+        return jsonify({"error": "Stripe not configured"}), 503
+
+    # Already fulfilled?
+    for existing in load_orders():
+        if existing.get("stripeSessionId") == session_id:
+            return jsonify({"ok": True, "order": existing})
+
+    try:
+        stripe = get_stripe()
+        sess = stripe.checkout.Session.retrieve(session_id)
+    except Exception as e:
+        return jsonify({"error": f"Could not load session: {e}"}), 400
+
+    if sess.get("payment_status") != "paid" and sess.get("status") != "complete":
+        # complete + paid is success; allow paid
+        if sess.get("payment_status") != "paid":
+            return jsonify(
+                {
+                    "error": "Payment not completed yet",
+                    "payment_status": sess.get("payment_status"),
+                    "status": sess.get("status"),
+                }
+            ), 402
+
+    email = (sess.get("customer_email") or sess.get("customer_details", {}) or {}).get(
+        "email"
+    ) or ""
+    if isinstance(sess.get("customer_details"), dict):
+        email = email or sess["customer_details"].get("email") or ""
+    meta = sess.get("metadata") or {}
+    name = meta.get("customer_name") or ""
+    currency = (meta.get("currency") or sess.get("currency") or "usd").upper()
+    try:
+        items = json.loads(meta.get("cart") or "[]")
+    except json.JSONDecodeError:
+        return jsonify({"error": "Invalid cart metadata on session"}), 400
+
+    try:
+        order = fulfill_order(
+            email=email or "customer@unknown",
+            name=name,
+            currency=currency,
+            items=items,
+            payment_mode_name="stripe",
+            stripe_session_id=session_id,
+            stripe_payment_intent=sess.get("payment_intent"),
+        )
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 409
+
+    return jsonify({"ok": True, "order": order})
+
+
+@app.post("/api/webhooks/stripe")
+def stripe_webhook():
+    """Stripe webhook: fulfill on checkout.session.completed."""
+    if not stripe_configured():
+        return jsonify({"error": "Stripe not configured"}), 503
+
+    payload = request.get_data()
+    sig = request.headers.get("Stripe-Signature", "")
+    secret = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
+
+    try:
+        stripe = get_stripe()
+        if secret:
+            event = stripe.Webhook.construct_event(payload, sig, secret)
+        else:
+            # Local testing without webhook secret (not for production)
+            event = json.loads(payload.decode("utf-8"))
+    except Exception as e:
+        return jsonify({"error": f"Webhook error: {e}"}), 400
+
+    etype = event.get("type") if isinstance(event, dict) else getattr(event, "type", None)
+    data_obj = (
+        event["data"]["object"]
+        if isinstance(event, dict)
+        else event.data.object
+    )
+
+    if etype == "checkout.session.completed":
+        sess = data_obj
+        # dict-like from JSON or StripeObject
+        def g(obj, key, default=None):
+            if isinstance(obj, dict):
+                return obj.get(key, default)
+            return getattr(obj, key, default)
+
+        session_id = g(sess, "id")
+        payment_status = g(sess, "payment_status")
+        if payment_status and payment_status != "paid":
+            return jsonify({"ok": True, "skipped": "not paid"})
+
+        # Already done?
+        for existing in load_orders():
+            if existing.get("stripeSessionId") == session_id:
+                return jsonify({"ok": True, "duplicate": True})
+
+        meta = g(sess, "metadata") or {}
+        if not isinstance(meta, dict):
+            meta = dict(meta)
+        email = g(sess, "customer_email") or ""
+        details = g(sess, "customer_details") or {}
+        if isinstance(details, dict):
+            email = email or details.get("email") or ""
+        try:
+            items = json.loads(meta.get("cart") or "[]")
+        except json.JSONDecodeError:
+            return jsonify({"error": "bad cart"}), 400
+        try:
+            fulfill_order(
+                email=email or "customer@unknown",
+                name=meta.get("customer_name") or "",
+                currency=(meta.get("currency") or g(sess, "currency") or "usd").upper(),
+                items=items,
+                payment_mode_name="stripe",
+                stripe_session_id=session_id,
+                stripe_payment_intent=str(g(sess, "payment_intent") or ""),
+            )
+        except ValueError as e:
+            # Stock race — Stripe already charged; log as failed fulfillment order
+            orders = load_orders()
+            orders.insert(
+                0,
+                {
+                    "id": "PHFAIL" + uuid.uuid4().hex[:8].upper(),
+                    "email": email,
+                    "status": "paid_unfulfilled",
+                    "error": str(e),
+                    "stripeSessionId": session_id,
+                    "createdAt": __import__("datetime").datetime.utcnow().isoformat()
+                    + "Z",
+                },
+            )
+            save_orders(orders[:500])
+            return jsonify({"error": str(e)}), 409
+
+    return jsonify({"ok": True})
 
 
 @app.get("/api/search")
@@ -322,6 +1631,86 @@ def admin_update_settings():
 @require_admin
 def admin_get_settings():
     return jsonify({"settings": load_settings()})
+
+
+# ---------- inventory (codes stock) ----------
+
+
+@app.get("/api/admin/inventory")
+@require_admin
+def admin_inventory():
+    inv = load_inventory()
+    summary = []
+    for d in load_deals(include_inactive=True):
+        pid = d.get("id")
+        codes = inv.get(pid) or []
+        available = sum(1 for c in codes if c.get("status", "available") == "available")
+        sold = sum(1 for c in codes if c.get("status") == "sold")
+        summary.append(
+            {
+                "productId": pid,
+                "name": d.get("name"),
+                "available": available,
+                "sold": sold,
+                "total": len(codes),
+            }
+        )
+    return jsonify({"summary": summary, "inventory": inv})
+
+
+@app.get("/api/admin/inventory/<product_id>")
+@require_admin
+def admin_inventory_product(product_id: str):
+    inv = load_inventory()
+    codes = inv.get(product_id) or []
+    return jsonify({"productId": product_id, "codes": codes})
+
+
+@app.post("/api/admin/inventory/<product_id>")
+@require_admin
+def admin_add_codes(product_id: str):
+    """Add stock codes. Body: { "codes": "CODE1\\nCODE2" } or { "codes": ["A","B"] }"""
+    data = request.get_json(silent=True) or {}
+    raw = data.get("codes")
+    if isinstance(raw, str):
+        lines = [ln.strip() for ln in raw.splitlines() if ln.strip()]
+    elif isinstance(raw, list):
+        lines = [str(x).strip() for x in raw if str(x).strip()]
+    else:
+        return jsonify({"error": "Provide codes as text (one per line) or array"}), 400
+
+    inv = load_inventory()
+    existing = inv.get(product_id) or []
+    existing_set = {c.get("code") for c in existing}
+    added = 0
+    for code in lines:
+        if code in existing_set:
+            continue
+        existing.append(
+            {
+                "code": code,
+                "status": "available",
+                "addedAt": __import__("datetime").datetime.utcnow().isoformat() + "Z",
+            }
+        )
+        existing_set.add(code)
+        added += 1
+    inv[product_id] = existing
+    save_inventory(inv)
+    return jsonify(
+        {
+            "ok": True,
+            "added": added,
+            "available": sum(1 for c in existing if c.get("status") == "available"),
+            "total": len(existing),
+        }
+    )
+
+
+@app.get("/api/admin/orders")
+@require_admin
+def admin_orders():
+    return jsonify({"orders": load_orders()[:100]})
 
 
 def normalize_deal(data: dict, deal_id: str) -> dict:

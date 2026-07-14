@@ -10,6 +10,10 @@ const state = {
   err: "",
   editing: null,
   productFilter: "",
+  inventorySummary: [],
+  stockProductId: "",
+  stockCodes: [],
+  orders: [],
 };
 
 async function api(path, opts = {}) {
@@ -55,6 +59,8 @@ function shell(content) {
       <aside class="side">
         <h2>SubSaverPH</h2>
         <button type="button" data-tab="deals" class="${state.tab === "deals" ? "active" : ""}">Products</button>
+        <button type="button" data-tab="stock" class="${state.tab === "stock" ? "active" : ""}">Codes / Stock</button>
+        <button type="button" data-tab="orders" class="${state.tab === "orders" ? "active" : ""}">Orders</button>
         <button type="button" data-tab="settings" class="${state.tab === "settings" ? "active" : ""}">Site content</button>
         <button type="button" data-tab="account" class="${state.tab === "account" ? "active" : ""}">Account</button>
         <a href="/" target="_blank" rel="noopener">↗ View live site</a>
@@ -150,6 +156,79 @@ function accountView() {
       <label>New password<input type="password" name="newPassword" required minlength="6" /></label>
       <button class="btn" type="submit">Update password</button>
     </form>`;
+}
+
+function stockView() {
+  const rows = (state.inventorySummary || [])
+    .map(
+      (s) => `
+    <tr>
+      <td><strong>${escapeHtml(s.name)}</strong><div class="muted">${escapeHtml(s.productId)}</div></td>
+      <td>${s.available}</td>
+      <td>${s.sold}</td>
+      <td>${s.total}</td>
+      <td><button class="btn ghost" data-stock="${escapeHtml(s.productId)}">Add codes</button></td>
+    </tr>`
+    )
+    .join("");
+
+  let form = "";
+  if (state.stockProductId) {
+    const prod = state.deals.find((d) => d.id === state.stockProductId);
+    form = `
+      <div class="panel">
+        <h2 style="margin-top:0;font-size:1rem">Add codes → ${escapeHtml(prod?.name || state.stockProductId)}</h2>
+        <p class="muted">Paste one code / license key / redeem link per line. When a customer pays, one code is delivered instantly.</p>
+        <form id="stockForm">
+          <label>Codes (one per line)
+            <textarea name="codes" placeholder="CODE-AAAA-1111&#10;CODE-BBBB-2222&#10;https://redeem.example/xyz" required></textarea>
+          </label>
+          <div class="row-actions">
+            <button class="btn" type="submit">Save stock</button>
+            <button class="btn ghost" type="button" id="cancelStock">Cancel</button>
+          </div>
+        </form>
+        <p class="muted" style="margin-top:12px">Available codes on file: ${(state.stockCodes || []).filter((c) => c.status !== "sold").length}</p>
+      </div>`;
+  }
+
+  return `
+    <div class="top"><h1>Codes / Stock (instant delivery)</h1></div>
+    <p class="muted">Load digital codes for each product. Checkout auto-sends an unused code after payment.</p>
+    ${form}
+    <div class="panel" style="overflow:auto">
+      <table class="table">
+        <thead><tr><th>Product</th><th>Available</th><th>Sold</th><th>Total</th><th></th></tr></thead>
+        <tbody>${rows || `<tr><td colspan="5" class="muted">No products yet. Add products first.</td></tr>`}</tbody>
+      </table>
+    </div>`;
+}
+
+function ordersView() {
+  const rows = (state.orders || [])
+    .map((o) => {
+      const codes = (o.items || [])
+        .map((i) => `${i.name}: ${(i.codes || []).join(", ")}`)
+        .join(" · ");
+      return `
+      <tr>
+        <td><strong>${escapeHtml(o.id)}</strong><div class="muted">${escapeHtml(o.createdAt || "")}</div></td>
+        <td>${escapeHtml(o.email)}<div class="muted">${escapeHtml(o.name || "")}</div></td>
+        <td><span class="badge">${escapeHtml(o.status || "")}</span></td>
+        <td class="muted" style="max-width:280px;word-break:break-all">${escapeHtml(codes)}</td>
+      </tr>`;
+    })
+    .join("");
+
+  return `
+    <div class="top"><h1>Orders</h1></div>
+    <p class="muted">Paid orders with delivered codes.</p>
+    <div class="panel" style="overflow:auto">
+      <table class="table">
+        <thead><tr><th>Order</th><th>Customer</th><th>Status</th><th>Codes delivered</th></tr></thead>
+        <tbody>${rows || `<tr><td colspan="4" class="muted">No orders yet.</td></tr>`}</tbody>
+      </table>
+    </div>`;
 }
 
 function emptyDeal() {
@@ -284,6 +363,8 @@ function render() {
   let content = "";
   if (state.tab === "settings") content = settingsView();
   else if (state.tab === "account") content = accountView();
+  else if (state.tab === "stock") content = stockView();
+  else if (state.tab === "orders") content = ordersView();
   else content = dealsView();
 
   app.innerHTML = shell(content);
@@ -292,11 +373,52 @@ function render() {
 
 function bindShell() {
   $$("[data-tab]").forEach((btn) => {
-    btn.addEventListener("click", () => {
+    btn.addEventListener("click", async () => {
       state.tab = btn.dataset.tab;
       state.editing = null;
+      state.stockProductId = "";
+      try {
+        if (state.tab === "stock") await loadInventory();
+        if (state.tab === "orders") await loadOrders();
+      } catch (err) {
+        toast(err.message, true);
+      }
       render();
     });
+  });
+
+  $$("[data-stock]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      state.stockProductId = btn.dataset.stock;
+      try {
+        const data = await api(`/api/admin/inventory/${encodeURIComponent(state.stockProductId)}`);
+        state.stockCodes = data.codes || [];
+      } catch (err) {
+        toast(err.message, true);
+      }
+      render();
+    });
+  });
+
+  $("#cancelStock")?.addEventListener("click", () => {
+    state.stockProductId = "";
+    render();
+  });
+
+  $("#stockForm")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    try {
+      const data = await api(`/api/admin/inventory/${encodeURIComponent(state.stockProductId)}`, {
+        method: "POST",
+        body: JSON.stringify({ codes: fd.get("codes") }),
+      });
+      await loadInventory();
+      state.stockProductId = "";
+      toast(`Added ${data.added} codes (${data.available} available)`);
+    } catch (err) {
+      toast(err.message, true);
+    }
   });
 
   $("#logoutBtn")?.addEventListener("click", async () => {
@@ -440,6 +562,16 @@ async function loadAll() {
   ]);
   state.deals = dealsRes.deals || [];
   state.settings = settingsRes.settings || {};
+}
+
+async function loadInventory() {
+  const data = await api("/api/admin/inventory");
+  state.inventorySummary = data.summary || [];
+}
+
+async function loadOrders() {
+  const data = await api("/api/admin/orders");
+  state.orders = data.orders || [];
 }
 
 async function boot() {

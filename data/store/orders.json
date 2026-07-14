@@ -1,0 +1,164 @@
+[
+  {
+    "id": "PHAD162E068B",
+    "email": "elaizamaevmateo@gmail.com",
+    "name": "Emerut ni Kent",
+    "currency": "PHP",
+    "items": [
+      {
+        "id": "supergrok-7d",
+        "name": "SuperGrok 7 Days",
+        "monogram": "SG",
+        "qty": 1,
+        "price": 99.0,
+        "priceBase": "PHP",
+        "duration": "7 days access",
+        "codes": [
+          "hxfthesrgerg"
+        ]
+      }
+    ],
+    "status": "paid",
+    "paymentMode": "instant_demo",
+    "method": "paymaya",
+    "stripeSessionId": null,
+    "stripePaymentIntent": null,
+    "providerRef": "demo-2044b9bd60a0428386f1a0ea2375c9b5",
+    "createdAt": "2026-07-14T07:40:19.438872Z",
+    "delivery": "instant",
+    "message": "Payment confirmed. Codes delivered instantly."
+  },
+  {
+    "id": "PH192F2021BD",
+    "email": "kentmirandamain@gmail.com",
+    "name": "ftjftj",
+    "currency": "PHP",
+    "items": [
+      {
+        "id": "supergrok-7d",
+        "name": "SuperGrok 7 Days",
+        "monogram": "SG",
+        "qty": 1,
+        "price": 99.0,
+        "priceBase": "PHP",
+        "duration": "7 days access",
+        "codes": [
+          "veswfvhrthe"
+        ]
+      }
+    ],
+    "status": "paid",
+    "paymentMode": "instant_demo",
+    "method": "gcash",
+    "stripeSessionId": null,
+    "stripePaymentIntent": null,
+    "providerRef": "demo-4ca8b69f05144fe5982188ebeef744a7",
+    "createdAt": "2026-07-14T07:19:09.849139Z",
+    "delivery": "instant",
+    "message": "Payment confirmed. Codes delivered instantly."
+  },
+  {
+    "id": "PHBA94A2A8F7",
+    "email": "kentmirandamain@gmail.com",
+    "name": "jhrtjtrj",
+    "currency": "PHP",
+    "items": [
+      {
+        "id": "supergrok-7d",
+        "name": "SuperGrok 7 Days",
+        "monogram": "SG",
+        "qty": 1,
+        "price": 99.0,
+        "priceBase": "PHP",
+        "duration": "7 days access",
+        "codes": [
+          "SG7D-DEMO-CCCC-0003"
+        ]
+      }
+    ],
+    "status": "paid",
+    "paymentMode": "instant_demo",
+    "stripeSessionId": null,
+    "stripePaymentIntent": null,
+    "createdAt": "2026-07-14T07:07:06.527946Z",
+    "delivery": "instant",
+    "message": "Payment confirmed. Codes delivered instantly."
+  },
+  {
+    "id": "PH146B996B34",
+    "email": "kentmirandamain@gmail.com",
+    "name": "jkmfyj",
+    "currency": "PHP",
+    "items": [
+      {
+        "id": "supergrok-1m",
+        "name": "SuperGrok 1 Month",
+        "monogram": "S1",
+        "qty": 1,
+        "price": 399.0,
+        "priceBase": "PHP",
+        "duration": "1 month access",
+        "codes": [
+          "SG1M-DEMO-XXXX-1001"
+        ]
+      }
+    ],
+    "status": "paid",
+    "paymentMode": "instant_demo",
+    "stripeSessionId": null,
+    "stripePaymentIntent": null,
+    "createdAt": "2026-07-14T06:54:12.990682Z",
+    "delivery": "instant",
+    "message": "Payment confirmed. Codes delivered instantly."
+  },
+  {
+    "id": "PH14C144CF5C",
+    "email": "kentmirandamain@gmail.com",
+    "name": "ntdnyjfryjrxf",
+    "currency": "PHP",
+    "items": [
+      {
+        "id": "supergrok-7d",
+        "name": "SuperGrok 7 Days",
+        "monogram": "SG",
+        "qty": 1,
+        "price": 99.0,
+        "priceBase": "PHP",
+        "duration": "7 days access",
+        "codes": [
+          "SG7D-DEMO-BBBB-0002"
+        ]
+      }
+    ],
+    "status": "paid",
+    "paymentMode": "instant_demo",
+    "createdAt": "2026-07-14T06:33:17.661014Z",
+    "delivery": "instant",
+    "message": "Payment recorded. Codes delivered instantly on this page."
+  },
+  {
+    "id": "PH153498C045",
+    "email": "test@example.com",
+    "name": "Test",
+    "currency": "PHP",
+    "items": [
+      {
+        "id": "supergrok-7d",
+        "name": "SuperGrok 7 Days",
+        "monogram": "SG",
+        "qty": 1,
+        "price": 99.0,
+        "priceBase": "PHP",
+        "duration": "7 days access",
+        "codes": [
+          "SG7D-DEMO-AAAA-0001"
+        ]
+      }
+    ],
+    "status": "paid",
+    "paymentMode": "instant_demo",
+    "createdAt": "2026-07-14T06:21:40.238594Z",
+    "delivery": "instant",
+    "message": "Payment recorded. Codes delivered instantly on this page."
+  }
+]
