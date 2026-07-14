@@ -1787,16 +1787,16 @@ def public_static(path: str):
 
 def main():
     ensure_store()
-    import os
-
     port = int(os.environ.get("PORT", "8790"))
-    print("=" * 50)
-    print("  SubSaverPH LIVE")
-    print(f"  Store : http://127.0.0.1:{port}/")
-    print(f"  Admin : http://127.0.0.1:{port}/admin")
-    print("  Login : admin / subsaverph")
-    print("=" * 50)
-    app.run(host="0.0.0.0", port=port, debug=False)
+    print("=" * 50, flush=True)
+    print("  SubSaverPH LIVE", flush=True)
+    print(f"  PORT  : {port}", flush=True)
+    print(f"  Store : http://0.0.0.0:{port}/", flush=True)
+    print("  Admin : /admin", flush=True)
+    print("  Login : admin / subsaverph", flush=True)
+    print("=" * 50, flush=True)
+    # threaded=True helps free-tier single process handle a few concurrent users
+    app.run(host="0.0.0.0", port=port, debug=False, threaded=True)
 
 
 # Ensure data store exists when started via gunicorn
