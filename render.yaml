@@ -4,8 +4,8 @@ services:
     runtime: python
     plan: free
     region: oregon
-    buildCommand: python3 -m pip install --target ./_deps -r requirements.txt || pip install --target ./_deps -r requirements.txt
-    startCommand: PYTHONPATH=./_deps:python3 run.py
+    buildCommand: python3 -m pip install --target ./_deps -r requirements.txt
+    startCommand: python3 run.py
     envVars:
       - key: PYTHON_VERSION
         value: "3.11.11"
