@@ -1786,8 +1786,16 @@ def public_static(path: str):
 
 
 def main():
-    ensure_store()
-    port = int(os.environ.get("PORT", "8790"))
+    import traceback
+    import sys
+
+    try:
+        ensure_store()
+        port = int(os.environ.get("PORT") or "8790")
+    except Exception:
+        traceback.print_exc()
+        sys.exit(1)
+
     print("=" * 50, flush=True)
     print("  SubSaverPH LIVE", flush=True)
     print(f"  PORT  : {port}", flush=True)
@@ -1795,12 +1803,19 @@ def main():
     print("  Admin : /admin", flush=True)
     print("  Login : admin / subsaverph", flush=True)
     print("=" * 50, flush=True)
-    # threaded=True helps free-tier single process handle a few concurrent users
-    app.run(host="0.0.0.0", port=port, debug=False, threaded=True)
+    try:
+        app.run(host="0.0.0.0", port=port, debug=False, threaded=True)
+    except Exception:
+        traceback.print_exc()
+        sys.exit(1)
 
 
-# Ensure data store exists when started via gunicorn
-ensure_store()
+# Ensure data store exists when imported by waitress/gunicorn
+try:
+    ensure_store()
+except Exception:
+    pass
 
 if __name__ == "__main__":
     main()
+
