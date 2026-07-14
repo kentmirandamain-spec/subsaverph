@@ -2,6 +2,7 @@ __pycache__/
 *.py[cod]
 .venv/
 venv/
+_deps/
 .env
 .env.txt
 .env.local
@@ -12,3 +13,4 @@ tools/
 .DS_Store
 PERMANENT-DOMAIN.txt
 PUBLIC-URL.txt
+

@@ -4,11 +4,13 @@ services:
     runtime: python
     plan: free
     region: oregon
-    buildCommand: python3 -m pip install --upgrade pip && python3 -m pip install -r requirements.txt && python3 -c "import flask,waitress; print('build-ok')"
-    startCommand: python3 run.py
+    buildCommand: python3 -m pip install --target ./_deps -r requirements.txt || pip install --target ./_deps -r requirements.txt
+    startCommand: PYTHONPATH=./_deps:python3 run.py
     envVars:
       - key: PYTHON_VERSION
         value: "3.11.11"
+      - key: PYTHONPATH
+        value: "./_deps"
       - key: SECRET_KEY
         generateValue: true
       - key: FORCE_HTTPS
