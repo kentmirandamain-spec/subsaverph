@@ -1,0 +1,15 @@
+# Cloudflare Named Tunnel config
+# Copy to: C:\Users\ADMIN\.cloudflared\config.yml
+# Replace TUNNEL_ID and YOUR_DOMAIN
+
+tunnel: TUNNEL_ID
+credentials-file: C:\Users\ADMIN\.cloudflared\TUNNEL_ID.json
+
+ingress:
+  # Public storefront + admin
+  - hostname: YOUR_DOMAIN
+    service: http://127.0.0.1:8790
+  - hostname: www.YOUR_DOMAIN
+    service: http://127.0.0.1:8790
+  # Required catch-all
+  - service: http_status:404

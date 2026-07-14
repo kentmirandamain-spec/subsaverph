@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+.idea/
+.vscode/
+tools/
+*.log
+.DS_Store
+PERMANENT-DOMAIN.txt
+PUBLIC-URL.txt
