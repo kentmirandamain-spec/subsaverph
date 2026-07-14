@@ -4,8 +4,7 @@ services:
     runtime: python
     plan: free
     region: oregon
-    rootDir: .
-    buildCommand: python3 -m pip install --upgrade pip && python3 -m pip install -r requirements.txt
+    buildCommand: python3 -m pip install --upgrade pip && python3 -m pip install -r requirements.txt && python3 -c "import flask,waitress; print('build-ok')"
     startCommand: python3 run.py
     envVars:
       - key: PYTHON_VERSION
