@@ -1,0 +1,7 @@
+# SubSaverPH — allow search engines
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /api/
+
+Sitemap: https://subsaverph.onrender.com/sitemap.xml

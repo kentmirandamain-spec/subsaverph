@@ -1878,6 +1878,16 @@ def admin_static(path: str):
     return send_from_directory(ROOT / "admin", path)
 
 
+@app.get("/robots.txt")
+def robots_txt():
+    return send_from_directory(ROOT, "robots.txt", mimetype="text/plain")
+
+
+@app.get("/sitemap.xml")
+def sitemap_xml():
+    return send_from_directory(ROOT, "sitemap.xml", mimetype="application/xml")
+
+
 @app.get("/<path:path>")
 def public_static(path: str):
     # Don't shadow API
