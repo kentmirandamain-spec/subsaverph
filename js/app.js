@@ -44,6 +44,7 @@ const state = {
   paymentMode: "instant_demo",
   stripeEnabled: false,
   stripePublishableKey: "",
+  paymongoEnabled: false,
   paymentMethods: [],
 };
 
@@ -590,7 +591,10 @@ function viewCheckout() {
   const cancelled =
     typeof location !== "undefined" && location.hash.includes("cancelled=1");
   const stripeOn = !!state.stripeEnabled;
+  const paymongoOn = !!state.paymongoEnabled;
   const isTestKey = String(state.stripePublishableKey || "").startsWith("pk_test_");
+  const hasGcash = methods.some((m) => m.id === "gcash");
+  const hasMaya = methods.some((m) => m.id === "paymaya");
   const methodRadios = methods
     .map(
       (m, i) => `
@@ -604,30 +608,48 @@ function viewCheckout() {
     )
     .join("");
 
-  const stripeHelp = stripeOn
-    ? `
-        <div class="pay-help">
-          <strong>${isTestKey ? "Stripe test mode" : "Stripe payment"}</strong>
-          <p>Card numbers are <em>not</em> typed on this site. After you click <strong>Continue to pay</strong>, you are sent to Stripe’s secure page where you enter the card.</p>
+  const payHelp = `
+        <div class="pay-help" id="payHelpBox">
+          <strong>How payment works</strong>
+          <p id="payHelpText">
+            ${
+              stripeOn || paymongoOn
+                ? "Pick a method below. You’ll be redirected to a secure payment page (Stripe or PayMongo). Codes unlock after payment."
+                : "Demo mode — no real money. Orders complete instantly for testing."
+            }
+          </p>
           ${
-            isTestKey
-              ? `<div class="test-card-box">
-            <p class="test-card-label">Use this Stripe test card on the next page:</p>
+            hasGcash || hasMaya
+              ? `<p class="muted" style="margin:8px 0 0;font-size:0.8rem;text-transform:none;letter-spacing:0;font-weight:400">
+            <strong style="color:#fff">GCash / Maya</strong> charge in <strong style="color:#fff">PHP</strong> via PayMongo.
+            ${paymongoOn ? "Live/test keys are configured." : "Currently demo until PayMongo keys are set on the server."}
+          </p>`
+              : ""
+          }
+          ${
+            stripeOn && isTestKey
+              ? `<div class="test-card-box" id="stripeTestBox" hidden>
+            <p class="test-card-label">Stripe test card (Card method only)</p>
             <ul>
               <li><strong>Card number:</strong> <code>4242 4242 4242 4242</code></li>
               <li><strong>Expiry:</strong> any future date (e.g. 12/34)</li>
               <li><strong>CVC:</strong> any 3 digits (e.g. 123)</li>
               <li><strong>Name / ZIP:</strong> anything</li>
             </ul>
-            <p class="muted" style="margin:8px 0 0;font-size:0.78rem;text-transform:none;letter-spacing:0;font-weight:400">No real money is charged in test mode.</p>
           </div>`
-              : `<p class="muted" style="margin:8px 0 0;font-size:0.8rem;text-transform:none;letter-spacing:0;font-weight:400">Live mode — use a real card. Charges are real.</p>`
+              : ""
           }
-        </div>`
-    : `
-        <p class="muted" style="margin:12px 0;font-size:0.8rem;text-transform:none;letter-spacing:0;font-weight:400">
-          Demo checkout — no Stripe card form. Orders complete instantly without a real payment page.
-        </p>`;
+        </div>`;
+
+  const defaultMethod = methods[0]?.id || "card";
+  const defaultBtn =
+    defaultMethod === "gcash"
+      ? "Continue to GCash"
+      : defaultMethod === "paymaya"
+        ? "Continue to Maya"
+        : defaultMethod === "card" && stripeOn
+          ? "Continue to Stripe"
+          : "Continue to pay";
 
   return `
     <div class="page">
@@ -635,8 +657,8 @@ function viewCheckout() {
         <p class="eyebrow">Payment</p>
         <h1 class="page-title">Checkout</h1>
         <p class="muted" style="margin-bottom:16px">
-          Choose a payment method. After payment succeeds, codes are delivered
-          <strong style="color:#fff">instantly</strong> on the next screen.
+          Pay with <strong style="color:#fff">Card</strong>, <strong style="color:#fff">GCash</strong>, or <strong style="color:#fff">Maya</strong>.
+          After payment, codes deliver <strong style="color:#fff">instantly</strong>.
         </p>
         ${cancelled ? `<p class="err" style="color:#ff8a8a;margin-bottom:12px">Payment cancelled. You can try again.</p>` : ""}
         <div class="checkout">
@@ -646,15 +668,18 @@ function viewCheckout() {
             <label>Full name<input required name="name" placeholder="Juan Dela Cruz" /></label>
             <h3>Payment currency</h3>
             <div id="pageFxMount" style="margin-bottom:16px"></div>
+            <p class="muted" style="margin:-8px 0 16px;font-size:0.78rem;text-transform:none;letter-spacing:0;font-weight:400">
+              GCash &amp; Maya always bill in PHP (converted automatically).
+            </p>
             <h3>Payment method</h3>
             <div class="pay-methods" role="radiogroup" aria-label="Payment method">
               ${methodRadios}
             </div>
-            ${stripeHelp}
+            ${payHelp}
             <label class="check"><input type="checkbox" name="agree" required /> I agree to purchase digital codes; delivery is instant after payment.</label>
             <p class="err" id="checkoutErr" style="color:#ff8a8a;font-size:0.85rem;min-height:1.2em"></p>
-            <button class="btn solid full" type="submit" id="payBtn">
-              ${stripeOn ? "Continue to Stripe" : "Continue to pay"} · ${formatMoney(t.total)}
+            <button class="btn solid full" type="submit" id="payBtn" data-total="${escapeHtml(formatMoney(t.total))}">
+              ${defaultBtn} · ${formatMoney(t.total)}
             </button>
           </form>
           <aside class="summary">
@@ -1073,22 +1098,52 @@ function bind() {
 
   const form = $("#payForm");
   if (form) {
+    const btn = $("#payBtn");
+    const totalLabel = btn?.dataset?.total || "";
+    const updatePayBtn = () => {
+      const method = form.querySelector('input[name="method"]:checked')?.value || "card";
+      const testBox = $("#stripeTestBox");
+      if (testBox) testBox.hidden = method !== "card";
+      if (!btn) return;
+      const label =
+        method === "gcash"
+          ? "Continue to GCash"
+          : method === "paymaya"
+            ? "Continue to Maya"
+            : method === "card" && state.stripeEnabled
+              ? "Continue to Stripe"
+              : method === "paypal"
+                ? "Continue to PayPal"
+                : method === "crypto"
+                  ? "Continue to Crypto"
+                  : "Continue to pay";
+      btn.textContent = totalLabel ? `${label} · ${totalLabel}` : label;
+    };
+    form.querySelectorAll('input[name="method"]').forEach((el) => {
+      el.addEventListener("change", updatePayBtn);
+    });
+    updatePayBtn();
+
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
       if (!form.reportValidity()) return;
       const fd = new FormData(form);
       const errEl = $("#checkoutErr");
-      const btn = $("#payBtn");
+      const payBtn = $("#payBtn");
       if (errEl) errEl.textContent = "";
-      if (btn) {
-        btn.disabled = true;
-        btn.textContent = "Processing…";
+      if (payBtn) {
+        payBtn.disabled = true;
+        payBtn.textContent = "Processing…";
       }
+      const method = fd.get("method") || "card";
+      // E-wallets settle in PHP via PayMongo
+      const currency =
+        method === "gcash" || method === "paymaya" ? "PHP" : getCurrencyCode();
       const payload = {
         email: fd.get("email"),
         name: fd.get("name"),
-        currency: getCurrencyCode(),
-        method: fd.get("method") || "card",
+        currency,
+        method,
         items: getCart().map((i) => ({ id: i.id, qty: i.qty })),
       };
       try {
@@ -1132,9 +1187,9 @@ function bind() {
       } catch (err) {
         if (errEl) errEl.textContent = err.message || "Checkout failed";
         toast(err.message || "Checkout failed");
-        if (btn) {
-          btn.disabled = false;
-          btn.textContent = "Continue to pay";
+        if (payBtn) {
+          payBtn.disabled = false;
+          updatePayBtn();
         }
       }
     });
@@ -1203,6 +1258,7 @@ async function loadLiveCatalog() {
     state.paymentMode = data.paymentMode || "instant_demo";
     state.stripeEnabled = !!data.stripeEnabled;
     state.stripePublishableKey = data.stripePublishableKey || "";
+    state.paymongoEnabled = !!data.paymongoEnabled;
     state.paymentMethods = Array.isArray(data.paymentMethods)
       ? data.paymentMethods
       : [];

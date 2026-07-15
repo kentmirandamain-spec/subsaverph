@@ -217,6 +217,8 @@ def health():
             "ok": True,
             "service": "SubSaverPH",
             "emailConfigured": mail_ok,
+            "stripeConfigured": stripe_configured(),
+            "paymongoConfigured": paymongo_configured(),
         }
     )
 
@@ -249,8 +251,9 @@ def api_catalog():
             "brands": ["All", *brands],
             "categories": ["All", *categories],
             "paymentMode": payment_mode(),
-            "stripeEnabled": payment_mode() == "stripe" and stripe_configured(),
+            "stripeEnabled": stripe_configured(),
             "stripePublishableKey": os.environ.get("STRIPE_PUBLISHABLE_KEY") or "",
+            "paymongoEnabled": paymongo_configured(),
             "paymentMethods": available_payment_methods(),
         }
     )
@@ -491,72 +494,89 @@ def cart_total_usd(normalized: list) -> float:
     return round(total, 2)
 
 
-def available_payment_methods() -> list:
-    """Return enabled payment methods for the checkout UI."""
-    methods = []
-    # Always offer demo if no real providers OR if PAYMENT_MODE=instant_demo only
-    demo_only = payment_mode() == "instant_demo" and not any(
-        [
-            os.environ.get("STRIPE_SECRET_KEY"),
-            os.environ.get("PAYMONGO_SECRET_KEY"),
-            os.environ.get("PAYPAL_CLIENT_ID"),
-            os.environ.get("NOWPAYMENTS_API_KEY"),
-        ]
-    )
+def paymongo_configured() -> bool:
+    return bool((os.environ.get("PAYMONGO_SECRET_KEY") or "").strip())
 
-    if os.environ.get("STRIPE_SECRET_KEY") or demo_only:
+
+def available_payment_methods() -> list:
+    """Return enabled payment methods for the checkout UI.
+
+    Card  → Stripe (if configured) or PayMongo card / demo
+    GCash / Maya (PayMaya) → PayMongo when PAYMONGO_SECRET_KEY is set
+    """
+    methods = []
+    has_stripe = bool((os.environ.get("STRIPE_SECRET_KEY") or "").strip())
+    has_paymongo = paymongo_configured()
+    has_paypal = bool((os.environ.get("PAYPAL_CLIENT_ID") or "").strip())
+    has_crypto = bool((os.environ.get("NOWPAYMENTS_API_KEY") or "").strip())
+    any_live = has_stripe or has_paymongo or has_paypal or has_crypto
+    # Demo only when no real providers are configured
+    demo_only = not any_live
+
+    # Card (prefer Stripe)
+    if has_stripe:
         methods.append(
             {
                 "id": "card",
                 "label": "Card",
-                "provider": "stripe" if os.environ.get("STRIPE_SECRET_KEY") else "demo",
-                "desc": "Visa / Mastercard via Stripe" if os.environ.get("STRIPE_SECRET_KEY") else "Card (demo)",
+                "provider": "stripe",
+                "desc": "Visa / Mastercard via Stripe",
             }
         )
-    if os.environ.get("PAYMONGO_SECRET_KEY") or demo_only:
+    elif has_paymongo:
+        methods.append(
+            {
+                "id": "card",
+                "label": "Card",
+                "provider": "paymongo",
+                "desc": "Visa / Mastercard via PayMongo",
+            }
+        )
+    elif demo_only:
+        methods.append(
+            {
+                "id": "card",
+                "label": "Card",
+                "provider": "demo",
+                "desc": "Card (demo — no real charge)",
+            }
+        )
+
+    # GCash + Maya (PayMaya) via PayMongo — Philippines e-wallets
+    if has_paymongo or demo_only:
         methods.append(
             {
                 "id": "gcash",
                 "label": "GCash",
-                "provider": "paymongo" if os.environ.get("PAYMONGO_SECRET_KEY") else "demo",
-                "desc": "Pay with GCash",
+                "provider": "paymongo" if has_paymongo else "demo",
+                "desc": "Pay with GCash (PHP)" if has_paymongo else "GCash (demo)",
             }
         )
         methods.append(
             {
                 "id": "paymaya",
                 "label": "Maya",
-                "provider": "paymongo" if os.environ.get("PAYMONGO_SECRET_KEY") else "demo",
-                "desc": "Pay with Maya (PayMaya)",
+                "provider": "paymongo" if has_paymongo else "demo",
+                "desc": "Pay with Maya / PayMaya (PHP)" if has_paymongo else "Maya (demo)",
             }
         )
-        if not os.environ.get("STRIPE_SECRET_KEY"):
-            # PayMongo can also do cards when Stripe is off
-            methods.insert(
-                0,
-                {
-                    "id": "card",
-                    "label": "Card",
-                    "provider": "paymongo" if os.environ.get("PAYMONGO_SECRET_KEY") else "demo",
-                    "desc": "Visa / Mastercard",
-                },
-            )
-    if os.environ.get("PAYPAL_CLIENT_ID") or demo_only:
+
+    if has_paypal or demo_only:
         methods.append(
             {
                 "id": "paypal",
                 "label": "PayPal",
-                "provider": "paypal" if os.environ.get("PAYPAL_CLIENT_ID") else "demo",
-                "desc": "PayPal balance or linked card",
+                "provider": "paypal" if has_paypal else "demo",
+                "desc": "PayPal balance or linked card" if has_paypal else "PayPal (demo)",
             }
         )
-    if os.environ.get("NOWPAYMENTS_API_KEY") or demo_only:
+    if has_crypto or demo_only:
         methods.append(
             {
                 "id": "crypto",
                 "label": "Crypto",
-                "provider": "nowpayments" if os.environ.get("NOWPAYMENTS_API_KEY") else "demo",
-                "desc": "USDT, BTC, ETH & more",
+                "provider": "nowpayments" if has_crypto else "demo",
+                "desc": "USDT, BTC, ETH & more" if has_crypto else "Crypto (demo)",
             }
         )
 
@@ -735,39 +755,54 @@ def _stripe_session(email, name, currency, items, normalized, base):
 
 
 def _paymongo_checkout(email, name, method, normalized, cart_meta, base):
-    secret = os.environ.get("PAYMONGO_SECRET_KEY")
+    """Start PayMongo Checkout for GCash, Maya (PayMaya), or card."""
+    secret = (os.environ.get("PAYMONGO_SECRET_KEY") or "").strip()
     if not secret:
-        return jsonify({"error": "PAYMONGO_SECRET_KEY not set"}), 503
+        return jsonify(
+            {
+                "error": "GCash / Maya not configured. Set PAYMONGO_SECRET_KEY on the server (PayMongo).",
+            }
+        ), 503
 
     import base64
     import urllib.request
-
-    # PayMongo amounts are in centavos (PHP)
-    amount_centavos = int(round(cart_total_php(normalized) * 100))
-    if amount_centavos < 10000:  # PayMongo often min 100.00 PHP for some methods
-        amount_centavos = max(amount_centavos, 2000)
 
     method_map = {
         "card": "card",
         "gcash": "gcash",
         "paymaya": "paymaya",
+        "maya": "paymaya",
     }
     pm_type = method_map.get(method, "gcash")
 
+    # PayMongo Checkout line amounts are in centavos (PHP only)
     line_items = []
+    total_centavos = 0
     for row in normalized:
         deal = row["deal"]
-        qty = row["qty"]
-        unit = int(round(cart_total_php([row]) / qty * 100)) if qty else 0
-        unit = max(unit, 100)
+        qty = max(1, int(row["qty"]))
+        unit = int(round(cart_total_php([row]) / qty * 100))
+        unit = max(unit, 100)  # min ₱1.00 per unit
+        total_centavos += unit * qty
         line_items.append(
             {
                 "currency": "PHP",
                 "amount": unit,
                 "name": (deal.get("name") or "Plan")[:100],
                 "quantity": qty,
+                "description": (deal.get("duration") or deal.get("tagline") or "Digital code")[
+                    :255
+                ],
             }
         )
+
+    # GCash/Maya often require a sensible minimum (₱20+)
+    if total_centavos < 2000:
+        return jsonify(
+            {
+                "error": "Minimum amount for GCash/Maya is ₱20.00. Add more items or use Card.",
+            }
+        ), 400
 
     ref = f"pm_{uuid.uuid4().hex[:16]}"
     body = {
@@ -776,7 +811,7 @@ def _paymongo_checkout(email, name, method, normalized, cart_meta, base):
                 "send_email_receipt": True,
                 "show_description": True,
                 "show_line_items": True,
-                "description": f"SubSaverPH order for {email}"[:255],
+                "description": f"SubSaverPH · {pm_type.upper()} · {email}"[:255],
                 "line_items": line_items,
                 "payment_method_types": [pm_type],
                 "success_url": f"{base}/#/success?provider=paymongo&ref={ref}",
@@ -785,7 +820,7 @@ def _paymongo_checkout(email, name, method, normalized, cart_meta, base):
                     "ref": ref,
                     "email": email,
                     "name": name,
-                    "cart": json.dumps(cart_meta),
+                    "cart": json.dumps(cart_meta)[:500],
                     "method": method,
                 },
             }
