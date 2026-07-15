@@ -281,6 +281,10 @@ mark {
   margin: 20px 0 24px;
   font-size: 0.95rem;
   color: var(--mute);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
 }
 
 .search-meta strong {
@@ -291,12 +295,28 @@ mark {
   margin-top: 12px;
 }
 
+/* Single product match — don't stretch a lone card across 3 columns */
+.grid.search-grid.grid-single,
+.grid.grid-single {
+  grid-template-columns: minmax(260px, 400px);
+  max-width: 420px;
+}
+
+.page-search-only .page-title {
+  margin-bottom: 6px;
+}
+
 .logo {
   font-family: var(--display);
   font-weight: 700;
   font-size: 0.95rem;
   letter-spacing: 0.16em;
   text-transform: uppercase;
+  cursor: pointer;
+}
+
+a.logo:hover {
+  opacity: 0.85;
 }
 
 .logo b {
@@ -1476,6 +1496,71 @@ mark {
   font-size: 0.85rem !important;
   line-height: 1.4;
   margin: 16px 0 20px !important;
+}
+
+/* Stripe test card help */
+.pay-help {
+  margin: 16px 0 8px;
+  padding: 16px;
+  border: 1px solid var(--line-strong);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.pay-help > strong {
+  display: block;
+  font-family: var(--display);
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.pay-help > p {
+  margin: 0 0 12px;
+  color: var(--mute);
+  font-size: 0.88rem;
+  line-height: 1.5;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 400;
+}
+
+.pay-help em {
+  font-style: normal;
+  color: #fff;
+  font-weight: 600;
+}
+
+.test-card-box {
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.05);
+  padding: 14px 16px;
+}
+
+.test-card-label {
+  margin: 0 0 10px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #fff;
+}
+
+.test-card-box ul {
+  margin: 0;
+  padding: 0 0 0 18px;
+  color: var(--mute);
+  font-size: 0.9rem;
+  line-height: 1.65;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.test-card-box code {
+  font-family: ui-monospace, Consolas, monospace;
+  color: #fff;
+  letter-spacing: 0.04em;
+  font-size: 0.95rem;
 }
 
 /* Payment method picker */

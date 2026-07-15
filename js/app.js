@@ -56,14 +56,58 @@ function parseRoute() {
   state.dealId = id || null;
 
   const params = new URLSearchParams(queryPart || "");
-  if (params.has("q")) {
+  if (state.view === "home") {
+    // Home always shows the full homepage (no leftover search)
+    state.query = "";
+    state.dealId = null;
+  } else if (params.has("q")) {
     state.query = params.get("q") || "";
   } else if (view === "search" && id) {
     state.query = decodeURIComponent(id);
+  } else if (view !== "search" && view !== "deals") {
+    state.query = "";
+  } else if (view === "search" && !params.has("q") && !id) {
+    state.query = "";
   }
 
   render();
   syncGlobalSearchInput();
+}
+
+/** Navigate to home and clear search — always show full homepage */
+function goHome() {
+  state.query = "";
+  state.view = "home";
+  state.dealId = null;
+  state.category = "All";
+  state.brand = "All";
+
+  // Close mobile menu if open
+  $("#navLinks")?.classList.remove("open");
+
+  // Clear search box in header
+  const g = $("#globalSearchInput");
+  if (g) g.value = "";
+  const suggest = $("#searchSuggest");
+  if (suggest) {
+    suggest.hidden = true;
+    suggest.innerHTML = "";
+  }
+
+  const alreadyHome =
+    location.hash === "#/home" ||
+    location.hash === "#/" ||
+    location.hash === "" ||
+    location.hash === "#";
+
+  if (alreadyHome) {
+    // Same hash won't fire hashchange — force home view
+    render();
+    syncGlobalSearchInput();
+  } else {
+    location.hash = "#/home";
+  }
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 function goSearch(q) {
@@ -213,7 +257,7 @@ function quickTagsHTML() {
     </div>`;
 }
 
-function searchBarHTML(placeholder = "Search SuperGrok, Netflix, Canva, AI…") {
+function searchBarHTML(placeholder = "Search SuperGrok, Netflix, Canva…") {
   return `
     <div class="product-search large">
       <span class="search-icon" aria-hidden="true">⌕</span>
@@ -238,25 +282,24 @@ function viewSearch() {
     <div class="page">
       <div class="page-inner">
         <p class="eyebrow">Search</p>
-        <h1 class="page-title">Find a plan</h1>
-        <p class="muted">Search by name, brand, category, features, or monogram (SG, NF, YT…)</p>
-        ${searchBarHTML("Type to search all products…")}
+        <h1 class="page-title">${q ? "Results" : "Find a plan"}</h1>
+        <p class="muted">${q ? "Only products that match your search are shown." : "Search by product name, brand, or monogram (SG, NF, YT…)."}</p>
+        ${searchBarHTML("Type a product name…")}
         ${
           q
             ? `<div class="search-meta">
-                <strong>${results.length}</strong> result${results.length === 1 ? "" : "s"} for
+                <strong>${results.length}</strong> product${results.length === 1 ? "" : "s"} matching
                 “<span>${escapeHtml(q)}</span>”
                 ${results.length ? "" : " — try SuperGrok, Netflix, or Canva"}
               </div>
               ${
                 results.length
-                  ? `<div class="grid search-grid">${results.map((d) => card(d, q)).join("")}</div>`
+                  ? `<div class="grid search-grid${results.length === 1 ? " grid-single" : ""}">${results.map((d) => card(d, q)).join("")}</div>`
                   : `<div class="empty">No products matched “${escapeHtml(q)}”.<br/><button type="button" class="btn solid sm" data-q="SuperGrok" style="margin-top:16px">Try SuperGrok</button></div>`
               }`
             : `<div class="search-empty-hero">
                 <p class="muted">Popular searches</p>
                 ${quickTagsHTML()}
-                <div class="grid" style="margin-top:32px">${[...window.DEALS].sort((a,b)=>off(b)-off(a)).slice(0,6).map((d)=>card(d)).join("")}</div>
               </div>`
         }
       </div>
@@ -273,9 +316,9 @@ function heroTitleHtml() {
 }
 
 function viewHome() {
-  const top = filtered().length && state.query
-    ? filtered()
-    : [...window.DEALS].sort((a, b) => off(b) - off(a)).slice(0, 6);
+  const q = state.query.trim();
+  const matches = q ? searchDeals(window.DEALS || [], q, { limit: 100 }) : [];
+  const top = [...window.DEALS].sort((a, b) => off(b) - off(a)).slice(0, 6);
   const s = siteSettings();
   const brandSet = [...new Set(window.DEALS.map((d) => d.brand).filter(Boolean))];
   const monoMap = { xAI: "SG", Canva: "CV", CapCut: "CC", Netflix: "NF", YouTube: "YT" };
@@ -285,6 +328,28 @@ function viewHome() {
     label: b === "xAI" ? "SuperGrok" : b,
   }));
 
+  /* When searching: only matching products — no platforms / catalog / mission clutter */
+  if (q) {
+    return `
+    <div class="page page-search-only">
+      <div class="page-inner">
+        <p class="eyebrow">Search</p>
+        <h1 class="page-title">Results</h1>
+        <p class="muted">Only products that match “<strong>${escapeHtml(q)}</strong>” are shown.</p>
+        ${searchBarHTML("Search a product name…")}
+        <div class="search-meta">
+          <strong>${matches.length}</strong> product${matches.length === 1 ? "" : "s"} found
+          <button type="button" class="link" id="clearSearchLink" style="margin-left:16px">Clear search</button>
+        </div>
+        ${
+          matches.length
+            ? `<div class="grid search-grid${matches.length === 1 ? " grid-single" : ""}">${matches.map((d) => card(d, q)).join("")}</div>`
+            : `<div class="empty">No products matched “${escapeHtml(q)}”.<br/>Try SuperGrok, Netflix, or Canva.</div>`
+        }
+      </div>
+    </div>`;
+  }
+
   return `
     <section class="hero">
       <div class="hero-glow"></div>
@@ -293,7 +358,7 @@ function viewHome() {
         <h1 class="display">${heroTitleHtml()}</h1>
         <p class="lead">${escapeHtml(s.heroLead || "Prepaid discounts. Pay in any currency.")}</p>
 
-        ${searchBarHTML("Search products — SuperGrok, Netflix, Canva…")}
+        ${searchBarHTML("Search SuperGrok, Netflix, Canva…")}
 
         <div class="cta" style="margin-top:28px">
           <a class="btn solid" href="#/search">Open search</a>
@@ -315,27 +380,6 @@ function viewHome() {
       <div>Demo storefront</div>
     </div>
 
-    ${
-      state.query
-        ? `<section class="section">
-            <div class="section-inner">
-              <div class="section-head">
-                <div>
-                  <p class="eyebrow">Search results</p>
-                  <h2>${filtered().length} match${filtered().length === 1 ? "" : "es"} for “${escapeHtml(state.query)}”</h2>
-                </div>
-                <button type="button" class="link" id="clearSearchLink">Clear</button>
-              </div>
-              ${
-                filtered().length
-                  ? `<div class="grid">${filtered().map((d) => card(d, state.query)).join("")}</div>`
-                  : `<div class="empty">No products found. Try “SuperGrok”, “Netflix”, or “Canva”.</div>`
-              }
-            </div>
-          </section>`
-        : ""
-    }
-
     <section class="section">
       <div class="section-inner">
         <div class="section-head">
@@ -355,18 +399,14 @@ function viewHome() {
             )
             .join("")}
         </div>
-        ${
-          state.query
-            ? ""
-            : `<div class="section-head">
+        <div class="section-head">
           <div>
             <p class="eyebrow">Catalog</p>
             <h2>Highest savings</h2>
           </div>
           <a href="#/deals" class="link">View all</a>
         </div>
-        <div class="grid">${top.map(card).join("")}</div>`
-        }
+        <div class="grid">${top.map(card).join("")}</div>
       </div>
     </section>
 
@@ -549,6 +589,8 @@ function viewCheckout() {
   const methods = paymentMethodsList();
   const cancelled =
     typeof location !== "undefined" && location.hash.includes("cancelled=1");
+  const stripeOn = !!state.stripeEnabled;
+  const isTestKey = String(state.stripePublishableKey || "").startsWith("pk_test_");
   const methodRadios = methods
     .map(
       (m, i) => `
@@ -561,6 +603,31 @@ function viewCheckout() {
       </label>`
     )
     .join("");
+
+  const stripeHelp = stripeOn
+    ? `
+        <div class="pay-help">
+          <strong>${isTestKey ? "Stripe test mode" : "Stripe payment"}</strong>
+          <p>Card numbers are <em>not</em> typed on this site. After you click <strong>Continue to pay</strong>, you are sent to Stripe’s secure page where you enter the card.</p>
+          ${
+            isTestKey
+              ? `<div class="test-card-box">
+            <p class="test-card-label">Use this Stripe test card on the next page:</p>
+            <ul>
+              <li><strong>Card number:</strong> <code>4242 4242 4242 4242</code></li>
+              <li><strong>Expiry:</strong> any future date (e.g. 12/34)</li>
+              <li><strong>CVC:</strong> any 3 digits (e.g. 123)</li>
+              <li><strong>Name / ZIP:</strong> anything</li>
+            </ul>
+            <p class="muted" style="margin:8px 0 0;font-size:0.78rem;text-transform:none;letter-spacing:0;font-weight:400">No real money is charged in test mode.</p>
+          </div>`
+              : `<p class="muted" style="margin:8px 0 0;font-size:0.8rem;text-transform:none;letter-spacing:0;font-weight:400">Live mode — use a real card. Charges are real.</p>`
+          }
+        </div>`
+    : `
+        <p class="muted" style="margin:12px 0;font-size:0.8rem;text-transform:none;letter-spacing:0;font-weight:400">
+          Demo checkout — no Stripe card form. Orders complete instantly without a real payment page.
+        </p>`;
 
   return `
     <div class="page">
@@ -583,14 +650,11 @@ function viewCheckout() {
             <div class="pay-methods" role="radiogroup" aria-label="Payment method">
               ${methodRadios}
             </div>
-            <p class="muted" style="margin:12px 0;font-size:0.8rem;text-transform:none;letter-spacing:0;font-weight:400">
-              Card → Stripe · GCash/Maya → PayMongo · PayPal · Crypto → NOWPayments.
-              Methods without API keys still appear in demo mode for testing.
-            </p>
+            ${stripeHelp}
             <label class="check"><input type="checkbox" name="agree" required /> I agree to purchase digital codes; delivery is instant after payment.</label>
             <p class="err" id="checkoutErr" style="color:#ff8a8a;font-size:0.85rem;min-height:1.2em"></p>
             <button class="btn solid full" type="submit" id="payBtn">
-              Continue to pay · ${formatMoney(t.total)}
+              ${stripeOn ? "Continue to Stripe" : "Continue to pay"} · ${formatMoney(t.total)}
             </button>
           </form>
           <aside class="summary">
@@ -755,6 +819,17 @@ function syncGlobalSearchInput() {
   if (g && document.activeElement !== g) g.value = state.query || "";
 }
 
+/** Group product hits into brand-level suggestions (SuperGrok once, not 7d + 1m) */
+function brandSuggestLabel(brand) {
+  if (brand === "xAI") return "SuperGrok";
+  return brand || "Other";
+}
+
+function brandMonogram(brand) {
+  const map = { xAI: "SG", Canva: "CV", CapCut: "CC", Netflix: "NF", YouTube: "YT" };
+  return map[brand] || (brand || "??").slice(0, 2).toUpperCase();
+}
+
 function renderSuggest(q) {
   const box = $("#searchSuggest");
   if (!box) return;
@@ -764,25 +839,43 @@ function renderSuggest(q) {
     box.innerHTML = "";
     return;
   }
-  const hits = suggestDeals(window.DEALS || [], query, 6);
+  const hits = suggestDeals(window.DEALS || [], query, 12);
   if (!hits.length) {
     box.innerHTML = `<div class="suggest-empty">No matches — press Enter to search</div>`;
     box.hidden = false;
     return;
   }
-  box.innerHTML = hits
-    .map(
-      (d) => `
-    <button type="button" class="suggest-item" data-suggest-id="${escapeHtml(d.id)}" role="option">
-      <span class="mono-box tiny">${escapeHtml(d.monogram)}</span>
+
+  // One row per brand (e.g. SuperGrok), not each plan
+  const byBrand = new Map();
+  for (const d of hits) {
+    const key = d.brand || d.id;
+    if (!byBrand.has(key)) byBrand.set(key, []);
+    byBrand.get(key).push(d);
+  }
+
+  const brandRows = [...byBrand.entries()].slice(0, 6).map(([brand, list]) => {
+    const label = brandSuggestLabel(brand);
+    const count = list.length;
+    const from = Math.min(...list.map((d) => d.price));
+    const sample = list[0];
+    const priceLabel =
+      count > 1
+        ? `From ${formatDealPrice({ ...sample, price: from }, "price")}`
+        : formatDealPrice(sample, "price");
+    return `
+    <button type="button" class="suggest-item" data-suggest-brand="${escapeHtml(label)}" role="option">
+      <span class="mono-box tiny">${escapeHtml(brandMonogram(brand))}</span>
       <span class="suggest-text">
-        <strong>${highlightMatch(d.name, query)}</strong>
-        <em>${escapeHtml(d.brand)} · ${escapeHtml(d.category)}</em>
+        <strong>${highlightMatch(label, query)}</strong>
+        <em>${count} plan${count === 1 ? "" : "s"} · ${escapeHtml(sample.category || brand)}</em>
       </span>
-      <span class="suggest-price">${formatDealPrice(d, "price")}</span>
-    </button>`
-    )
-    .join("") +
+      <span class="suggest-price">${priceLabel}</span>
+    </button>`;
+  });
+
+  box.innerHTML =
+    brandRows.join("") +
     `<button type="button" class="suggest-all" data-suggest-all="${escapeHtml(query)}">View all results for “${escapeHtml(query)}” →</button>`;
   box.hidden = false;
 }
@@ -818,6 +911,12 @@ function bindGlobalSearch() {
     if (all) {
       box.hidden = true;
       goSearch(all.dataset.suggestAll);
+      return;
+    }
+    const brandItem = e.target.closest("[data-suggest-brand]");
+    if (brandItem) {
+      box.hidden = true;
+      goSearch(brandItem.dataset.suggestBrand);
       return;
     }
     const item = e.target.closest("[data-suggest-id]");
@@ -1103,12 +1202,16 @@ async function loadLiveCatalog() {
       : [];
     state.live = true;
 
-    // Apply host settings to chrome
+    // Apply host settings to chrome (keep all logos as home links)
     const s = data.settings || {};
     if (s.siteName) {
       document.title = `${s.siteName} — Discounted Subscriptions`;
-      const logo = document.querySelector(".logo");
-      if (logo) logo.innerHTML = `${escapeHtml(s.siteName.replace(/PH$/i, ""))}<b>PH</b>`;
+      const label = `${escapeHtml(s.siteName.replace(/PH$/i, ""))}<b>PH</b>`;
+      document.querySelectorAll("a.logo").forEach((logo) => {
+        logo.innerHTML = label;
+        logo.setAttribute("href", "#/home");
+        logo.setAttribute("title", "Go to home");
+      });
     }
     const foot = document.querySelector(".footer-inner p");
     if (foot && s.footerText) foot.textContent = s.footerText;
@@ -1120,6 +1223,18 @@ async function loadLiveCatalog() {
 async function init() {
   await loadLiveCatalog();
   bindGlobalSearch();
+
+  // Logo + Home nav (and any #/home links) → always go home
+  document.addEventListener("click", (e) => {
+    const homeLink = e.target.closest('a.logo, a[href="#/home"], a[href="#/"], a[href="#"]');
+    if (!homeLink) return;
+    // Don't hijack external or other in-page anchors that aren't home
+    const href = homeLink.getAttribute("href") || "";
+    if (homeLink.classList.contains("logo") || href === "#/home" || href === "#/" || href === "#") {
+      e.preventDefault();
+      goHome();
+    }
+  });
 
   // Nav currency picker
   const navMount = $("#navFxMount");
