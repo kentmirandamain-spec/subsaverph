@@ -77,6 +77,7 @@ git push -u origin main
 ## Notes
 
 - **Free tier sleeps** after ~15 minutes idle. First visit after sleep can take 30–60 seconds.
+- **Stay online:** see **KEEP-ONLINE-24-7.md** (GitHub keep-alive ping, or upgrade to Render Starter ~$7/mo for real 24/7).
 - **Admin edits** are stored on the server disk and may reset when Render rebuilds the free instance. Re-apply important price changes after redeploy, or upgrade later for a persistent disk.
 - To update the site: change files → `git push` → Render auto-redeploys.
 
