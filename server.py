@@ -207,7 +207,18 @@ def require_admin(fn):
 
 @app.get("/api/health")
 def health():
-    return jsonify({"ok": True, "service": "SubSaverPH"})
+    try:
+        from email_delivery import mail_configured
+        mail_ok = mail_configured()
+    except Exception:
+        mail_ok = False
+    return jsonify(
+        {
+            "ok": True,
+            "service": "SubSaverPH",
+            "emailConfigured": mail_ok,
+        }
+    )
 
 
 @app.get("/api/deals")
@@ -318,6 +329,53 @@ def validate_cart_items(items: list) -> tuple[list, dict]:
     return normalized, deals_by_id
 
 
+def _persist_order_update(order: dict) -> None:
+    """Update a single order in the store by id."""
+    orders = load_orders()
+    oid = order.get("id")
+    for i, o in enumerate(orders):
+        if o.get("id") == oid:
+            orders[i] = order
+            save_orders(orders[:500])
+            return
+    orders.insert(0, order)
+    save_orders(orders[:500])
+
+
+def _email_invoice_for_order(order: dict) -> dict:
+    """Send invoice email with codes; never raises. Updates order email fields."""
+    try:
+        from email_delivery import send_order_invoice
+
+        result = send_order_invoice(order)
+    except Exception as e:
+        result = {"ok": False, "provider": None, "detail": str(e)}
+
+    order["emailSent"] = bool(result.get("ok"))
+    order["emailProvider"] = result.get("provider")
+    order["emailDetail"] = str(result.get("detail") or "")[:500]
+    order["emailSentAt"] = (
+        __import__("datetime").datetime.utcnow().isoformat() + "Z"
+        if result.get("ok")
+        else order.get("emailSentAt")
+    )
+    if result.get("ok"):
+        order["message"] = (
+            "Payment confirmed. Codes delivered on-site and emailed to you."
+        )
+    elif result.get("skipped"):
+        order["message"] = (
+            "Payment confirmed. Codes delivered on-site "
+            "(email not configured on server)."
+        )
+    else:
+        order["message"] = (
+            "Payment confirmed. Codes delivered on-site "
+            f"(email failed: {order.get('emailDetail') or 'unknown'})."
+        )
+    return result
+
+
 def fulfill_order(
     *,
     email: str,
@@ -330,14 +388,20 @@ def fulfill_order(
     provider_ref: str | None = None,
     method: str | None = None,
 ) -> dict:
-    """Reserve codes and save paid order. Idempotent by stripe_session_id / provider_ref."""
+    """Reserve codes, save paid order, email invoice. Idempotent by session/ref."""
     if stripe_session_id:
         for existing in load_orders():
             if existing.get("stripeSessionId") == stripe_session_id:
+                if not existing.get("emailSent"):
+                    _email_invoice_for_order(existing)
+                    _persist_order_update(existing)
                 return existing
     if provider_ref:
         for existing in load_orders():
             if existing.get("providerRef") == provider_ref:
+                if not existing.get("emailSent"):
+                    _email_invoice_for_order(existing)
+                    _persist_order_update(existing)
                 return existing
 
     normalized, _ = validate_cart_items(items)
@@ -376,10 +440,15 @@ def fulfill_order(
         "createdAt": __import__("datetime").datetime.utcnow().isoformat() + "Z",
         "delivery": "instant",
         "message": "Payment confirmed. Codes delivered instantly.",
+        "emailSent": False,
     }
     orders = load_orders()
     orders.insert(0, order)
     save_orders(orders[:500])
+
+    # Email invoice + codes (SMTP or Resend). Does not block order if mail fails.
+    _email_invoice_for_order(order)
+    _persist_order_update(order)
     return order
 
 

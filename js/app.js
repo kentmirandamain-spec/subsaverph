@@ -771,15 +771,21 @@ function viewSuccess() {
     })
     .join("");
 
+  const emailNote = order.emailSent
+    ? `Invoice + codes emailed to <strong style="color:#fff">${escapeHtml(order.email)}</strong>.`
+    : order.email
+      ? `Codes are shown below. If email is configured on the server, an invoice was also sent to <strong style="color:#fff">${escapeHtml(order.email)}</strong>.`
+      : `Save your codes below.`;
+
   return `
     <div class="success">
       <div class="success-card">
         <div class="ok">OK</div>
         <h1>Order delivered</h1>
-        <p class="muted">Order <strong style="color:#fff">${escapeHtml(order.id)}</strong><br/>Sent to <strong style="color:#fff">${escapeHtml(order.email)}</strong></p>
+        <p class="muted">Order <strong style="color:#fff">${escapeHtml(order.id)}</strong><br/>${emailNote}</p>
         <p style="margin-top:12px;font-weight:600">${escapeHtml(order.currency || getCurrencyCode())} · ${escapeHtml(order.paymentMode || "instant")} · Instant digital delivery</p>
         <div class="codes">${lines}</div>
-        <p class="muted" style="font-size:0.8rem">Save these codes now. Redeem on the official service. Screenshot recommended.</p>
+        <p class="muted" style="font-size:0.8rem">Save these codes now (and check your email inbox/spam). Redeem on the official service.</p>
         <div class="cta" style="justify-content:center;margin-top:22px">
           <a class="btn solid" href="#/deals">More deals</a>
           <a class="btn" href="#/home">Home</a>
