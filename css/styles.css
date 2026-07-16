@@ -79,8 +79,9 @@ img.brand-logo {
   width: 28px;
   height: 28px;
   object-fit: contain;
-  border-radius: 6px;
+  border-radius: 0; /* SpaceX-style: hard square, no soft badge */
   flex-shrink: 0;
+  background: #000;
 }
 
 .wrap {
