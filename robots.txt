@@ -1,5 +1,12 @@
-# SubSaverPH — allow search engines
+# SubSaverPH — allow search engines (Google, Bing, etc.)
 User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /admin/
+Disallow: /api/
+
+# Googlebot
+User-agent: Googlebot
 Allow: /
 Disallow: /admin
 Disallow: /api/

@@ -92,12 +92,13 @@ That’s fine for brand search; for richer SEO later, switch to path routes (`/d
 
 ## Checklist
 
-- [ ] Site Live on Render  
-- [ ] `/robots.txt` and `/sitemap.xml` open in browser  
+- [x] Site Live on Render  
+- [x] `/robots.txt` and `/sitemap.xml` open in browser  
+- [x] On-page SEO (title, description, JSON-LD, crawlable homepage text)  
 - [ ] Google Search Console property verified  
-- [ ] Sitemap submitted  
+- [ ] Sitemap submitted (`sitemap.xml`)  
 - [ ] Homepage “Request indexing”  
-- [ ] Share link on socials  
+- [ ] Share link on socials (helps rankings later)  
 - [ ] (Optional) Custom domain  
 
 ---
