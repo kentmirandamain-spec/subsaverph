@@ -1,11 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="SubSaverPH">
   <rect width="512" height="512" fill="#000"/>
-  <g fill="#fff" font-family="Bahnschrift, Arial Black, Arial, sans-serif" font-weight="600" letter-spacing="0.18em">
-    <text x="256" y="248" text-anchor="middle" font-size="52">SUBSAVER</text>
-  </g>
-  <rect x="196" y="268" width="120" height="2" fill="#fff"/>
-  <text x="256" y="320" text-anchor="middle" fill="#fff"
+  <text x="256" y="270" text-anchor="middle" fill="#fff"
         font-family="Bahnschrift, Arial Black, Arial, sans-serif"
-        font-size="40" font-weight="600" letter-spacing="0.28em">PH</text>
+        font-size="42" font-weight="600" letter-spacing="0.14em">SUBSAVERPH</text>
+  <rect x="176" y="300" width="160" height="2" fill="#fff"/>
 </svg>
