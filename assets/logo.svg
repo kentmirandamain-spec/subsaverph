@@ -1,7 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="SubSaverPH">
   <rect width="512" height="512" fill="#000"/>
-  <text x="256" y="272" text-anchor="middle" fill="#fff"
-        font-family="Bahnschrift, Arial, Helvetica, sans-serif"
-        font-size="48" font-weight="600" letter-spacing="0.04em">SubSaverPH</text>
+  <text x="230" y="250" text-anchor="middle" fill="#fff"
+        font-family="Bahnschrift, Arial Black, Arial, sans-serif"
+        font-size="140" font-weight="700" letter-spacing="0.02em">SS</text>
+  <text x="340" y="175" text-anchor="start" fill="#a8a8a8"
+        font-family="Bahnschrift, Arial Black, Arial, sans-serif"
+        font-size="32" font-weight="600" letter-spacing="0.08em">PH</text>
+  <rect x="226" y="300" width="60" height="1.5" fill="#fff" opacity="0.35"/>
+  <text x="256" y="350" text-anchor="middle" fill="#fff"
+        font-family="Bahnschrift, Arial, sans-serif"
+        font-size="34" font-weight="600" letter-spacing="0.06em">SubSaverPH</text>
 </svg>
