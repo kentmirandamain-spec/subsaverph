@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="SubSaverPH">
   <rect width="512" height="512" fill="#000"/>
-  <text x="256" y="300" text-anchor="middle" fill="#fff"
+  <text x="240" y="300" text-anchor="middle" fill="#fff"
         font-family="Bahnschrift, Arial Black, Arial, sans-serif"
-        font-size="180" font-weight="700" letter-spacing="0.04em">SS</text>
+        font-size="170" font-weight="700" letter-spacing="0.04em">SS</text>
+  <text x="360" y="175" text-anchor="start" fill="#a8a8a8"
+        font-family="Bahnschrift, Arial Black, Arial, sans-serif"
+        font-size="34" font-weight="600" letter-spacing="0.08em">PH</text>
 </svg>
