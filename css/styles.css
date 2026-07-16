@@ -1960,6 +1960,11 @@ a.logo:hover {
   align-self: center;
 }
 
+.footer-meta li em {
+  font-style: normal;
+  color: var(--text);
+}
+
 .footer-disclaimer {
   margin: 18px 0 0 !important;
   font-size: 0.8rem !important;

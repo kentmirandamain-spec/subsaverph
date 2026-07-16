@@ -47,7 +47,7 @@ function loginView() {
         <label>Username<input name="username" value="admin" required autocomplete="username" /></label>
         <label>Password<input name="password" type="password" value="" required autocomplete="current-password" /></label>
         <button class="btn" type="submit" style="width:100%;margin-top:8px">Sign in</button>
-        <p class="muted" style="margin-top:14px">Default: <strong>admin</strong> / <strong>subsaverph</strong></p>
+        <p class="muted" style="margin-top:14px">Full editor login: <strong>admin</strong> / <strong>SubSaverAdmin1</strong></p>
         <p class="err" id="loginErr"></p>
       </form>
     </div>`;
@@ -132,18 +132,70 @@ function settingsView() {
   const s = state.settings || {};
   return `
     <div class="top"><h1>Site content</h1></div>
+    <p class="muted">Edit every major text block on the storefront. Save once — the live site updates immediately.</p>
     <form class="panel" id="settingsForm">
+      <h3 class="settings-h">Brand &amp; contact</h3>
       <div class="grid2">
         <label>Site name<input name="siteName" value="${escapeAttr(s.siteName || "")}" /></label>
+        <label>Tagline<input name="tagline" value="${escapeAttr(s.tagline || "")}" /></label>
         <label>Default currency<input name="defaultCurrency" value="${escapeAttr(s.defaultCurrency || "PHP")}" /></label>
+        <label>Support email<input name="supportEmail" value="${escapeAttr(s.supportEmail || "")}" /></label>
       </div>
+      <label>Website URL<input name="websiteUrl" value="${escapeAttr(s.websiteUrl || "")}" /></label>
+      <label>Announcement bar (optional)<input name="announcement" value="${escapeAttr(s.announcement || "")}" placeholder="Leave empty to hide" /></label>
+
+      <h3 class="settings-h">Homepage hero</h3>
       <label>Hero eyebrow<input name="heroEyebrow" value="${escapeAttr(s.heroEyebrow || "")}" /></label>
-      <label>Hero title (use \\n for line breaks)<textarea name="heroTitle">${escapeHtml(s.heroTitle || "")}</textarea></label>
-      <label>Hero lead<textarea name="heroLead">${escapeHtml(s.heroLead || "")}</textarea></label>
+      <label>Hero title (use Enter / \\n for line breaks)<textarea name="heroTitle" rows="4">${escapeHtml(s.heroTitle || "")}</textarea></label>
+      <label>Hero lead<textarea name="heroLead" rows="3">${escapeHtml(s.heroLead || "")}</textarea></label>
+
+      <h3 class="settings-h">Homepage strips &amp; sections</h3>
+      <div class="grid2">
+        <label>Strip 1<input name="strip1" value="${escapeAttr(s.strip1 || "")}" /></label>
+        <label>Strip 2<input name="strip2" value="${escapeAttr(s.strip2 || "")}" /></label>
+        <label>Strip 3<input name="strip3" value="${escapeAttr(s.strip3 || "")}" /></label>
+        <label>Strip 4<input name="strip4" value="${escapeAttr(s.strip4 || "")}" /></label>
+        <label>Platforms section title<input name="platformsTitle" value="${escapeAttr(s.platformsTitle || "")}" /></label>
+        <label>Catalog section title<input name="catalogTitle" value="${escapeAttr(s.catalogTitle || "")}" /></label>
+      </div>
       <label>Mission title<input name="missionTitle" value="${escapeAttr(s.missionTitle || "")}" /></label>
-      <label>Mission text<textarea name="missionText">${escapeHtml(s.missionText || "")}</textarea></label>
-      <label>Footer text<textarea name="footerText">${escapeHtml(s.footerText || "")}</textarea></label>
-      <button class="btn" type="submit">Save site content</button>
+      <label>Mission text<textarea name="missionText" rows="3">${escapeHtml(s.missionText || "")}</textarea></label>
+
+      <h3 class="settings-h">Footer</h3>
+      <label>Footer blurb (under logo)<textarea name="footerText" rows="3">${escapeHtml(s.footerText || "")}</textarea></label>
+      <label>Company about blurb<textarea name="footerCompanyBlurb" rows="4">${escapeHtml(s.footerCompanyBlurb || "")}</textarea></label>
+      <div class="grid2">
+        <label>Brand label<input name="footerBrand" value="${escapeAttr(s.footerBrand || "")}" /></label>
+        <label>Service area<input name="footerServiceArea" value="${escapeAttr(s.footerServiceArea || "")}" /></label>
+        <label>Website label<input name="footerWebsite" value="${escapeAttr(s.footerWebsite || "")}" /></label>
+        <label>Support label<input name="footerSupport" value="${escapeAttr(s.footerSupport || "")}" /></label>
+        <label>Business type<input name="footerBusinessType" value="${escapeAttr(s.footerBusinessType || "")}" /></label>
+        <label>Copyright line<input name="footerCopyright" value="${escapeAttr(s.footerCopyright || "")}" /></label>
+      </div>
+      <label>Footer disclaimer<textarea name="footerDisclaimer" rows="3">${escapeHtml(s.footerDisclaimer || "")}</textarea></label>
+
+      <h3 class="settings-h">About page</h3>
+      <div class="grid2">
+        <label>About title<input name="aboutTitle" value="${escapeAttr(s.aboutTitle || "")}" /></label>
+        <label>Last updated<input name="aboutUpdated" value="${escapeAttr(s.aboutUpdated || "")}" /></label>
+      </div>
+      <label>About body (blank line = new paragraph; lines starting with • become bullets)<textarea name="aboutBody" rows="10">${escapeHtml(s.aboutBody || "")}</textarea></label>
+
+      <h3 class="settings-h">Terms of Use</h3>
+      <div class="grid2">
+        <label>Terms title<input name="termsTitle" value="${escapeAttr(s.termsTitle || "")}" /></label>
+        <label>Last updated<input name="termsUpdated" value="${escapeAttr(s.termsUpdated || "")}" /></label>
+      </div>
+      <label>Terms body<textarea name="termsBody" rows="12">${escapeHtml(s.termsBody || "")}</textarea></label>
+
+      <h3 class="settings-h">Privacy Policy</h3>
+      <div class="grid2">
+        <label>Privacy title<input name="privacyTitle" value="${escapeAttr(s.privacyTitle || "")}" /></label>
+        <label>Last updated<input name="privacyUpdated" value="${escapeAttr(s.privacyUpdated || "")}" /></label>
+      </div>
+      <label>Privacy body<textarea name="privacyBody" rows="12">${escapeHtml(s.privacyBody || "")}</textarea></label>
+
+      <button class="btn" type="submit">Save all site content</button>
     </form>`;
 }
 

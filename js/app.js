@@ -311,6 +311,57 @@ function siteSettings() {
   return state.settings || {};
 }
 
+/** Convert admin plain-text body into simple legal HTML (safe escaped). */
+function textToLegalHtml(raw) {
+  const text = String(raw || "").trim();
+  if (!text) return "";
+  const blocks = text.split(/\n\s*\n/);
+  return blocks
+    .map((block) => {
+      const lines = block.split("\n").map((l) => l.trim()).filter(Boolean);
+      if (!lines.length) return "";
+      // Bullet list if every line starts with • or -
+      if (lines.every((l) => /^[•\-\*]\s+/.test(l))) {
+        const items = lines
+          .map((l) => `<li>${escapeHtml(l.replace(/^[•\-\*]\s+/, ""))}</li>`)
+          .join("");
+        return `<ul>${items}</ul>`;
+      }
+      // Heading-like short line alone
+      if (lines.length === 1 && lines[0].length < 60 && !/[.!?]$/.test(lines[0])) {
+        return `<h2>${escapeHtml(lines[0])}</h2>`;
+      }
+      return `<p>${lines.map((l) => escapeHtml(l)).join("<br/>")}</p>`;
+    })
+    .join("\n");
+}
+
+function applySiteChrome() {
+  const s = siteSettings();
+  const setText = (sel, val) => {
+    const el = document.querySelector(sel);
+    if (el && val != null && String(val).length) el.textContent = val;
+  };
+  setText("#footerBlurb", s.footerText);
+  setText("#footerCompanyBlurb", s.footerCompanyBlurb);
+  setText("#footerBrand", s.footerBrand);
+  setText("#footerServiceArea", s.footerServiceArea);
+  setText("#footerWebsiteLabel", s.footerWebsite);
+  setText("#footerSupportLabel", s.footerSupport);
+  setText("#footerBusinessType", s.footerBusinessType);
+  setText("#footerDisclaimer", s.footerDisclaimer);
+  if (s.footerCopyright) {
+    const year = new Date().getFullYear();
+    setText("#footerCopyright", `© ${year} ${s.footerCopyright}`);
+  }
+  if (s.supportEmail) {
+    document.querySelectorAll("a[data-support-email]").forEach((a) => {
+      a.href = `mailto:${s.supportEmail}`;
+      if (a.dataset.supportLabel !== "0") a.textContent = s.supportEmail;
+    });
+  }
+}
+
 function heroTitleHtml() {
   const raw = siteSettings().heroTitle || "Premium\nplans.\nLower\ncost.";
   return escapeHtml(raw).replace(/\\n/g, "<br/>").replace(/\n/g, "<br/>");
@@ -375,10 +426,10 @@ function viewHome() {
     </section>
 
     <div class="strip">
-      <div>Secure checkout</div>
-      <div>Searchable FX pay</div>
-      <div>Instant digital codes</div>
-      <div>Demo storefront</div>
+      <div>${escapeHtml(s.strip1 || "Secure checkout")}</div>
+      <div>${escapeHtml(s.strip2 || "Searchable FX pay")}</div>
+      <div>${escapeHtml(s.strip3 || "Instant digital codes")}</div>
+      <div>${escapeHtml(s.strip4 || "Demo storefront")}</div>
     </div>
 
     <section class="section">
@@ -386,7 +437,7 @@ function viewHome() {
         <div class="section-head">
           <div>
             <p class="eyebrow">Platforms</p>
-            <h2>Select a service</h2>
+            <h2>${escapeHtml(s.platformsTitle || "Select a service")}</h2>
           </div>
         </div>
         <div class="brands">
@@ -403,7 +454,7 @@ function viewHome() {
         <div class="section-head">
           <div>
             <p class="eyebrow">Catalog</p>
-            <h2>Highest savings</h2>
+            <h2>${escapeHtml(s.catalogTitle || "Highest savings")}</h2>
           </div>
           <a href="#/deals" class="link">View all</a>
         </div>
@@ -588,153 +639,41 @@ function viewLegalShell(eyebrow, title, updated, bodyHtml) {
 }
 
 function viewAbout() {
+  const s = siteSettings();
+  const body =
+    textToLegalHtml(s.aboutBody) ||
+    `<p><strong>${escapeHtml(s.siteName || "SubSaverPH")}</strong> — discounted prepaid subscriptions in the Philippines.</p>`;
   return viewLegalShell(
     "Company",
-    "About SubSaverPH",
-    "July 16, 2026",
-    `
-      <h2>Who we are</h2>
-      <p><strong>SubSaverPH</strong> is an online storefront based in the Philippines that offers discounted prepaid digital subscriptions and access codes for popular tools and streaming services — including SuperGrok, Canva, CapCut, Netflix, and YouTube Premium.</p>
-      <p>Our goal is simple: help customers stack the plans they need without paying full retail every month, with clear PHP-first pricing and multi-currency checkout.</p>
-
-      <h2>What we sell</h2>
-      <ul>
-        <li>Prepaid subscription access (digital delivery)</li>
-        <li>Outlet-style pricing on selected plan lengths</li>
-        <li>Instant or email delivery of codes / redeem instructions after successful payment</li>
-      </ul>
-
-      <h2>Company details</h2>
-      <ul>
-        <li><strong>Brand name:</strong> SubSaverPH</li>
-        <li><strong>Website:</strong> <a href="https://subsaverph.onrender.com/">https://subsaverph.onrender.com/</a></li>
-        <li><strong>Service area:</strong> Philippines (online storefront; digital goods)</li>
-        <li><strong>Support:</strong> <a href="mailto:support@subsaverph.com">support@subsaverph.com</a></li>
-        <li><strong>Business category:</strong> E-commerce — digital goods &amp; prepaid access</li>
-      </ul>
-
-      <h2>Brand independence</h2>
-      <p>SubSaverPH is an independent reseller / storefront. We are <strong>not</strong> affiliated with, endorsed by, or sponsored by xAI, Canva, ByteDance (CapCut), Netflix, Google/YouTube, or any other third-party brand named on this site. All trademarks belong to their respective owners.</p>
-
-      <h2>Contact</h2>
-      <p>For order help, refunds, or partnership questions, email <a href="mailto:support@subsaverph.com">support@subsaverph.com</a> and include your order ID when possible.</p>
-    `
+    escapeHtml(s.aboutTitle || "About SubSaverPH"),
+    escapeHtml(s.aboutUpdated || "July 16, 2026"),
+    body
   );
 }
 
 function viewTerms() {
+  const s = siteSettings();
+  const body =
+    textToLegalHtml(s.termsBody) ||
+    `<p>Terms of Use for ${escapeHtml(s.siteName || "SubSaverPH")}. Contact ${escapeHtml(s.supportEmail || "support@subsaverph.com")}.</p>`;
   return viewLegalShell(
     "Legal",
-    "Terms of Use",
-    "July 16, 2026",
-    `
-      <p>These Terms of Use (“Terms”) govern your access to and use of the SubSaverPH website and services at <strong>subsaverph.onrender.com</strong> (the “Site”). By using the Site, you agree to these Terms.</p>
-
-      <h2>1. Eligibility</h2>
-      <p>You must be at least 18 years old (or the age of majority in your jurisdiction) and able to form a binding contract to place an order. By purchasing, you confirm that the payment method and account details you provide are yours or that you are authorized to use them.</p>
-
-      <h2>2. Products &amp; digital delivery</h2>
-      <p>SubSaverPH sells prepaid digital subscriptions, access codes, or redeem instructions. Unless stated otherwise, products are delivered digitally (on-screen and/or by email) after payment is confirmed. You are responsible for redeeming codes on the official third-party service and for meeting that service’s own terms and eligibility rules.</p>
-
-      <h2>3. Pricing &amp; currency</h2>
-      <p>Prices may be shown in PHP or converted to other currencies for convenience. Conversion rates may change. The amount charged is the amount confirmed at checkout with your selected payment provider. Taxes, bank fees, or FX fees charged by your bank or wallet are your responsibility.</p>
-
-      <h2>4. Orders &amp; payment</h2>
-      <p>An order is an offer to buy. We may accept or decline orders (for example stock, fraud risk, or pricing errors). Payment is processed by third-party processors (such as card, GCash, Maya, or others shown at checkout). We do not store full card numbers on our servers when using hosted checkout.</p>
-
-      <h2>5. Refunds &amp; cancellations</h2>
-      <p>Because products are digital and often delivered immediately, refunds are limited:</p>
-      <ul>
-        <li>If a code is defective or not delivered after confirmed payment, contact support with your order ID for replacement or refund review.</li>
-        <li>Refunds are generally not available after a code has been successfully redeemed or after substantial use of the access.</li>
-        <li>Chargebacks filed without contacting us first may delay resolution.</li>
-      </ul>
-
-      <h2>6. Acceptable use</h2>
-      <p>You agree not to misuse the Site, attempt unauthorized access, scrape in a way that harms service, resell inventory in violation of third-party rules where prohibited, or use the Site for fraud or illegal activity.</p>
-
-      <h2>7. Third-party brands</h2>
-      <p>Product names and logos mentioned on the Site are trademarks of their owners. SubSaverPH is not affiliated with or endorsed by those brands. Your use of third-party services is governed by their terms, not ours.</p>
-
-      <h2>8. Disclaimer of warranties</h2>
-      <p>The Site and products are provided “as is” to the fullest extent permitted by law. We do not guarantee uninterrupted availability, or that third-party platforms will accept every code in every region or account type.</p>
-
-      <h2>9. Limitation of liability</h2>
-      <p>To the maximum extent permitted by applicable law, SubSaverPH is not liable for indirect, incidental, special, or consequential damages, or for losses arising from third-party platform decisions, account bans, or regional restrictions. Our total liability for any order is limited to the amount you paid for that order.</p>
-
-      <h2>10. Changes</h2>
-      <p>We may update these Terms by posting a new version on the Site. Continued use after changes means you accept the updated Terms.</p>
-
-      <h2>11. Contact</h2>
-      <p>Questions about these Terms: <a href="mailto:support@subsaverph.com">support@subsaverph.com</a>.</p>
-    `
+    escapeHtml(s.termsTitle || "Terms of Use"),
+    escapeHtml(s.termsUpdated || "July 16, 2026"),
+    body
   );
 }
 
 function viewPrivacy() {
+  const s = siteSettings();
+  const body =
+    textToLegalHtml(s.privacyBody) ||
+    `<p>Privacy Policy for ${escapeHtml(s.siteName || "SubSaverPH")}. Contact ${escapeHtml(s.supportEmail || "support@subsaverph.com")}.</p>`;
   return viewLegalShell(
     "Legal",
-    "Privacy Policy",
-    "July 16, 2026",
-    `
-      <p>This Privacy Policy explains how <strong>SubSaverPH</strong> (“we”, “us”) collects, uses, and protects information when you use <strong>https://subsaverph.onrender.com</strong> (the “Site”).</p>
-
-      <h2>1. Information we collect</h2>
-      <ul>
-        <li><strong>Order information</strong> — name/email you provide at checkout, cart contents, order ID, payment status, and delivery details needed to fulfill digital goods.</li>
-        <li><strong>Payment data</strong> — processed by payment providers (e.g. Stripe, PayMongo, or others). We receive confirmation and limited metadata; we do not store full card numbers when using hosted checkout.</li>
-        <li><strong>Technical data</strong> — IP address, browser type, device, approximate location, and pages viewed (server logs / basic analytics).</li>
-        <li><strong>Communications</strong> — messages you send to support.</li>
-      </ul>
-
-      <h2>2. How we use information</h2>
-      <ul>
-        <li>Process orders and deliver codes or access instructions</li>
-        <li>Send order confirmations and support replies</li>
-        <li>Prevent fraud, abuse, and security incidents</li>
-        <li>Improve the Site, pricing display, and checkout</li>
-        <li>Comply with legal obligations</li>
-      </ul>
-
-      <h2>3. Cookies &amp; local storage</h2>
-      <p>We may use browser storage for cart contents, currency preference, and session-related settings so checkout works smoothly. You can clear site data in your browser; doing so may empty your cart.</p>
-
-      <h2>4. Sharing of information</h2>
-      <p>We share data only as needed with:</p>
-      <ul>
-        <li><strong>Payment processors</strong> to complete transactions</li>
-        <li><strong>Hosting / infrastructure</strong> providers that run the Site</li>
-        <li><strong>Email delivery</strong> services if order emails are enabled</li>
-        <li><strong>Authorities</strong> when required by law</li>
-      </ul>
-      <p>We do not sell your personal information.</p>
-
-      <h2>5. Data retention</h2>
-      <p>Order and account-related records are kept as long as needed for fulfillment, support, accounting, dispute resolution, and legal compliance, then deleted or anonymized when no longer required.</p>
-
-      <h2>6. Security</h2>
-      <p>We use reasonable technical and organizational measures (HTTPS, access controls, limited staff access to order data). No method of transmission or storage is 100% secure.</p>
-
-      <h2>7. Your choices</h2>
-      <ul>
-        <li>Request access to or correction of personal data you provided</li>
-        <li>Request deletion where applicable (we may retain records required by law or legitimate business needs such as completed orders)</li>
-        <li>Opt out of non-essential marketing emails if we send them (transactional order emails may still be sent)</li>
-      </ul>
-      <p>Contact <a href="mailto:support@subsaverph.com">support@subsaverph.com</a> for privacy requests.</p>
-
-      <h2>8. Children’s privacy</h2>
-      <p>The Site is not directed to children under 13 (or the minimum age required in your region). We do not knowingly collect personal information from children.</p>
-
-      <h2>9. International users</h2>
-      <p>The Site is operated with a focus on customers in the Philippines but may be accessible elsewhere. By using the Site, you understand your information may be processed in countries where our hosting or payment providers operate.</p>
-
-      <h2>10. Changes to this policy</h2>
-      <p>We may update this Privacy Policy from time to time. The “Last updated” date at the top will change when we do. Continued use of the Site means you accept the updated policy.</p>
-
-      <h2>11. Contact</h2>
-      <p>Privacy questions: <a href="mailto:support@subsaverph.com">support@subsaverph.com</a>.</p>
-    `
+    escapeHtml(s.privacyTitle || "Privacy Policy"),
+    escapeHtml(s.privacyUpdated || "July 16, 2026"),
+    body
   );
 }
 
@@ -1213,6 +1152,7 @@ function render() {
   mountPageFx();
   bind();
   syncGlobalSearchInput();
+  applySiteChrome();
 }
 
 function bind() {
@@ -1460,8 +1400,7 @@ async function loadLiveCatalog() {
         logo.setAttribute("aria-label", `${s.siteName} home`);
       });
     }
-    const foot = document.querySelector("#footerBlurb");
-    if (foot && s.footerText) foot.textContent = s.footerText;
+    applySiteChrome();
   } catch {
     state.live = false;
   }
