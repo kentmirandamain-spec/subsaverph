@@ -36,7 +36,6 @@ import {
   setLang,
   t,
   fillLanguageSelect,
-  LANGUAGES,
 } from "./prefs.js";
 
 const $ = (s, el = document) => el.querySelector(s);
