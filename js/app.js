@@ -523,7 +523,7 @@ function viewHome() {
   }
 
   return `
-    <section class="hero hero-compact">
+    <section class="hero">
       <div class="hero-glow"></div>
       <div class="hero-inner">
         <p class="eyebrow">${escapeHtml(c("hero_eyebrow", "heroEyebrow"))}</p>
@@ -533,12 +533,12 @@ function viewHome() {
         ${searchBarHTML(t("search_placeholder"))}
 
         <div class="cta" style="margin-top:28px">
-          <a class="btn solid" href="#catalog">${escapeHtml(t("cta_browse"))}</a>
-          <a class="btn" href="#/search">${escapeHtml(t("cta_search"))}</a>
+          <a class="btn solid" href="#/search">${escapeHtml(t("cta_search"))}</a>
+          <a class="btn" href="#/deals">${escapeHtml(t("cta_browse"))}</a>
         </div>
         <div class="meta">
-          <div><strong>${allDeals.length}</strong><span>${escapeHtml(t("meta_plans"))}</span></div>
-          <div><strong>${brands.length}</strong><span>${escapeHtml(t("meta_platforms"))}</span></div>
+          <div><strong>${window.DEALS.length}</strong><span>${escapeHtml(t("meta_plans"))}</span></div>
+          <div><strong>5</strong><span>${escapeHtml(t("meta_platforms"))}</span></div>
           <div><strong>${CURRENCY_LIST.length}+</strong><span>${escapeHtml(t("meta_currencies"))}</span></div>
         </div>
       </div>
@@ -550,26 +550,6 @@ function viewHome() {
       <div>${escapeHtml(c("strip3", "strip3"))}</div>
       <div>${escapeHtml(c("strip4", "strip4"))}</div>
     </div>
-
-    <!-- Full catalog: every deal is on the homepage — scroll to see them all -->
-    <section class="section section-catalog" id="catalog">
-      <div class="section-inner">
-        <div class="section-head">
-          <div>
-            <p class="eyebrow">${escapeHtml(t("eyebrow_catalog"))}</p>
-            <h2>${escapeHtml(c("catalog_title", "catalogTitle") || t("page_deals"))}</h2>
-            <p class="muted" style="margin:8px 0 0">${allDeals.length} ${escapeHtml(t("meta_plans"))}</p>
-          </div>
-        </div>
-        <div class="grid grid-all-deals">
-          ${
-            allDeals.length
-              ? allDeals.map((d) => card(d)).join("")
-              : `<div class="empty" style="grid-column:1/-1;padding:40px">${escapeHtml(t("no_products_matched"))}</div>`
-          }
-        </div>
-      </div>
-    </section>
 
     <section class="section">
       <div class="section-inner">
@@ -590,6 +570,15 @@ function viewHome() {
             )
             .join("")}
         </div>
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">${escapeHtml(t("eyebrow_catalog"))}</p>
+            <h2>${escapeHtml(c("catalog_title", "catalogTitle"))}</h2>
+            <p class="muted" style="margin:8px 0 0">${allDeals.length} ${escapeHtml(t("meta_plans"))}</p>
+          </div>
+          <a href="#/deals" class="link">${escapeHtml(t("view_all"))}</a>
+        </div>
+        <div class="grid grid-all-deals">${allDeals.map(card).join("")}</div>
       </div>
     </section>
 
@@ -599,7 +588,7 @@ function viewHome() {
         <p class="eyebrow">${escapeHtml(t("why_prefix"))} ${escapeHtml(s.siteName || "SubSaverPH")}</p>
         <h2>${escapeHtml(c("mission_title", "missionTitle"))}</h2>
         <p>${escapeHtml(c("mission_text", "missionText"))}</p>
-        <a class="btn solid" href="#catalog">${escapeHtml(t("cta_browse"))}</a>
+        <a class="btn solid" href="#/deals">${escapeHtml(t("cta_browse"))}</a>
       </div>
     </section>`;
 }
@@ -1554,23 +1543,6 @@ async function init() {
     if (homeLink.classList.contains("logo") || href === "#/home" || href === "#/" || href === "#") {
       e.preventDefault();
       goHome();
-    }
-  });
-
-  // Smooth scroll to full catalog on homepage (#catalog)
-  document.addEventListener("click", (e) => {
-    const catLink = e.target.closest('a[href="#catalog"]');
-    if (!catLink) return;
-    e.preventDefault();
-    const el = document.getElementById("catalog");
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "start" });
-      history.replaceState(null, "", "#catalog");
-    } else {
-      location.hash = "#/home";
-      setTimeout(() => {
-        document.getElementById("catalog")?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 50);
     }
   });
 

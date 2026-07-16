@@ -830,10 +830,10 @@ html[data-theme="light"] .prefs-panel {
   transform: none;
 }
 
-/* HERO — compact so catalog is reachable quickly on scroll */
+/* HERO â€” full viewport, text only */
 .hero {
   position: relative;
-  min-height: auto;
+  min-height: 100vh;
   display: flex;
   align-items: flex-end;
   padding: calc(var(--nav-h) + 48px) 0 72px;
@@ -841,34 +841,8 @@ html[data-theme="light"] .prefs-panel {
   background:
     radial-gradient(ellipse 70% 45% at 70% 0%, rgba(255, 255, 255, 0.07), transparent 55%),
     radial-gradient(ellipse 50% 40% at 10% 90%, rgba(255, 255, 255, 0.04), transparent 50%),
-    var(--bg);
+    #000;
   overflow: hidden;
-}
-
-.hero.hero-compact {
-  min-height: 0;
-  padding-bottom: 56px;
-}
-
-/* Full deals grid on homepage — never clip or hide cards */
-.section-catalog {
-  scroll-margin-top: calc(var(--nav-h) + 16px);
-}
-
-.grid.grid-all-deals {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1px;
-  background: var(--line);
-  border: 1px solid var(--line);
-  max-height: none !important;
-  overflow: visible !important;
-  height: auto !important;
-}
-
-.grid.grid-all-deals .card {
-  min-height: 300px;
-  height: auto;
 }
 
 .hero-glow {
@@ -2281,8 +2255,7 @@ html[data-theme="light"] .prefs-panel {
 }
 
 @media (max-width: 960px) {
-  .grid,
-  .grid.grid-all-deals {
+  .grid {
     grid-template-columns: 1fr 1fr;
   }
   .brands,
@@ -2341,7 +2314,6 @@ html[data-theme="light"] .prefs-panel {
     display: none;
   }
   .grid,
-  .grid.grid-all-deals,
   .brands,
   .strip,
   .steps,
@@ -2352,8 +2324,7 @@ html[data-theme="light"] .prefs-panel {
     border-right: none;
     border-bottom: 1px solid var(--line);
   }
-  .hero,
-  .hero.hero-compact {
+  .hero {
     padding: calc(var(--nav-h) + 56px) 0 56px;
     min-height: auto;
   }
