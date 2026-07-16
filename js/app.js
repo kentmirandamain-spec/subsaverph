@@ -1049,9 +1049,9 @@ function viewSuccess() {
     .join("");
 
   const emailNote = order.emailSent
-    ? `Invoice + codes emailed to <strong style="color:#fff">${escapeHtml(order.email)}</strong>.`
+    ? `Invoice + access codes were emailed to <strong style="color:var(--text)">${escapeHtml(order.email)}</strong>. Check inbox and spam.`
     : order.email
-      ? `Codes are shown below. If email is configured on the server, an invoice was also sent to <strong style="color:#fff">${escapeHtml(order.email)}</strong>.`
+      ? `Codes are shown below. Email to <strong style="color:var(--text)">${escapeHtml(order.email)}</strong> was not confirmed${order.emailDetail ? ` (${escapeHtml(String(order.emailDetail).slice(0, 80))})` : ""}. Save codes here.`
       : `Save your codes below.`;
 
   return `

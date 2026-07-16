@@ -204,7 +204,31 @@ def build_invoice_content(order: dict[str, Any]) -> tuple[str, str, str]:
     return subject, text, html
 
 
-def _send_via_resend(to_email: str, subject: str, text: str, html: str) -> tuple[bool, str]:
+def _notify_emails() -> list[str]:
+    """Optional merchant inboxes that get a BCC copy of each order invoice."""
+    raw = (
+        (os.environ.get("ORDER_NOTIFY_EMAIL") or "").strip()
+        or (os.environ.get("MAIL_NOTIFY_TO") or "").strip()
+        or (os.environ.get("MAIL_REPLY_TO") or "").strip()
+    )
+    if not raw:
+        return []
+    out = []
+    for part in raw.replace(";", ",").split(","):
+        e = part.strip()
+        if e and "@" in e:
+            out.append(e)
+    return out
+
+
+def _send_via_resend(
+    to_email: str,
+    subject: str,
+    text: str,
+    html: str,
+    *,
+    bcc: list[str] | None = None,
+) -> tuple[bool, str]:
     api_key = (os.environ.get("RESEND_API_KEY") or "").strip()
     if not api_key:
         return False, "RESEND_API_KEY not set"
@@ -218,7 +242,9 @@ def _send_via_resend(to_email: str, subject: str, text: str, html: str) -> tuple
     reply = (os.environ.get("MAIL_REPLY_TO") or "").strip()
     if reply:
         payload["reply_to"] = reply
-    # Resend expects from as "Name <email@domain>"
+    bcc_list = [e for e in (bcc or []) if e.lower() != to_email.lower()]
+    if bcc_list:
+        payload["bcc"] = bcc_list
     if "from" in payload and "<" not in str(payload["from"]):
         payload["from"] = f"SubSaverPH <{payload['from']}>"
 
@@ -243,7 +269,14 @@ def _send_via_resend(to_email: str, subject: str, text: str, html: str) -> tuple
         return False, f"Resend error: {e}"
 
 
-def _send_via_smtp(to_email: str, subject: str, text: str, html: str) -> tuple[bool, str]:
+def _send_via_smtp(
+    to_email: str,
+    subject: str,
+    text: str,
+    html: str,
+    *,
+    bcc: list[str] | None = None,
+) -> tuple[bool, str]:
     host = (os.environ.get("SMTP_HOST") or "").strip()
     port = int(os.environ.get("SMTP_PORT") or "587")
     user = (os.environ.get("SMTP_USER") or "").strip()
@@ -261,15 +294,19 @@ def _send_via_smtp(to_email: str, subject: str, text: str, html: str) -> tuple[b
     reply = (os.environ.get("MAIL_REPLY_TO") or "").strip()
     if reply:
         msg["Reply-To"] = reply
+    bcc_list = [e for e in (bcc or []) if e.lower() != to_email.lower()]
+    if bcc_list:
+        msg["Bcc"] = ", ".join(bcc_list)
     msg.attach(MIMEText(text, "plain", "utf-8"))
     msg.attach(MIMEText(html, "html", "utf-8"))
 
+    recipients = [to_email] + bcc_list
     try:
         if use_ssl or port == 465:
             context = ssl.create_default_context()
             with smtplib.SMTP_SSL(host, port, timeout=30, context=context) as smtp:
                 smtp.login(user, password)
-                smtp.sendmail(_from_address(), [to_email], msg.as_string())
+                smtp.sendmail(_from_address(), recipients, msg.as_string())
         else:
             with smtplib.SMTP(host, port, timeout=30) as smtp:
                 smtp.ehlo()
@@ -278,7 +315,7 @@ def _send_via_smtp(to_email: str, subject: str, text: str, html: str) -> tuple[b
                     smtp.starttls(context=context)
                     smtp.ehlo()
                 smtp.login(user, password)
-                smtp.sendmail(_from_address(), [to_email], msg.as_string())
+                smtp.sendmail(_from_address(), recipients, msg.as_string())
         return True, "smtp ok"
     except Exception as e:
         return False, f"SMTP error: {e}"
@@ -286,8 +323,9 @@ def _send_via_smtp(to_email: str, subject: str, text: str, html: str) -> tuple[b
 
 def send_order_invoice(order: dict[str, Any]) -> dict[str, Any]:
     """
-    Send invoice + codes to order email.
-    Returns { ok, provider, detail, skipped? }
+    Send invoice + codes to the customer email.
+    Optional BCC to ORDER_NOTIFY_EMAIL / MAIL_NOTIFY_TO / MAIL_REPLY_TO (you receive a copy).
+    Returns { ok, provider, detail, skipped?, notified? }
     """
     to_email = (order.get("email") or "").strip()
     if not to_email or "@" not in to_email:
@@ -302,11 +340,23 @@ def send_order_invoice(order: dict[str, Any]) -> dict[str, Any]:
         }
 
     subject, text, html = build_invoice_content(order)
+    notify = _notify_emails()
 
-    # Prefer Resend if key present
     if (os.environ.get("RESEND_API_KEY") or "").strip():
-        ok, detail = _send_via_resend(to_email, subject, text, html)
-        return {"ok": ok, "provider": "resend", "detail": detail}
+        ok, detail = _send_via_resend(to_email, subject, text, html, bcc=notify)
+        return {
+            "ok": ok,
+            "provider": "resend",
+            "detail": detail,
+            "notified": bool(ok and notify),
+            "notifyTo": notify if ok else [],
+        }
 
-    ok, detail = _send_via_smtp(to_email, subject, text, html)
-    return {"ok": ok, "provider": "smtp", "detail": detail}
+    ok, detail = _send_via_smtp(to_email, subject, text, html, bcc=notify)
+    return {
+        "ok": ok,
+        "provider": "smtp",
+        "detail": detail,
+        "notified": bool(ok and notify),
+        "notifyTo": notify if ok else [],
+    }

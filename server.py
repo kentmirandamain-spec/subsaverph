@@ -357,6 +357,8 @@ def _email_invoice_for_order(order: dict) -> dict:
     order["emailSent"] = bool(result.get("ok"))
     order["emailProvider"] = result.get("provider")
     order["emailDetail"] = str(result.get("detail") or "")[:500]
+    order["emailNotified"] = bool(result.get("notified"))
+    order["emailNotifyTo"] = result.get("notifyTo") or []
     order["emailSentAt"] = (
         __import__("datetime").datetime.utcnow().isoformat() + "Z"
         if result.get("ok")

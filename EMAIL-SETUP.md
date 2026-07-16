@@ -1,58 +1,115 @@
-# Email invoice + codes (after payment)
+# Receive email after purchase
 
 After a successful payment, SubSaverPH:
 
 1. Assigns stock codes to the order  
 2. Shows them on the success page  
-3. **Emails an invoice with the same codes** to the customer  
+3. **Emails an invoice + the same codes** to the **customer’s checkout email**  
+4. Optionally **BCC’s you** (store owner) so you also get a copy  
 
-## Render environment variables
+Live check: https://subsaverph.onrender.com/api/health  
+→ `"emailConfigured": true` means the server can send mail.
 
-Add **one** of these options in Render → Environment, then **redeploy**.
+---
 
-### Option A — Resend (easiest on Render)
+## How the customer gets the email
+
+1. Buyer enters their **email** at checkout (required).  
+2. They complete payment (Card / GCash / Maya / etc.).  
+3. Server fulfills order → calls email sender.  
+4. Customer receives: **order ID, items, access codes**.  
+5. Success page says if email was sent. Tell them to check **Inbox + Spam**.
+
+---
+
+## Setup on Render (production)
+
+### Option A — Resend (easiest)
 
 1. Sign up: https://resend.com  
-2. Create an API key  
-3. (Production) Verify your domain, or use `onboarding@resend.dev` for tests  
+2. **API Keys** → create key → copy `re_...`  
+3. For testing you can send from: `SubSaverPH <onboarding@resend.dev>`  
+4. For production: **Domains** → verify your domain (e.g. subsaverph.com)  
 
-| Key | Example |
-|-----|---------|
-| `RESEND_API_KEY` | `re_xxxxxxxx` |
-| `MAIL_FROM` | `SubSaverPH <onboarding@resend.dev>` |
+Render → **subsaverph** → **Environment**:
+
+| Key | Value |
+|-----|--------|
+| `RESEND_API_KEY` | `re_...` |
+| `MAIL_FROM` | `SubSaverPH <onboarding@resend.dev>` (or `you@yourdomain.com` after verify) |
 | `MAIL_FROM_NAME` | `SubSaverPH` |
-| `MAIL_REPLY_TO` | your real support email |
+| `MAIL_REPLY_TO` | your Gmail (customer replies go here) |
+| `ORDER_NOTIFY_EMAIL` | your Gmail (you get a BCC copy of every order) |
 
-### Option B — SMTP (Gmail / Outlook / etc.)
+**Save** → wait for redeploy.
 
-| Key | Example (Gmail) |
-|-----|-----------------|
+### Option B — Gmail SMTP
+
+1. Google Account → **Security** → turn on **2-Step Verification**  
+2. **App passwords** → create one for “Mail”  
+3. Render env:
+
+| Key | Value |
+|-----|--------|
 | `SMTP_HOST` | `smtp.gmail.com` |
 | `SMTP_PORT` | `587` |
 | `SMTP_USER` | `you@gmail.com` |
-| `SMTP_PASSWORD` | Gmail **App Password** (not your normal password) |
+| `SMTP_PASSWORD` | 16-char app password |
 | `SMTP_FROM` | `you@gmail.com` |
 | `SMTP_TLS` | `1` |
 | `MAIL_FROM_NAME` | `SubSaverPH` |
+| `ORDER_NOTIFY_EMAIL` | `you@gmail.com` |
 
-Gmail: Google Account → Security → 2-Step Verification → App passwords.
+---
 
-## Check it works
+## You (seller) also receive email
+
+Set **one** of these to your inbox:
+
+- `ORDER_NOTIFY_EMAIL=you@gmail.com` (preferred)  
+- or `MAIL_NOTIFY_TO=you@gmail.com`  
+- or `MAIL_REPLY_TO=you@gmail.com` (also used as Reply-To for customers)
+
+You get a **BCC copy** of the same invoice the customer gets (with codes).
+
+---
+
+## Verify
 
 ```text
-GET https://subsaverph.onrender.com/api/health
+https://subsaverph.onrender.com/api/health
 ```
 
-Should include `"emailConfigured": true`.
+Must show:
 
-Complete a test Stripe payment; the customer email should receive:
+```json
+"emailConfigured": true
+```
 
-- Order / invoice details  
-- Product names  
-- **Access codes**  
+Then:
+
+1. Put stock codes on a product (Admin → Codes / Stock)  
+2. Buy with **test** card or demo  
+3. Use a real inbox you can open at checkout  
+4. Check success page: “Invoice + access codes were emailed…”  
+5. Open that inbox (+ spam)
+
+---
+
+## Troubleshooting
+
+| Problem | Fix |
+|--------|-----|
+| `emailConfigured: false` | Missing `RESEND_API_KEY` or SMTP vars on Render |
+| Customer no email | Check spam; Resend may only allow verified recipients on free test from |
+| Resend “domain not verified” | Verify domain, or use `onboarding@resend.dev` for tests |
+| Codes on site but no email | Look at order in Admin → Orders (`emailSent`, `emailDetail`) |
+| You don’t get a copy | Set `ORDER_NOTIFY_EMAIL` to your address |
+
+---
 
 ## Notes
 
-- If email is not configured, orders still succeed and codes still show on the website.  
-- Failed sends are stored on the order (`emailSent: false`, `emailDetail`).  
-- Check spam if the message does not arrive.  
+- Without email configured, orders still work; codes still show on the success page.  
+- Email is best-effort; always show codes on-site too.  
+- For reliable delivery to any customer, verify a real domain on Resend (or use SMTP from Gmail).  
