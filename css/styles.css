@@ -76,10 +76,10 @@ img:not(.logo-mark):not(.brand-logo) {
 img.logo-mark,
 img.brand-logo {
   display: block;
-  width: 28px;
-  height: 28px;
+  width: 36px;
+  height: 36px;
   object-fit: contain;
-  border-radius: 0; /* SpaceX-style: hard square, no soft badge */
+  border-radius: 0;
   flex-shrink: 0;
   background: #000;
 }
@@ -320,23 +320,17 @@ mark {
 .logo {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  font-family: var(--display);
-  font-weight: 700;
-  font-size: 0.95rem;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
   cursor: pointer;
+  line-height: 0;
 }
 
 a.logo:hover {
   opacity: 0.85;
 }
 
-.logo-text b,
-.logo b {
-  font-weight: 500;
-  opacity: 0.5;
+/* Wordmark text removed — logo is image only (SS + PH) */
+.logo-text {
+  display: none !important;
 }
 
 .links {

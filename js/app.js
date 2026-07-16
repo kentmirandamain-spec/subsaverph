@@ -1444,19 +1444,20 @@ async function loadLiveCatalog() {
       : [];
     state.live = true;
 
-    // Apply host settings to chrome (keep logo mark + text)
+    // Apply host settings to chrome (logo image only — no text)
     const s = data.settings || {};
     if (s.siteName) {
       document.title = `${s.siteName} — Discounted Subscriptions`;
-      const base = escapeHtml(s.siteName.replace(/PH$/i, ""));
       document.querySelectorAll("a.logo").forEach((logo) => {
         const mark = logo.querySelector(".logo-mark");
+        const alt = escapeHtml(s.siteName);
         const markHtml = mark
           ? mark.outerHTML
-          : `<img class="logo-mark" src="/favicon.png" width="28" height="28" alt="${escapeHtml(s.siteName)}" />`;
-        logo.innerHTML = `${markHtml}<span class="logo-text">${base}<b>PH</b></span>`;
+          : `<img class="logo-mark" src="/favicon.png" width="36" height="36" alt="${alt}" />`;
+        logo.innerHTML = markHtml;
         logo.setAttribute("href", "#/home");
-        logo.setAttribute("title", "Go to home");
+        logo.setAttribute("title", `${s.siteName} home`);
+        logo.setAttribute("aria-label", `${s.siteName} home`);
       });
     }
     const foot = document.querySelector("#footerBlurb");
