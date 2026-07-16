@@ -1913,19 +1913,164 @@ a.logo:hover {
   max-width: 36ch;
 }
 
+.footer-company {
+  width: min(var(--max), calc(100% - 40px));
+  margin: 40px auto 0;
+  padding-top: 28px;
+  border-top: 1px solid var(--line);
+}
+
+.footer-company h4 {
+  font-size: 0.65rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--mute-2);
+  margin: 0 0 16px;
+}
+
+.footer-company-grid {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 28px 40px;
+}
+
+.footer-company p {
+  color: var(--mute);
+  font-size: 0.9rem;
+  line-height: 1.6;
+  margin: 0 0 12px;
+  max-width: none;
+}
+
+.footer-meta {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.footer-meta li {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.88rem;
+  color: var(--text);
+}
+
+.footer-meta li span {
+  color: var(--mute-2);
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  align-self: center;
+}
+
+.footer-disclaimer {
+  margin: 18px 0 0 !important;
+  font-size: 0.8rem !important;
+  color: var(--mute-2) !important;
+  max-width: 90ch !important;
+}
+
 .footer-bar {
   width: min(var(--max), calc(100% - 40px));
-  margin: 36px auto 0;
+  margin: 28px auto 0;
   padding-top: 20px;
   border-top: 1px solid var(--line);
   display: flex;
   justify-content: space-between;
+  align-items: center;
   gap: 12px;
   flex-wrap: wrap;
   font-size: 0.68rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--mute-2);
+}
+
+.footer-legal-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+}
+
+.footer-legal-links a {
+  display: inline;
+  margin: 0;
+  color: var(--mute);
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.footer-legal-links a:hover {
+  color: #fff;
+}
+
+/* Legal pages (About / Terms / Privacy) */
+.legal-page {
+  max-width: 760px;
+}
+
+.legal-updated {
+  margin: -8px 0 28px;
+  font-size: 0.85rem;
+}
+
+.legal-body h2 {
+  font-family: var(--display);
+  font-size: 0.95rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin: 28px 0 10px;
+  font-weight: 600;
+}
+
+.legal-body p,
+.legal-body li {
+  color: var(--mute);
+  font-size: 0.95rem;
+  line-height: 1.65;
+}
+
+.legal-body p {
+  margin: 0 0 12px;
+}
+
+.legal-body ul {
+  margin: 0 0 14px;
+  padding-left: 1.2rem;
+}
+
+.legal-body li {
+  margin: 6px 0;
+}
+
+.legal-body a {
+  color: #fff;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.legal-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  margin-top: 40px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+
+.legal-nav a {
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--mute);
+}
+
+.legal-nav a:hover {
+  color: #fff;
 }
 
 .toast {
@@ -1963,8 +2108,14 @@ a.logo:hover {
   .detail,
   .layout,
   .checkout,
-  .footer-inner {
+  .footer-inner,
+  .footer-company-grid {
     grid-template-columns: 1fr;
+  }
+
+  .footer-meta li {
+    grid-template-columns: 1fr;
+    gap: 4px;
   }
 }
 
