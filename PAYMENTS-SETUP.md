@@ -1,16 +1,20 @@
-# Multi-payment setup (Card, GCash, Maya, PayPal, Crypto)
+# Multi-payment setup (Card, GCash, Maya, PayPal, Crypto, Xendit)
 
 Checkout shows all enabled methods. After payment succeeds, **codes deliver instantly**.
 
 | Method | Provider | Env keys |
 |--------|----------|----------|
-| **Card** | Stripe (preferred) or PayMongo | `STRIPE_*` or `PAYMONGO_*` |
-| **GCash** | PayMongo | `PAYMONGO_SECRET_KEY` |
-| **Maya** | PayMongo | `PAYMONGO_SECRET_KEY` |
+| **Card** | Stripe (preferred), PayMongo, or Xendit | `STRIPE_*` / `PAYMONGO_*` / `XENDIT_*` |
+| **GCash / Maya / GrabPay / ShopeePay** | **Xendit** or **PayMongo** | `XENDIT_SECRET_KEY` or `PAYMONGO_SECRET_KEY` |
+| **Xendit Checkout** | Xendit hosted multi-wallet | `XENDIT_SECRET_KEY` |
 | **PayPal** | PayPal | `PAYPAL_CLIENT_ID` + `PAYPAL_CLIENT_SECRET` |
 | **Crypto** | NOWPayments | `NOWPAYMENTS_API_KEY` |
 
+`EWALLET_PROVIDER=auto|xendit|paymongo` chooses which backend runs GCash/Maya/GrabPay/ShopeePay.
+
 If **no keys** are set, methods still appear in **demo mode** (no real money, instant codes).
+
+See **XENDIT-SETUP.md** and **PH-EWALLET-SETUP.md**.
 
 ---
 
@@ -27,12 +31,21 @@ STRIPE_WEBHOOK_SECRET=whsec_...
 Webhook: `https://YOUR-APP.onrender.com/api/webhooks/stripe`  
 Event: `checkout.session.completed`
 
-### PayMongo (GCash + Maya + optional card)
+### PayMongo (GCash + Maya + GrabPay + ShopeePay + optional card)
 ```
 PAYMONGO_SECRET_KEY=sk_test_or_live
 PAYMONGO_PUBLIC_KEY=pk_test_or_live
 ```
 Webhook: `https://YOUR-APP.onrender.com/api/webhooks/paymongo`
+
+### Xendit (GCash + Maya + GrabPay + ShopeePay + card + multi-checkout)
+```
+XENDIT_SECRET_KEY=xnd_development_or_production
+EWALLET_PROVIDER=xendit
+XENDIT_CALLBACK_TOKEN=optional_shared_secret
+```
+Webhook: `https://YOUR-APP.onrender.com/api/webhooks/xendit`  
+(Invoice paid callback)
 
 ### PayPal
 ```
@@ -79,6 +92,7 @@ Replace with your real app name:
 |----------|-----|
 | Stripe | `https://YOUR-APP.onrender.com/api/webhooks/stripe` |
 | PayMongo | `https://YOUR-APP.onrender.com/api/webhooks/paymongo` |
+| Xendit | `https://YOUR-APP.onrender.com/api/webhooks/xendit` |
 | Crypto | `https://YOUR-APP.onrender.com/api/webhooks/nowpayments` |
 
 Also set:
@@ -91,8 +105,8 @@ PUBLIC_URL=https://YOUR-APP.onrender.com
 
 ## Notes
 
-- **GCash / Maya** need a **PayMongo** business account (PH).  
-- **Card** works best with **Stripe**.  
+- **GCash / Maya / GrabPay / ShopeePay** need **Xendit** and/or **PayMongo** (PH KYC).  
+- **Card** works best with **Stripe** (or Xendit/PayMongo cards).  
 - **PayPal** needs a PayPal Developer app.  
 - **Crypto** needs NOWPayments (or similar).  
 - Always keep **Codes / Stock** filled or products show **SOLD OUT**.  

@@ -219,6 +219,8 @@ def health():
             "emailConfigured": mail_ok,
             "stripeConfigured": stripe_configured(),
             "paymongoConfigured": paymongo_configured(),
+            "xenditConfigured": xendit_configured(),
+            "ewalletProvider": ewallet_provider(),
         }
     )
 
@@ -254,6 +256,8 @@ def api_catalog():
             "stripeEnabled": stripe_configured(),
             "stripePublishableKey": os.environ.get("STRIPE_PUBLISHABLE_KEY") or "",
             "paymongoEnabled": paymongo_configured(),
+            "xenditEnabled": xendit_configured(),
+            "ewalletProvider": ewallet_provider(),
             "paymentMethods": available_payment_methods(),
         }
     )
@@ -500,19 +504,43 @@ def paymongo_configured() -> bool:
     return bool((os.environ.get("PAYMONGO_SECRET_KEY") or "").strip())
 
 
+def xendit_configured() -> bool:
+    return bool((os.environ.get("XENDIT_SECRET_KEY") or "").strip())
+
+
+def ewallet_provider() -> str:
+    """
+    Which backend powers PH e-wallets (gcash, maya, grab_pay, shopeepay).
+    Env EWALLET_PROVIDER = auto | xendit | paymongo
+    auto → paymongo if set, else xendit if set, else demo
+    """
+    pref = (os.environ.get("EWALLET_PROVIDER") or "auto").strip().lower()
+    if pref == "xendit" and xendit_configured():
+        return "xendit"
+    if pref == "paymongo" and paymongo_configured():
+        return "paymongo"
+    # auto
+    if paymongo_configured():
+        return "paymongo"
+    if xendit_configured():
+        return "xendit"
+    return "demo"
+
+
 def available_payment_methods() -> list:
     """Return enabled payment methods for the checkout UI.
 
-    Card  → Stripe (if configured) or PayMongo card / demo
-    PH e-wallets (GCash, Maya, GrabPay, ShopeePay) → PayMongo when configured
+    Card  → Stripe (preferred), else PayMongo/Xendit card, else demo
+    PH e-wallets → PayMongo or Xendit (see EWALLET_PROVIDER)
     """
     methods = []
     has_stripe = bool((os.environ.get("STRIPE_SECRET_KEY") or "").strip())
     has_paymongo = paymongo_configured()
+    has_xendit = xendit_configured()
     has_paypal = bool((os.environ.get("PAYPAL_CLIENT_ID") or "").strip())
     has_crypto = bool((os.environ.get("NOWPAYMENTS_API_KEY") or "").strip())
-    any_live = has_stripe or has_paymongo or has_paypal or has_crypto
-    # Demo only when no real providers are configured
+    ewallet_prov = ewallet_provider()
+    any_live = has_stripe or has_paymongo or has_xendit or has_paypal or has_crypto
     demo_only = not any_live
 
     # Card (prefer Stripe)
@@ -536,6 +564,16 @@ def available_payment_methods() -> list:
                 "group": "card",
             }
         )
+    elif has_xendit:
+        methods.append(
+            {
+                "id": "card",
+                "label": "Card",
+                "provider": "xendit",
+                "desc": "Visa / Mastercard via Xendit",
+                "group": "card",
+            }
+        )
     elif demo_only:
         methods.append(
             {
@@ -547,17 +585,23 @@ def available_payment_methods() -> list:
             }
         )
 
-    # Philippine e-wallets via PayMongo (or demo preview)
-    # Types: https://docs.paymongo.com/docs/payment-acceptance-e-wallets
-    if has_paymongo or demo_only:
-        provider = "paymongo" if has_paymongo else "demo"
-        suffix = " (PHP)" if has_paymongo else " (demo)"
+    # Philippine e-wallets via PayMongo or Xendit (or demo preview)
+    if ewallet_prov in ("paymongo", "xendit") or demo_only:
+        provider = ewallet_prov if ewallet_prov != "demo" else "demo"
+        if demo_only:
+            provider = "demo"
+        label_src = {
+            "paymongo": "PayMongo",
+            "xendit": "Xendit",
+            "demo": "demo",
+        }.get(provider, provider)
+        suffix = f" · {label_src}" if provider != "demo" else " (demo)"
         methods.append(
             {
                 "id": "gcash",
                 "label": "GCash",
                 "provider": provider,
-                "desc": f"Pay with GCash{suffix}",
+                "desc": f"Pay with GCash (PHP){suffix}",
                 "group": "ewallet",
             }
         )
@@ -566,7 +610,7 @@ def available_payment_methods() -> list:
                 "id": "paymaya",
                 "label": "Maya",
                 "provider": provider,
-                "desc": f"Pay with Maya / PayMaya{suffix}",
+                "desc": f"Pay with Maya / PayMaya (PHP){suffix}",
                 "group": "ewallet",
             }
         )
@@ -575,7 +619,7 @@ def available_payment_methods() -> list:
                 "id": "grab_pay",
                 "label": "GrabPay",
                 "provider": provider,
-                "desc": f"Pay with GrabPay{suffix}",
+                "desc": f"Pay with GrabPay (PHP){suffix}",
                 "group": "ewallet",
             }
         )
@@ -584,7 +628,19 @@ def available_payment_methods() -> list:
                 "id": "shopeepay",
                 "label": "ShopeePay",
                 "provider": provider,
-                "desc": f"Pay with ShopeePay{suffix}",
+                "desc": f"Pay with ShopeePay (PHP){suffix}",
+                "group": "ewallet",
+            }
+        )
+
+    # Full Xendit hosted invoice (all enabled channels on one page)
+    if has_xendit:
+        methods.append(
+            {
+                "id": "xendit",
+                "label": "Xendit Checkout",
+                "provider": "xendit",
+                "desc": "GCash, Maya, GrabPay, ShopeePay & more (hosted)",
                 "group": "ewallet",
             }
         )
@@ -596,6 +652,7 @@ def available_payment_methods() -> list:
                 "label": "PayPal",
                 "provider": "paypal" if has_paypal else "demo",
                 "desc": "PayPal balance or linked card" if has_paypal else "PayPal (demo)",
+                "group": "other",
             }
         )
     if has_crypto or demo_only:
@@ -605,6 +662,7 @@ def available_payment_methods() -> list:
                 "label": "Crypto",
                 "provider": "nowpayments" if has_crypto else "demo",
                 "desc": "USDT, BTC, ETH & more" if has_crypto else "Crypto (demo)",
+                "group": "other",
             }
         )
 
@@ -670,7 +728,7 @@ def payments_config():
 def api_checkout_start():
     """
     Unified checkout start.
-    method: card | gcash | paymaya | grab_pay | shopeepay | paypal | crypto | demo
+    method: card | gcash | paymaya | grab_pay | shopeepay | xendit | paypal | crypto | demo
     Returns { url } for redirect providers, or { order } for demo.
     """
     data = request.get_json(silent=True) or {}
@@ -702,7 +760,7 @@ def api_checkout_start():
     provider = (methods.get(method) or {}).get("provider") or "demo"
     base = public_base_url()
     cart_meta = [{"id": r["id"], "qty": r["qty"]} for r in normalized]
-    paymongo_methods = ("gcash", "paymaya", "grab_pay", "shopeepay", "card")
+    ewallet_methods = ("gcash", "paymaya", "grab_pay", "shopeepay", "card", "xendit")
 
     # ---- DEMO (no real money) ----
     if provider == "demo" or method == "demo":
@@ -725,8 +783,12 @@ def api_checkout_start():
         return _stripe_session(email, name, currency, items, normalized, base)
 
     # ---- PH e-wallets + Card via PayMongo ----
-    if provider == "paymongo" and method in paymongo_methods:
+    if provider == "paymongo" and method in ewallet_methods and method != "xendit":
         return _paymongo_checkout(email, name, method, normalized, cart_meta, base)
+
+    # ---- PH e-wallets + Card + multi via Xendit ----
+    if provider == "xendit" and method in ewallet_methods:
+        return _xendit_checkout(email, name, method, normalized, cart_meta, base)
 
     # ---- PayPal ----
     if method == "paypal" and provider == "paypal":
@@ -923,6 +985,148 @@ def _paymongo_checkout(email, name, method, normalized, cart_meta, base):
     )
 
 
+def _xendit_checkout(email, name, method, normalized, cart_meta, base):
+    """
+    Start Xendit Invoice for PH e-wallets / card / multi-method checkout.
+    Docs: https://developers.xendit.co/api-reference/#create-invoice
+    Auth: Basic secret_key:
+    Amount is in major currency units (PHP pesos), not centavos.
+    """
+    secret = (os.environ.get("XENDIT_SECRET_KEY") or "").strip()
+    if not secret:
+        return jsonify(
+            {
+                "error": "Xendit not configured. Set XENDIT_SECRET_KEY on the server.",
+            }
+        ), 503
+
+    import base64
+    import urllib.request
+
+    # Map our method ids → Xendit invoice payment_methods codes
+    method_map = {
+        "gcash": ["GCASH"],
+        "paymaya": ["PAYMAYA"],
+        "maya": ["PAYMAYA"],
+        "grab_pay": ["GRABPAY"],
+        "grabpay": ["GRABPAY"],
+        "shopeepay": ["SHOPEEPAY"],
+        "card": ["CREDIT_CARD"],
+        "xendit": ["GCASH", "PAYMAYA", "GRABPAY", "SHOPEEPAY", "CREDIT_CARD"],
+    }
+    payment_methods = method_map.get(method, ["GCASH", "PAYMAYA", "GRABPAY", "SHOPEEPAY"])
+
+    # Total in PHP (major units)
+    total_php = float(cart_total_php(normalized))
+    if total_php < 1:
+        return jsonify({"error": "Cart total too low for Xendit."}), 400
+    # E-wallets often need a small minimum
+    if method != "card" and total_php < 20:
+        return jsonify(
+            {
+                "error": "Minimum amount for PH e-wallets is ₱20.00. Add more items or use Card.",
+            }
+        ), 400
+
+    items_payload = []
+    for row in normalized:
+        deal = row["deal"]
+        qty = max(1, int(row["qty"]))
+        unit = round(cart_total_php([row]) / qty, 2)
+        items_payload.append(
+            {
+                "name": (deal.get("name") or "Plan")[:100],
+                "quantity": qty,
+                "price": max(unit, 1),
+                "category": (deal.get("category") or "Digital")[:50],
+            }
+        )
+
+    ref = f"xd_{uuid.uuid4().hex[:16]}"
+    body = {
+        "external_id": ref,
+        "amount": round(total_php, 2),
+        "description": f"SubSaverPH · {method} · {email}"[:255],
+        "invoice_duration": int(os.environ.get("XENDIT_INVOICE_DURATION") or "86400"),
+        "currency": "PHP",
+        "reminder_time": 1,
+        "customer": {
+            "given_names": (name or "Customer")[:100],
+            "email": email,
+        },
+        "customer_notification_preference": {
+            "invoice_created": ["email"],
+            "invoice_reminder": ["email"],
+            "invoice_paid": ["email"],
+        },
+        "success_redirect_url": f"{base}/#/success?provider=xendit&ref={ref}",
+        "failure_redirect_url": f"{base}/#/checkout?cancelled=1",
+        "payment_methods": payment_methods,
+        "items": items_payload,
+        "metadata": {
+            "ref": ref,
+            "email": email,
+            "name": name,
+            "method": method,
+            "cart": json.dumps(cart_meta)[:500],
+        },
+    }
+
+    auth = base64.b64encode(f"{secret}:".encode()).decode()
+    api_base = (os.environ.get("XENDIT_API_BASE") or "https://api.xendit.co").rstrip("/")
+    req = urllib.request.Request(
+        f"{api_base}/v2/invoices",
+        data=json.dumps(body).encode("utf-8"),
+        headers={
+            "Authorization": f"Basic {auth}",
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            payload = json.loads(resp.read().decode("utf-8"))
+    except Exception as e:
+        err_body = ""
+        if hasattr(e, "read"):
+            try:
+                err_body = e.read().decode("utf-8")  # type: ignore
+            except Exception:
+                pass
+        return jsonify({"error": f"Xendit error: {e} {err_body}"}), 502
+
+    invoice_url = payload.get("invoice_url")
+    invoice_id = payload.get("id")
+    if not invoice_url:
+        return jsonify({"error": "Xendit did not return invoice_url", "raw": payload}), 502
+
+    pending = read_json(STORE / "pending_payments.json", {})
+    pending[ref] = {
+        "email": email,
+        "name": name,
+        "cart": cart_meta,
+        "method": method,
+        "provider": "xendit",
+        "invoiceId": invoice_id,
+        "currency": "PHP",
+        "amount": round(total_php, 2),
+        "createdAt": __import__("datetime").datetime.utcnow().isoformat() + "Z",
+    }
+    write_json(STORE / "pending_payments.json", pending)
+
+    return jsonify(
+        {
+            "ok": True,
+            "provider": "xendit",
+            "method": method,
+            "url": invoice_url,
+            "ref": ref,
+            "invoiceId": invoice_id,
+        }
+    )
+
+
 def _paypal_checkout(email, name, currency, normalized, cart_meta, base):
     client_id = os.environ.get("PAYPAL_CLIENT_ID")
     secret = os.environ.get("PAYPAL_CLIENT_SECRET")
@@ -1110,8 +1314,8 @@ def _crypto_checkout(email, name, normalized, cart_meta, base):
 @app.get("/api/checkout/complete")
 def api_checkout_complete():
     """
-    After redirect from PayMongo / PayPal / Crypto:
-    ?provider=paymongo|paypal|crypto&ref=...
+    After redirect from PayMongo / Xendit / PayPal / Crypto:
+    ?provider=paymongo|xendit|paypal|crypto&ref=...
     Verifies payment when possible and fulfills codes.
     """
     provider = (request.args.get("provider") or "").lower()
@@ -1148,6 +1352,15 @@ def api_checkout_complete():
                 {
                     "error": "PayMongo payment not confirmed yet. Wait a moment and refresh.",
                     "hint": "Ensure webhook is set or try again in a few seconds.",
+                }
+            ), 402
+    elif provider == "xendit" or pending.get("provider") == "xendit":
+        ok = _xendit_paid(pending)
+        if not ok and os.environ.get("XENDIT_REQUIRE_VERIFY", "1") == "1":
+            return jsonify(
+                {
+                    "error": "Xendit payment not confirmed yet. Wait a moment and refresh.",
+                    "hint": "Ensure Xendit webhook is set, or wait a few seconds.",
                 }
             ), 402
     elif provider == "crypto" or pending.get("provider") == "nowpayments":
@@ -1288,6 +1501,34 @@ def _crypto_paid(pending: dict) -> bool:
         return False
 
 
+def _xendit_paid(pending: dict) -> bool:
+    """Verify Xendit invoice is PAID / SETTLED."""
+    secret = (os.environ.get("XENDIT_SECRET_KEY") or "").strip()
+    invoice_id = pending.get("invoiceId")
+    if not secret or not invoice_id:
+        return os.environ.get("XENDIT_TRUST_RETURN", "0") == "1"
+    import base64
+    import urllib.request
+
+    auth = base64.b64encode(f"{secret}:".encode()).decode()
+    api_base = (os.environ.get("XENDIT_API_BASE") or "https://api.xendit.co").rstrip("/")
+    req = urllib.request.Request(
+        f"{api_base}/v2/invoices/{invoice_id}",
+        headers={
+            "Authorization": f"Basic {auth}",
+            "Accept": "application/json",
+        },
+        method="GET",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+        status = (data.get("status") or "").upper()
+        return status in ("PAID", "SETTLED")
+    except Exception:
+        return False
+
+
 @app.post("/api/webhooks/paymongo")
 def paymongo_webhook():
     """PayMongo webhook — fulfill when payment paid."""
@@ -1355,6 +1596,73 @@ def nowpayments_webhook():
             items=pending.get("cart") or [],
             payment_mode_name="nowpayments",
             method="crypto",
+            provider_ref=ref,
+        )
+        pending_all.pop(ref, None)
+        write_json(STORE / "pending_payments.json", pending_all)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 409
+    return jsonify({"ok": True})
+
+
+@app.post("/api/webhooks/xendit")
+def xendit_webhook():
+    """
+    Xendit invoice webhook.
+    Dashboard → Settings → Callbacks → Invoice paid URL:
+      https://YOUR-APP.onrender.com/api/webhooks/xendit
+    Optional: set XENDIT_CALLBACK_TOKEN and verify X-CALLBACK-TOKEN header.
+    """
+    # Optional shared-secret verification
+    expected = (os.environ.get("XENDIT_CALLBACK_TOKEN") or "").strip()
+    if expected:
+        got = (request.headers.get("X-CALLBACK-TOKEN") or "").strip()
+        if got != expected:
+            return jsonify({"error": "Invalid callback token"}), 401
+
+    payload = request.get_json(silent=True) or {}
+    # Invoice paid payload uses external_id + status
+    status = (payload.get("status") or "").upper()
+    # Some payloads nest under data
+    if not status and isinstance(payload.get("data"), dict):
+        status = (payload["data"].get("status") or "").upper()
+
+    if status and status not in ("PAID", "SETTLED"):
+        return jsonify({"ok": True, "skipped": status or "no status"})
+
+    ref = (
+        payload.get("external_id")
+        or (payload.get("data") or {}).get("external_id")
+        or ""
+    ).strip()
+    if not ref:
+        # Fallback: match by invoice id
+        inv_id = payload.get("id") or (payload.get("data") or {}).get("id")
+        pending_all = read_json(STORE / "pending_payments.json", {})
+        for k, v in pending_all.items():
+            if v.get("invoiceId") == inv_id:
+                ref = k
+                break
+    if not ref:
+        return jsonify({"ok": True, "skipped": "no ref"})
+
+    for existing in load_orders():
+        if existing.get("providerRef") == ref:
+            return jsonify({"ok": True, "duplicate": True})
+
+    pending_all = read_json(STORE / "pending_payments.json", {})
+    pending = pending_all.get(ref)
+    if not pending:
+        return jsonify({"ok": True, "skipped": "unknown ref"})
+
+    try:
+        fulfill_order(
+            email=pending.get("email") or payload.get("payer_email") or "",
+            name=pending.get("name") or "",
+            currency="PHP",
+            items=pending.get("cart") or [],
+            payment_mode_name="xendit",
+            method=pending.get("method") or "xendit",
             provider_ref=ref,
         )
         pending_all.pop(ref, None)
