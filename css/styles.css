@@ -69,6 +69,14 @@ html[data-theme="light"] {
   color-scheme: light;
 }
 
+/* While translating long pages */
+html.is-translating body {
+  cursor: progress;
+}
+html.is-translating .prefs-panel {
+  opacity: 0.85;
+}
+
 /* RTL languages (Arabic, Hebrew, Urdu, Persian) */
 html[dir="rtl"] .nav-inner,
 html[dir="rtl"] .footer-inner,

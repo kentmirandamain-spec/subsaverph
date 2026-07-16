@@ -37,6 +37,7 @@ import {
   t,
   fillLanguageSelect,
 } from "./prefs.js";
+import { queueTranslateDom } from "./translate.js";
 
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -117,10 +118,12 @@ function bindPrefsPanel() {
     if (e.key === "Escape") close();
   });
 
-  langSel?.addEventListener("change", () => {
+  langSel?.addEventListener("change", async () => {
     setLang(langSel.value);
     applyI18n();
     render();
+    toast(t("translating"));
+    await localizeFullPage();
     toast(t("toast_lang"));
   });
 
@@ -217,8 +220,34 @@ function updateBadge() {
 
 function ratesNote() {
   const info = getRatesInfo();
-  const src = info.source === "live" ? "Live FX" : info.source === "cache" ? "Cached FX" : "Offline FX";
-  return `${src} · ${CURRENCY_LIST.length} currencies · pay in ${getCurrencyCode()}`;
+  const src =
+    info.source === "live"
+      ? t("live_fx")
+      : info.source === "cache"
+        ? t("cached_fx")
+        : t("offline_fx");
+  return `${src} · ${CURRENCY_LIST.length} ${t("currencies_word")} · ${t("pay_in")} ${getCurrencyCode()}`;
+}
+
+/** Content helper: translated string for non-English; admin settings for English when set */
+function c(key, settingsKey) {
+  const s = siteSettings();
+  if (getLang() === "en" && settingsKey && s[settingsKey]) return String(s[settingsKey]);
+  const translated = t(key);
+  if (translated && translated !== key) return translated;
+  if (settingsKey && s[settingsKey]) return String(s[settingsKey]);
+  return translated || "";
+}
+
+async function localizeFullPage() {
+  applyI18n();
+  applySiteChrome();
+  if (getLang() === "en") {
+    document.documentElement.removeAttribute("data-translated");
+    return;
+  }
+  // Translate remaining English on the page (products, legal, hero, etc.)
+  await queueTranslateDom(document.body, getLang());
 }
 
 function openCart() {
@@ -243,8 +272,8 @@ function off(d) {
 }
 
 function periodLabel(d) {
-  if (d.period === "7 days") return " / 7 days";
-  if (d.period === "month") return " / month";
+  if (d.period === "7 days") return t("per_7_days");
+  if (d.period === "month") return t("per_month");
   return d.period ? ` / ${d.period}` : "";
 }
 
@@ -257,12 +286,15 @@ function isSoldOut(d) {
 }
 
 function stockLabel(d) {
-  if (isSoldOut(d)) return "SOLD OUT";
+  if (isSoldOut(d)) return t("sold_out");
   if (typeof d.stockLeft === "number") {
-    if (d.stockLeft <= 3) return `Only ${d.stockLeft} left`;
-    return `${d.stockLeft} in stock`;
+    if (d.stockLeft <= 3) return t("only_left").replace("{n}", String(d.stockLeft));
+    return t("n_in_stock").replace("{n}", String(d.stockLeft));
   }
-  return d.stock || "In stock";
+  const raw = d.stock || "In stock";
+  if (/sold out/i.test(raw)) return t("sold_out");
+  if (/in stock/i.test(raw)) return t("in_stock");
+  return raw;
 }
 
 function card(d, highlightQ = "") {
@@ -275,7 +307,7 @@ function card(d, highlightQ = "") {
       <div class="card-top">
         <div class="mono-box">${escapeHtml(d.monogram)}</div>
         <div class="pills">
-          ${soldOut ? `<span class="pill sold-out-pill">SOLD OUT</span>` : ""}
+          ${soldOut ? `<span class="pill sold-out-pill">${escapeHtml(t("sold_out"))}</span>` : ""}
           ${!soldOut && d.badge ? `<span class="pill">${escapeHtml(d.badge)}</span>` : ""}
           ${!soldOut ? `<span class="pill on">−${off(d)}%</span>` : ""}
         </div>
@@ -292,11 +324,11 @@ function card(d, highlightQ = "") {
         <div class="dur">${escapeHtml(d.duration)}</div>
       </div>
       <div class="actions">
-        <a class="btn sm" href="#/deal/${d.id}">Details</a>
+        <a class="btn sm" href="#/deal/${d.id}">${escapeHtml(t("details"))}</a>
         ${
           soldOut
-            ? `<button class="btn sm sold-out-btn" type="button" disabled>SOLD OUT</button>`
-            : `<button class="btn sm solid" data-add="${d.id}">Add</button>`
+            ? `<button class="btn sm sold-out-btn" type="button" disabled>${escapeHtml(t("sold_out"))}</button>`
+            : `<button class="btn sm solid" data-add="${d.id}">${escapeHtml(t("add"))}</button>`
         }
       </div>
     </article>`;
@@ -425,28 +457,28 @@ function applySiteChrome() {
     const el = document.querySelector(sel);
     if (el && val != null && String(val).length) el.textContent = val;
   };
-  setText("#footerBlurb", s.footerText);
-  setText("#footerCompanyBlurb", s.footerCompanyBlurb);
-  setText("#footerBrand", s.footerBrand);
-  setText("#footerServiceArea", s.footerServiceArea);
-  setText("#footerWebsiteLabel", s.footerWebsite);
-  setText("#footerSupportLabel", s.footerSupport);
-  setText("#footerBusinessType", s.footerBusinessType);
-  setText("#footerDisclaimer", s.footerDisclaimer);
-  if (s.footerCopyright) {
-    const year = new Date().getFullYear();
-    setText("#footerCopyright", `© ${year} ${s.footerCopyright}`);
-  }
+  setText("#footerBlurb", c("footer_blurb", "footerText"));
+  setText("#footerCompanyBlurb", c("footer_company_blurb", "footerCompanyBlurb"));
+  setText("#footerBrand", s.footerBrand || s.siteName || "SubSaverPH");
+  setText("#footerServiceArea", c("footer_service_area", "footerServiceArea"));
+  setText("#footerWebsiteLabel", s.footerWebsite || "subsaverph.onrender.com");
+  setText("#footerSupportLabel", s.footerSupport || s.supportEmail || "support@subsaverph.com");
+  setText("#footerBusinessType", c("footer_business_type", "footerBusinessType"));
+  setText("#footerDisclaimer", c("footer_disclaimer", "footerDisclaimer"));
+  const year = new Date().getFullYear();
+  setText("#footerCopyright", `© ${year} ${c("footer_copyright", "footerCopyright")}`);
+  document.querySelectorAll(".footer-meta li span[data-i18n-meta]").forEach((span) => {
+    span.textContent = t(span.getAttribute("data-i18n-meta"));
+  });
   if (s.supportEmail) {
     document.querySelectorAll("a[data-support-email]").forEach((a) => {
       a.href = `mailto:${s.supportEmail}`;
-      if (a.dataset.supportLabel !== "0") a.textContent = s.supportEmail;
     });
   }
 }
 
 function heroTitleHtml() {
-  const raw = siteSettings().heroTitle || "Premium\nplans.\nLower\ncost.";
+  const raw = c("hero_title", "heroTitle") || "Premium\nplans.\nLower\ncost.";
   return escapeHtml(raw).replace(/\\n/g, "<br/>").replace(/\n/g, "<br/>");
 }
 
@@ -465,21 +497,25 @@ function viewHome() {
 
   /* When searching: only matching products — no platforms / catalog / mission clutter */
   if (q) {
+    const found =
+      matches.length === 1
+        ? t("product_found")
+        : t("products_found");
     return `
     <div class="page page-search-only">
       <div class="page-inner">
-        <p class="eyebrow">Search</p>
-        <h1 class="page-title">Results</h1>
-        <p class="muted">Only products that match “<strong>${escapeHtml(q)}</strong>” are shown.</p>
-        ${searchBarHTML("Search a product name…")}
+        <p class="eyebrow">${escapeHtml(t("page_search"))}</p>
+        <h1 class="page-title">${escapeHtml(t("search_results_title"))}</h1>
+        <p class="muted">${escapeHtml(t("search_only_match"))} “<strong>${escapeHtml(q)}</strong>” ${escapeHtml(t("search_are_shown"))}</p>
+        ${searchBarHTML(t("search_product_ph"))}
         <div class="search-meta">
-          <strong>${matches.length}</strong> product${matches.length === 1 ? "" : "s"} found
-          <button type="button" class="link" id="clearSearchLink" style="margin-left:16px">Clear search</button>
+          <strong>${matches.length}</strong> ${escapeHtml(found)}
+          <button type="button" class="link" id="clearSearchLink" style="margin-left:16px">${escapeHtml(t("clear_search"))}</button>
         </div>
         ${
           matches.length
             ? `<div class="grid search-grid${matches.length === 1 ? " grid-single" : ""}">${matches.map((d) => card(d, q)).join("")}</div>`
-            : `<div class="empty">No products matched “${escapeHtml(q)}”.<br/>Try SuperGrok, Netflix, or Canva.</div>`
+            : `<div class="empty">${escapeHtml(t("no_products_matched"))} “${escapeHtml(q)}”.<br/>${escapeHtml(t("try_brands"))}</div>`
         }
       </div>
     </div>`;
@@ -489,11 +525,11 @@ function viewHome() {
     <section class="hero">
       <div class="hero-glow"></div>
       <div class="hero-inner">
-        <p class="eyebrow">${escapeHtml(s.heroEyebrow || "SubSaverPH · Subscription access")}</p>
+        <p class="eyebrow">${escapeHtml(c("hero_eyebrow", "heroEyebrow"))}</p>
         <h1 class="display">${heroTitleHtml()}</h1>
-        <p class="lead">${escapeHtml(s.heroLead || "Prepaid discounts. Pay in any currency.")}</p>
+        <p class="lead">${escapeHtml(c("hero_lead", "heroLead"))}</p>
 
-        ${searchBarHTML("Search SuperGrok, Netflix, Canva…")}
+        ${searchBarHTML(t("search_placeholder"))}
 
         <div class="cta" style="margin-top:28px">
           <a class="btn solid" href="#/search">${escapeHtml(t("cta_search"))}</a>
@@ -508,10 +544,10 @@ function viewHome() {
     </section>
 
     <div class="strip">
-      <div>${escapeHtml(s.strip1 || "Secure checkout")}</div>
-      <div>${escapeHtml(s.strip2 || "Searchable FX pay")}</div>
-      <div>${escapeHtml(s.strip3 || "Instant digital codes")}</div>
-      <div>${escapeHtml(s.strip4 || "Demo storefront")}</div>
+      <div>${escapeHtml(c("strip1", "strip1"))}</div>
+      <div>${escapeHtml(c("strip2", "strip2"))}</div>
+      <div>${escapeHtml(c("strip3", "strip3"))}</div>
+      <div>${escapeHtml(c("strip4", "strip4"))}</div>
     </div>
 
     <section class="section">
@@ -519,7 +555,7 @@ function viewHome() {
         <div class="section-head">
           <div>
             <p class="eyebrow">${escapeHtml(t("eyebrow_platforms"))}</p>
-            <h2>${escapeHtml(s.platformsTitle || "Select a service")}</h2>
+            <h2>${escapeHtml(c("platforms_title", "platformsTitle"))}</h2>
           </div>
         </div>
         <div class="brands">
@@ -536,7 +572,7 @@ function viewHome() {
         <div class="section-head">
           <div>
             <p class="eyebrow">${escapeHtml(t("eyebrow_catalog"))}</p>
-            <h2>${escapeHtml(s.catalogTitle || "Highest savings")}</h2>
+            <h2>${escapeHtml(c("catalog_title", "catalogTitle"))}</h2>
           </div>
           <a href="#/deals" class="link">${escapeHtml(t("view_all"))}</a>
         </div>
@@ -547,10 +583,10 @@ function viewHome() {
     <section class="mission">
       <div class="mission-line"></div>
       <div class="mission-inner">
-        <p class="eyebrow">Why ${escapeHtml(s.siteName || "SubSaverPH")}</p>
-        <h2>${escapeHtml(s.missionTitle || "Stack subscriptions without stacking full price")}</h2>
-        <p>${escapeHtml(s.missionText || "Prepaid multi-month plans at outlet rates.")}</p>
-        <a class="btn solid" href="#/deals">Browse deals</a>
+        <p class="eyebrow">${escapeHtml(t("why_prefix"))} ${escapeHtml(s.siteName || "SubSaverPH")}</p>
+        <h2>${escapeHtml(c("mission_title", "missionTitle"))}</h2>
+        <p>${escapeHtml(c("mission_text", "missionText"))}</p>
+        <a class="btn solid" href="#/deals">${escapeHtml(t("cta_browse"))}</a>
       </div>
     </section>`;
 }
@@ -606,7 +642,7 @@ function viewDeals() {
 function viewDeal() {
   const d = getDeal(state.dealId);
   if (!d) {
-    return `<div class="page"><div class="page-inner empty"><h2>Plan not found</h2><a class="btn solid" href="#/deals">Back</a></div></div>`;
+    return `<div class="page"><div class="page-inner empty"><h2>${escapeHtml(t("plan_not_found"))}</h2><a class="btn solid" href="#/deals">${escapeHtml(t("back"))}</a></div></div>`;
   }
   const isPhp = (d.priceBase || "USD") === "PHP";
   const yearly = d.period === "month" ? d.price * 12 : d.price;
@@ -615,16 +651,16 @@ function viewDeal() {
   return `
     <div class="page">
       <div class="page-inner">
-        <a href="#/deals" class="link">← All deals</a>
+        <a href="#/deals" class="link">← ${escapeHtml(t("all_deals"))}</a>
         <div class="detail">
           <div class="detail-panel">
             <div class="mono-box lg">${escapeHtml(d.monogram)}</div>
             ${
               soldOut
-                ? `<div class="save-big sold-out-big">SOLD OUT<span>No codes left in stock</span></div>`
-                : `<div class="save-big">−${off(d)}%<span>Versus retail</span></div>`
+                ? `<div class="save-big sold-out-big">${escapeHtml(t("sold_out"))}<span>${escapeHtml(t("no_codes_left"))}</span></div>`
+                : `<div class="save-big">−${off(d)}%<span>${escapeHtml(t("versus_retail"))}</span></div>`
             }
-            ${isPhp ? `<p class="php-tag">Base price in PHP · shows exact ₱ when currency is PHP</p>` : ""}
+            ${isPhp ? `<p class="php-tag">${escapeHtml(t("base_price_php"))}</p>` : ""}
             <ul class="list">
               ${d.includes.map((x) => `<li>${escapeHtml(x)}</li>`).join("")}
             </ul>
@@ -633,19 +669,19 @@ function viewDeal() {
             <p class="cat">${escapeHtml(d.brand)} · ${escapeHtml(d.category)} · <span class="${soldOut ? "is-sold-out" : ""}">${escapeHtml(stockLabel(d))}</span></p>
             <h1>${escapeHtml(d.name)}</h1>
             <p class="tag">${escapeHtml(d.tagline)}</p>
-            <p class="muted" style="margin:8px 0 14px">★ ${d.rating} · ${d.reviews.toLocaleString()} reviews</p>
+            <p class="muted" style="margin:8px 0 14px">★ ${d.rating} · ${d.reviews.toLocaleString()} ${escapeHtml(t("reviews"))}</p>
 
             <div id="pageFxMount" style="margin-bottom:14px"></div>
 
             <div class="price-hero">
               <div>
                 <strong>${formatDealPrice(d, "price")}</strong><span class="per">${periodLabel(d)}</span>
-                <span class="was" style="display:block;margin-top:4px">${formatDealPrice(d, "original")} retail</span>
+                <span class="was" style="display:block;margin-top:4px">${formatDealPrice(d, "original")} ${escapeHtml(t("retail"))}</span>
               </div>
               ${
                 soldOut
-                  ? `<div class="you-save sold-out-banner">SOLD OUT</div>`
-                  : `<div class="you-save">Save ${formatDealPrice({ ...d, price: d.original - d.price, priceBase: d.priceBase }, "price")}</div>`
+                  ? `<div class="you-save sold-out-banner">${escapeHtml(t("sold_out"))}</div>`
+                  : `<div class="you-save">${escapeHtml(t("save"))} ${formatDealPrice({ ...d, price: d.original - d.price, priceBase: d.priceBase }, "price")}</div>`
               }
             </div>
             <p class="muted" style="font-size:0.8rem;letter-spacing:0.08em;text-transform:uppercase;font-weight:600">
@@ -663,10 +699,10 @@ function viewDeal() {
             <div class="buy">
               ${
                 soldOut
-                  ? `<button class="btn sold-out-btn" type="button" disabled>SOLD OUT</button>
-                     <p class="muted" style="width:100%;margin:8px 0 0">This plan has no codes left. Check back later or pick another product.</p>`
-                  : `<button class="btn solid" data-add="${d.id}">Add to cart</button>
-                     <button class="btn" data-buy-now="${d.id}">Buy now</button>`
+                  ? `<button class="btn sold-out-btn" type="button" disabled>${escapeHtml(t("sold_out"))}</button>
+                     <p class="muted" style="width:100%;margin:8px 0 0">${escapeHtml(t("pick_another"))}</p>`
+                  : `<button class="btn solid" data-add="${d.id}">${escapeHtml(t("add_to_cart"))}</button>
+                     <button class="btn" data-buy-now="${d.id}">${escapeHtml(t("buy_now"))}</button>`
               }
             </div>
             <p class="fine">${escapeHtml(d.finePrint)}</p>
@@ -681,19 +717,19 @@ function viewHow() {
   return `
     <div class="page">
       <div class="page-inner">
-        <p class="eyebrow">Protocol</p>
-        <h1 class="page-title">How it works</h1>
+        <p class="eyebrow">${escapeHtml(t("protocol"))}</p>
+        <h1 class="page-title">${escapeHtml(t("page_how"))}</h1>
         <div class="steps">
-          <div class="step"><em>01</em><h3>Search</h3><p>Use the home search bar to find SuperGrok, Canva, CapCut, Netflix, or YouTube.</p></div>
-          <div class="step"><em>02</em><h3>Currency</h3><p>Open Pay → search any currency (PHP, USD, EUR…). SuperGrok stays exact at ₱99 / ₱399 in PHP.</p></div>
-          <div class="step"><em>03</em><h3>Checkout</h3><p>Demo card form only. No real charges. Codes on confirmation.</p></div>
-          <div class="step"><em>04</em><h3>Redeem</h3><p>Apply codes on the official service. Keep the order ID.</p></div>
+          <div class="step"><em>01</em><h3>${escapeHtml(t("how_step1_t"))}</h3><p>${escapeHtml(t("how_step1_p"))}</p></div>
+          <div class="step"><em>02</em><h3>${escapeHtml(t("how_step2_t"))}</h3><p>${escapeHtml(t("how_step2_p"))}</p></div>
+          <div class="step"><em>03</em><h3>${escapeHtml(t("how_step3_t"))}</h3><p>${escapeHtml(t("how_step3_p"))}</p></div>
+          <div class="step"><em>04</em><h3>${escapeHtml(t("how_step4_t"))}</h3><p>${escapeHtml(t("how_step4_p"))}</p></div>
         </div>
         <div class="note">
-          <h3>Demo notice</h3>
-          <p class="muted">SubSaverPH is a portfolio storefront. Not affiliated with xAI, Canva, CapCut, Netflix, or YouTube.</p>
+          <h3>${escapeHtml(t("demo_notice"))}</h3>
+          <p class="muted">${escapeHtml(t("demo_notice_p"))}</p>
           <div class="cta" style="margin:18px 0 0">
-            <a class="btn solid" href="#/deals">Browse deals</a>
+            <a class="btn solid" href="#/deals">${escapeHtml(t("cta_browse"))}</a>
           </div>
         </div>
       </div>
@@ -706,55 +742,46 @@ function viewLegalShell(eyebrow, title, updated, bodyHtml) {
       <div class="page-inner legal-page">
         <p class="eyebrow">${eyebrow}</p>
         <h1 class="page-title">${title}</h1>
-        <p class="legal-updated muted">Last updated: ${updated}</p>
+        <p class="legal-updated muted">${escapeHtml(t("last_updated"))}: ${updated}</p>
         <div class="legal-body">
           ${bodyHtml}
         </div>
         <div class="legal-nav">
-          <a href="#/about">About</a>
-          <a href="#/terms">Terms of Use</a>
-          <a href="#/privacy">Privacy Policy</a>
-          <a href="#/home">Back to home</a>
+          <a href="#/about">${escapeHtml(t("footer_about"))}</a>
+          <a href="#/terms">${escapeHtml(t("footer_terms"))}</a>
+          <a href="#/privacy">${escapeHtml(t("footer_privacy"))}</a>
+          <a href="#/home">${escapeHtml(t("back_to_home"))}</a>
         </div>
       </div>
     </div>`;
 }
 
 function viewAbout() {
-  const s = siteSettings();
-  const body =
-    textToLegalHtml(s.aboutBody) ||
-    `<p><strong>${escapeHtml(s.siteName || "SubSaverPH")}</strong> — discounted prepaid subscriptions in the Philippines.</p>`;
+  const body = textToLegalHtml(c("about_body", "aboutBody"));
   return viewLegalShell(
-    "Company",
-    escapeHtml(s.aboutTitle || "About SubSaverPH"),
-    escapeHtml(s.aboutUpdated || "July 16, 2026"),
+    t("company"),
+    escapeHtml(c("about_title", "aboutTitle")),
+    escapeHtml(c("about_updated", "aboutUpdated")),
     body
   );
 }
 
 function viewTerms() {
-  const s = siteSettings();
-  const body =
-    textToLegalHtml(s.termsBody) ||
-    `<p>Terms of Use for ${escapeHtml(s.siteName || "SubSaverPH")}. Contact ${escapeHtml(s.supportEmail || "support@subsaverph.com")}.</p>`;
+  const body = textToLegalHtml(c("terms_body", "termsBody"));
   return viewLegalShell(
-    "Legal",
-    escapeHtml(s.termsTitle || "Terms of Use"),
-    escapeHtml(s.termsUpdated || "July 16, 2026"),
+    t("legal"),
+    escapeHtml(c("terms_title", "termsTitle")),
+    escapeHtml(c("terms_updated", "termsUpdated")),
     body
   );
 }
 
 function viewPrivacy() {
-  const s = siteSettings();
-  const body =
-    textToLegalHtml(s.privacyBody) ||
-    `<p>Privacy Policy for ${escapeHtml(s.siteName || "SubSaverPH")}. Contact ${escapeHtml(s.supportEmail || "support@subsaverph.com")}.</p>`;
+  const body = textToLegalHtml(c("privacy_body", "privacyBody"));
   return viewLegalShell(
-    "Legal",
-    escapeHtml(s.privacyTitle || "Privacy Policy"),
-    escapeHtml(s.privacyUpdated || "July 16, 2026"),
+    t("legal"),
+    escapeHtml(c("privacy_title", "privacyTitle")),
+    escapeHtml(c("privacy_updated", "privacyUpdated")),
     body
   );
 }
@@ -1236,6 +1263,10 @@ function render() {
   syncGlobalSearchInput();
   applySiteChrome();
   applyI18n();
+  // Full-page translation for product text + leftover English
+  if (getLang() !== "en") {
+    queueTranslateDom(document.body, getLang());
+  }
 }
 
 function bind() {
