@@ -68,9 +68,19 @@ select {
   color: #fff;
 }
 
-/* no images anywhere */
-img {
+/* Hide decorative product images; allow brand logo / icons for Google & nav */
+img:not(.logo-mark):not(.brand-logo) {
   display: none !important;
+}
+
+img.logo-mark,
+img.brand-logo {
+  display: block;
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  border-radius: 6px;
+  flex-shrink: 0;
 }
 
 .wrap {
@@ -307,6 +317,9 @@ mark {
 }
 
 .logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
   font-family: var(--display);
   font-weight: 700;
   font-size: 0.95rem;
@@ -319,6 +332,7 @@ a.logo:hover {
   opacity: 0.85;
 }
 
+.logo-text b,
 .logo b {
   font-weight: 500;
   opacity: 0.5;
