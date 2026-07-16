@@ -69,6 +69,30 @@ html[data-theme="light"] {
   color-scheme: light;
 }
 
+/* RTL languages (Arabic, Hebrew, Urdu, Persian) */
+html[dir="rtl"] .nav-inner,
+html[dir="rtl"] .footer-inner,
+html[dir="rtl"] .footer-company-grid,
+html[dir="rtl"] .drawer-foot .row,
+html[dir="rtl"] .cart-line {
+  direction: rtl;
+}
+html[dir="rtl"] .prefs-panel {
+  right: auto;
+  left: 0;
+}
+html[dir="rtl"] .fx-panel {
+  right: auto;
+  left: 0;
+}
+html[dir="rtl"] .tools {
+  flex-direction: row-reverse;
+}
+
+.prefs-select {
+  max-height: none;
+}
+
 *,
 *::before,
 *::after {
@@ -539,6 +563,10 @@ a.logo:hover {
   padding: 10px 12px;
   font-size: 0.88rem;
   cursor: pointer;
+}
+
+#prefLang.prefs-select {
+  max-height: 42px;
 }
 
 html[data-theme="light"] .prefs-panel {

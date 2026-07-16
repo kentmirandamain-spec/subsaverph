@@ -30,12 +30,13 @@ import {
 import {
   initPrefs,
   applyTheme,
-  applyLang,
   getThemePref,
   getLang,
   setThemePref,
   setLang,
   t,
+  fillLanguageSelect,
+  LANGUAGES,
 } from "./prefs.js";
 
 const $ = (s, el = document) => el.querySelector(s);
@@ -90,7 +91,7 @@ function bindPrefsPanel() {
   const themeSel = $("#prefTheme");
   if (!picker || !btn || !panel) return;
 
-  if (langSel) langSel.value = getLang();
+  if (langSel) fillLanguageSelect(langSel);
   if (themeSel) themeSel.value = getThemePref();
 
   const close = () => {

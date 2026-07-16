@@ -34,8 +34,10 @@
         document.documentElement.setAttribute("data-theme", theme === "light" ? "light" : "dark");
         document.documentElement.setAttribute("data-theme-pref", pref);
         var lang = localStorage.getItem("subsaverph_lang") || "en";
-        document.documentElement.lang = lang === "fil" ? "fil" : "en";
-        document.documentElement.setAttribute("data-lang", lang === "fil" ? "fil" : "en");
+        var rtl = { ar: 1, he: 1, ur: 1, fa: 1 };
+        document.documentElement.lang = lang === "zh" ? "zh-CN" : lang;
+        document.documentElement.setAttribute("data-lang", lang);
+        document.documentElement.dir = rtl[lang] ? "rtl" : "ltr";
         var meta = document.querySelector('meta[name="theme-color"]');
         if (meta) meta.setAttribute("content", theme === "light" ? "#f4f4f5" : "#000000");
       } catch (e) {}
@@ -172,8 +174,8 @@
               <label class="prefs-label" for="prefLang" data-i18n="prefs_language">Language</label>
               <p class="prefs-hint" data-i18n="prefs_lang_hint">UI language for menus and buttons.</p>
               <select id="prefLang" class="prefs-select" aria-label="Language">
+                <!-- Filled by js/prefs.js (all languages) -->
                 <option value="en">English</option>
-                <option value="fil">Filipino</option>
               </select>
             </div>
             <div class="prefs-block">
