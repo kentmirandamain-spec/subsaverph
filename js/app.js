@@ -485,7 +485,8 @@ function heroTitleHtml() {
 function viewHome() {
   const q = state.query.trim();
   const matches = q ? searchDeals(window.DEALS || [], q, { limit: 100 }) : [];
-  const top = [...window.DEALS].sort((a, b) => off(b) - off(a)).slice(0, 6);
+  // Show every deal on the homepage so users see all products as they scroll
+  const allDeals = [...window.DEALS].sort((a, b) => off(b) - off(a));
   const s = siteSettings();
   const brandSet = [...new Set(window.DEALS.map((d) => d.brand).filter(Boolean))];
   const monoMap = { xAI: "SG", Canva: "CV", CapCut: "CC", Netflix: "NF", YouTube: "YT" };
@@ -573,10 +574,11 @@ function viewHome() {
           <div>
             <p class="eyebrow">${escapeHtml(t("eyebrow_catalog"))}</p>
             <h2>${escapeHtml(c("catalog_title", "catalogTitle"))}</h2>
+            <p class="muted" style="margin:8px 0 0">${allDeals.length} ${escapeHtml(t("meta_plans"))}</p>
           </div>
           <a href="#/deals" class="link">${escapeHtml(t("view_all"))}</a>
         </div>
-        <div class="grid">${top.map(card).join("")}</div>
+        <div class="grid grid-all-deals">${allDeals.map(card).join("")}</div>
       </div>
     </section>
 
