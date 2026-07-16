@@ -27,6 +27,16 @@ import {
   popularQueries,
   highlightMatch,
 } from "./search.js";
+import {
+  initPrefs,
+  applyTheme,
+  applyLang,
+  getThemePref,
+  getLang,
+  setThemePref,
+  setLang,
+  t,
+} from "./prefs.js";
 
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -47,6 +57,79 @@ const state = {
   paymongoEnabled: false,
   paymentMethods: [],
 };
+
+/** Apply data-i18n labels across static chrome */
+function applyI18n() {
+  document.querySelectorAll("[data-i18n]").forEach((el) => {
+    const key = el.getAttribute("data-i18n");
+    if (key) el.textContent = t(key);
+  });
+  document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
+    const key = el.getAttribute("data-i18n-placeholder");
+    if (key) el.setAttribute("placeholder", t(key));
+  });
+  document.querySelectorAll("[data-i18n-aria]").forEach((el) => {
+    const key = el.getAttribute("data-i18n-aria");
+    if (key) el.setAttribute("aria-label", t(key));
+  });
+  // Theme option labels
+  const themeSel = $("#prefTheme");
+  if (themeSel) {
+    [...themeSel.options].forEach((opt) => {
+      const map = { dark: "theme_dark", light: "theme_light", system: "theme_system" };
+      if (map[opt.value]) opt.textContent = t(map[opt.value]);
+    });
+  }
+}
+
+function bindPrefsPanel() {
+  const picker = $("#prefsPicker");
+  const btn = $("#prefsBtn");
+  const panel = $("#prefsPanel");
+  const langSel = $("#prefLang");
+  const themeSel = $("#prefTheme");
+  if (!picker || !btn || !panel) return;
+
+  if (langSel) langSel.value = getLang();
+  if (themeSel) themeSel.value = getThemePref();
+
+  const close = () => {
+    panel.hidden = true;
+    btn.setAttribute("aria-expanded", "false");
+    picker.classList.remove("open");
+  };
+  const open = () => {
+    panel.hidden = false;
+    btn.setAttribute("aria-expanded", "true");
+    picker.classList.add("open");
+  };
+
+  btn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (panel.hidden) open();
+    else close();
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!picker.contains(e.target)) close();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") close();
+  });
+
+  langSel?.addEventListener("change", () => {
+    setLang(langSel.value);
+    applyI18n();
+    render();
+    toast(t("toast_lang"));
+  });
+
+  themeSel?.addEventListener("change", () => {
+    setThemePref(themeSel.value);
+    applyTheme(themeSel.value);
+    toast(t("toast_theme"));
+  });
+}
 
 function parseRoute() {
   const hash = location.hash.replace(/^#\/?/, "") || "home";
@@ -413,13 +496,13 @@ function viewHome() {
         ${searchBarHTML("Search SuperGrok, Netflix, Canva…")}
 
         <div class="cta" style="margin-top:28px">
-          <a class="btn solid" href="#/search">Open search</a>
-          <a class="btn" href="#/deals">Browse deals</a>
+          <a class="btn solid" href="#/search">${escapeHtml(t("cta_search"))}</a>
+          <a class="btn" href="#/deals">${escapeHtml(t("cta_browse"))}</a>
         </div>
         <div class="meta">
-          <div><strong>${window.DEALS.length}</strong><span>Active plans</span></div>
-          <div><strong>5</strong><span>Platforms</span></div>
-          <div><strong>${CURRENCY_LIST.length}+</strong><span>Currencies</span></div>
+          <div><strong>${window.DEALS.length}</strong><span>${escapeHtml(t("meta_plans"))}</span></div>
+          <div><strong>5</strong><span>${escapeHtml(t("meta_platforms"))}</span></div>
+          <div><strong>${CURRENCY_LIST.length}+</strong><span>${escapeHtml(t("meta_currencies"))}</span></div>
         </div>
       </div>
     </section>
@@ -435,7 +518,7 @@ function viewHome() {
       <div class="section-inner">
         <div class="section-head">
           <div>
-            <p class="eyebrow">Platforms</p>
+            <p class="eyebrow">${escapeHtml(t("eyebrow_platforms"))}</p>
             <h2>${escapeHtml(s.platformsTitle || "Select a service")}</h2>
           </div>
         </div>
@@ -452,10 +535,10 @@ function viewHome() {
         </div>
         <div class="section-head">
           <div>
-            <p class="eyebrow">Catalog</p>
+            <p class="eyebrow">${escapeHtml(t("eyebrow_catalog"))}</p>
             <h2>${escapeHtml(s.catalogTitle || "Highest savings")}</h2>
           </div>
-          <a href="#/deals" class="link">View all</a>
+          <a href="#/deals" class="link">${escapeHtml(t("view_all"))}</a>
         </div>
         <div class="grid">${top.map(card).join("")}</div>
       </div>
@@ -477,8 +560,8 @@ function viewDeals() {
   return `
     <div class="page">
       <div class="page-inner">
-        <p class="eyebrow">Catalog</p>
-        <h1 class="page-title">All deals</h1>
+        <p class="eyebrow">${escapeHtml(t("eyebrow_catalog"))}</p>
+        <h1 class="page-title">${escapeHtml(t("page_deals"))}</h1>
         <p class="muted">${list.length} plan${list.length === 1 ? "" : "s"} · currency <strong>${getCurrencyCode()}</strong></p>
 
         ${searchBarHTML()}
@@ -1152,6 +1235,7 @@ function render() {
   bind();
   syncGlobalSearchInput();
   applySiteChrome();
+  applyI18n();
 }
 
 function bind() {
@@ -1406,10 +1490,15 @@ async function loadLiveCatalog() {
 }
 
 async function init() {
+  initPrefs();
+  applyI18n();
+  bindPrefsPanel();
+
   const yearEl = document.getElementById("footerYear");
   if (yearEl) yearEl.textContent = String(new Date().getFullYear());
 
   await loadLiveCatalog();
+  applyI18n();
   bindGlobalSearch();
 
   // Logo + Home nav (and any #/home links) → always go home
@@ -1431,7 +1520,7 @@ async function init() {
       onChange: () => {
         render();
         if ($("#drawer").classList.contains("open")) renderCart();
-        toast(`Pay in ${getCurrencyCode()}`);
+        toast(`${t("toast_pay")} ${getCurrencyCode()}`);
       },
     });
   }

@@ -2,7 +2,8 @@
 
 @import url("https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Orbitron:wght@500;600;700&display=swap");
 
-:root {
+:root,
+html[data-theme="dark"] {
   --bg: #000;
   --panel: #0a0a0a;
   --line: rgba(255, 255, 255, 0.14);
@@ -10,6 +11,14 @@
   --text: #fff;
   --mute: rgba(255, 255, 255, 0.58);
   --mute-2: rgba(255, 255, 255, 0.38);
+  --surface: #111;
+  --btn-solid-bg: #fff;
+  --btn-solid-fg: #000;
+  --nav-scrolled: rgba(0, 0, 0, 0.85);
+  --icon-hover: rgba(255, 255, 255, 0.08);
+  --focus-ring: rgba(255, 255, 255, 0.55);
+  --selection-bg: rgba(255, 255, 255, 0.18);
+  --selection-fg: #fff;
   --font: "DM Sans", system-ui, sans-serif;
   --display: "Orbitron", system-ui, sans-serif;
   --nav-h: 80px;
@@ -22,6 +31,32 @@
   --space-6: 88px;
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
   --dur: 0.22s;
+}
+
+/* Light appearance */
+html[data-theme="light"] {
+  --bg: #f4f4f5;
+  --panel: #ffffff;
+  --line: rgba(0, 0, 0, 0.1);
+  --line-strong: rgba(0, 0, 0, 0.22);
+  --text: #0a0a0a;
+  --mute: rgba(0, 0, 0, 0.58);
+  --mute-2: rgba(0, 0, 0, 0.4);
+  --surface: #ececee;
+  --btn-solid-bg: #0a0a0a;
+  --btn-solid-fg: #fff;
+  --nav-scrolled: rgba(244, 244, 245, 0.92);
+  --icon-hover: rgba(0, 0, 0, 0.06);
+  --focus-ring: rgba(0, 0, 0, 0.45);
+  --selection-bg: rgba(0, 0, 0, 0.12);
+  --selection-fg: #0a0a0a;
+}
+
+html {
+  color-scheme: dark;
+}
+html[data-theme="light"] {
+  color-scheme: light;
 }
 
 *,
@@ -59,13 +94,13 @@ select {
 }
 
 :focus-visible {
-  outline: 1px solid rgba(255, 255, 255, 0.55);
+  outline: 1px solid var(--focus-ring);
   outline-offset: 3px;
 }
 
 ::selection {
-  background: rgba(255, 255, 255, 0.18);
-  color: #fff;
+  background: var(--selection-bg);
+  color: var(--selection-fg);
 }
 
 /* Hide decorative product images; allow brand logo / icons for Google & nav */
@@ -81,7 +116,8 @@ img.brand-logo {
   object-fit: contain;
   border-radius: 0;
   flex-shrink: 0;
-  background: #000;
+  background: var(--bg);
+  border: 1px solid var(--line);
 }
 
 .wrap {
@@ -102,7 +138,7 @@ img.brand-logo {
 }
 
 .nav.scrolled {
-  background: rgba(0, 0, 0, 0.9);
+  background: var(--nav-scrolled);
   backdrop-filter: blur(12px);
   border-bottom-color: var(--line);
 }
@@ -356,7 +392,7 @@ a.logo:hover {
   right: 0;
   bottom: 0;
   height: 1px;
-  background: #fff;
+  background: var(--text);
   transform: scaleX(0);
   transform-origin: left;
   transition: transform var(--dur) var(--ease);
@@ -380,7 +416,7 @@ a.logo:hover {
   appearance: none;
   background: transparent;
   border: 1px solid var(--line-strong);
-  color: #fff;
+  color: var(--text);
   padding: 8px 28px 8px 10px;
   font-size: 0.72rem;
   font-weight: 600;
@@ -388,16 +424,16 @@ a.logo:hover {
   text-transform: uppercase;
   cursor: pointer;
   max-width: 180px;
-  background-image: linear-gradient(45deg, transparent 50%, #fff 50%),
-    linear-gradient(135deg, #fff 50%, transparent 50%);
+  background-image: linear-gradient(45deg, transparent 50%, var(--text) 50%),
+    linear-gradient(135deg, var(--text) 50%, transparent 50%);
   background-position: calc(100% - 12px) 50%, calc(100% - 8px) 50%;
   background-size: 4px 4px, 4px 4px;
   background-repeat: no-repeat;
 }
 
 .field-select option {
-  background: #111;
-  color: #fff;
+  background: var(--surface);
+  color: var(--text);
 }
 
 /* Searchable currency picker */
@@ -411,8 +447,8 @@ a.logo:hover {
   align-items: center;
   gap: 8px;
   border: 1px solid var(--line-strong);
-  background: rgba(255, 255, 255, 0.03);
-  color: #fff;
+  background: var(--icon-hover);
+  color: var(--text);
   padding: 8px 12px;
   cursor: pointer;
   font-size: 0.72rem;
@@ -424,8 +460,78 @@ a.logo:hover {
 
 .fx-btn:hover,
 .currency-picker.open .fx-btn {
-  border-color: #fff;
-  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--text);
+  background: var(--icon-hover);
+}
+
+/* Language + theme preferences */
+.prefs-picker {
+  position: relative;
+  z-index: 130;
+}
+
+.prefs-btn {
+  font-size: 1.05rem;
+}
+
+.prefs-panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: min(280px, calc(100vw - 32px));
+  padding: 16px;
+  background: var(--panel);
+  border: 1px solid var(--line-strong);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.35);
+  color: var(--text);
+}
+
+.prefs-heading {
+  margin: 0 0 14px;
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--mute-2);
+  font-weight: 700;
+}
+
+.prefs-block {
+  margin-bottom: 14px;
+}
+
+.prefs-block:last-child {
+  margin-bottom: 0;
+}
+
+.prefs-label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.prefs-hint {
+  margin: 0 0 8px;
+  font-size: 0.78rem;
+  color: var(--mute);
+  line-height: 1.4;
+}
+
+.prefs-select {
+  width: 100%;
+  appearance: none;
+  background: var(--bg);
+  border: 1px solid var(--line-strong);
+  color: var(--text);
+  padding: 10px 12px;
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+
+html[data-theme="light"] .prefs-panel {
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.12);
 }
 
 .fx-caption {
@@ -590,7 +696,7 @@ a.logo:hover {
   height: 40px;
   border: 1px solid var(--line-strong);
   background: transparent;
-  color: #fff;
+  color: var(--text);
   cursor: pointer;
   display: grid;
   place-items: center;
@@ -599,8 +705,8 @@ a.logo:hover {
 }
 
 .icon:hover {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: #fff;
+  background: var(--icon-hover);
+  border-color: var(--text);
 }
 
 .badge {
@@ -610,8 +716,8 @@ a.logo:hover {
   min-width: 16px;
   height: 16px;
   padding: 0 4px;
-  background: #fff;
-  color: #000;
+  background: var(--btn-solid-bg);
+  color: var(--btn-solid-fg);
   font-size: 0.62rem;
   font-weight: 800;
   display: grid;
@@ -628,9 +734,9 @@ a.logo:hover {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 2px solid #fff;
+  border: 2px solid var(--text);
   background: transparent;
-  color: #fff;
+  color: var(--text);
   padding: 14px 32px;
   font-size: 0.72rem;
   font-weight: 700;
@@ -643,8 +749,8 @@ a.logo:hover {
 }
 
 .btn:hover {
-  background: #fff;
-  color: #000;
+  background: var(--btn-solid-bg);
+  color: var(--btn-solid-fg);
 }
 
 .btn:active {
@@ -652,13 +758,13 @@ a.logo:hover {
 }
 
 .btn.solid {
-  background: #fff;
-  color: #000;
+  background: var(--btn-solid-bg);
+  color: var(--btn-solid-fg);
 }
 
 .btn.solid:hover {
   background: transparent;
-  color: #fff;
+  color: var(--text);
 }
 
 .btn.sm {
@@ -2337,6 +2443,33 @@ a.logo:hover {
 
 .footer-bar {
   margin-top: 40px;
+}
+
+/* Light theme: remaining high-contrast fixes */
+html[data-theme="light"] .nav-search {
+  background: rgba(0, 0, 0, 0.03);
+}
+html[data-theme="light"] .search-suggest,
+html[data-theme="light"] .fx-panel,
+html[data-theme="light"] .drawer {
+  background: var(--panel);
+  color: var(--text);
+  border-color: var(--line);
+}
+html[data-theme="light"] .overlay {
+  background: rgba(0, 0, 0, 0.35);
+}
+html[data-theme="light"] .toast {
+  background: #0a0a0a;
+  color: #fff;
+}
+html[data-theme="light"] .hero-glow {
+  opacity: 0.35;
+}
+html[data-theme="light"] input,
+html[data-theme="light"] select,
+html[data-theme="light"] textarea {
+  color: var(--text);
 }
 
 /* Prefer reduced motion */
