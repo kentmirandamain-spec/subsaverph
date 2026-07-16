@@ -420,7 +420,6 @@ function viewHome() {
           <div><strong>${window.DEALS.length}</strong><span>Active plans</span></div>
           <div><strong>5</strong><span>Platforms</span></div>
           <div><strong>${CURRENCY_LIST.length}+</strong><span>Currencies</span></div>
-          <div><strong>₱99</strong><span>SuperGrok 7 days</span></div>
         </div>
       </div>
     </section>
