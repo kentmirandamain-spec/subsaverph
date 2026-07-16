@@ -790,14 +790,29 @@ function paymentMethodsList() {
   const list = state.paymentMethods && state.paymentMethods.length
     ? state.paymentMethods
     : [
-        { id: "card", label: "Card", desc: "Visa / Mastercard" },
-        { id: "gcash", label: "GCash", desc: "Pay with GCash" },
-        { id: "paymaya", label: "Maya", desc: "Pay with Maya" },
-        { id: "paypal", label: "PayPal", desc: "PayPal" },
-        { id: "crypto", label: "Crypto", desc: "USDT, BTC, ETH" },
-        { id: "demo", label: "Demo", desc: "Test without real money" },
+        { id: "card", label: "Card", desc: "Visa / Mastercard", group: "card" },
+        { id: "gcash", label: "GCash", desc: "Pay with GCash (PHP)", group: "ewallet" },
+        { id: "paymaya", label: "Maya", desc: "Pay with Maya / PayMaya (PHP)", group: "ewallet" },
+        { id: "grab_pay", label: "GrabPay", desc: "Pay with GrabPay (PHP)", group: "ewallet" },
+        { id: "shopeepay", label: "ShopeePay", desc: "Pay with ShopeePay (PHP)", group: "ewallet" },
+        { id: "paypal", label: "PayPal", desc: "PayPal", group: "other" },
+        { id: "crypto", label: "Crypto", desc: "USDT, BTC, ETH", group: "other" },
+        { id: "demo", label: "Demo", desc: "Test without real money", group: "other" },
       ];
   return list;
+}
+
+const PH_EWALLETS = new Set(["gcash", "paymaya", "grab_pay", "shopeepay"]);
+
+function payButtonLabel(method) {
+  if (method === "gcash") return "Continue to GCash";
+  if (method === "paymaya") return "Continue to Maya";
+  if (method === "grab_pay") return "Continue to GrabPay";
+  if (method === "shopeepay") return "Continue to ShopeePay";
+  if (method === "card" && state.stripeEnabled) return "Continue to Stripe";
+  if (method === "paypal") return "Continue to PayPal";
+  if (method === "crypto") return "Continue to crypto pay";
+  return "Continue to pay";
 }
 
 function viewCheckout() {
@@ -812,20 +827,40 @@ function viewCheckout() {
   const stripeOn = !!state.stripeEnabled;
   const paymongoOn = !!state.paymongoEnabled;
   const isTestKey = String(state.stripePublishableKey || "").startsWith("pk_test_");
-  const hasGcash = methods.some((m) => m.id === "gcash");
-  const hasMaya = methods.some((m) => m.id === "paymaya");
-  const methodRadios = methods
-    .map(
-      (m, i) => `
-      <label class="pay-method">
-        <input type="radio" name="method" value="${escapeHtml(m.id)}" ${i === 0 ? "checked" : ""} required />
+  const hasEwallet = methods.some((m) => PH_EWALLETS.has(m.id));
+  const ewalletMethods = methods.filter((m) => PH_EWALLETS.has(m.id) || m.group === "ewallet");
+  const otherMethods = methods.filter((m) => !PH_EWALLETS.has(m.id) && m.group !== "ewallet");
+
+  const radioHtml = (m, checked) => `
+      <label class="pay-method ${PH_EWALLETS.has(m.id) ? "pay-method-ewallet" : ""}">
+        <input type="radio" name="method" value="${escapeHtml(m.id)}" ${checked ? "checked" : ""} required />
         <span class="pay-method-box">
           <strong>${escapeHtml(m.label)}</strong>
           <em>${escapeHtml(m.desc || "")}</em>
         </span>
-      </label>`
-    )
-    .join("");
+      </label>`;
+
+  // Prefer GCash first for Filipino shoppers when available
+  const preferred =
+    methods.find((m) => m.id === "gcash") ||
+    methods.find((m) => PH_EWALLETS.has(m.id)) ||
+    methods[0];
+  const methodRadios = [
+    ...(ewalletMethods.length
+      ? [
+          `<p class="pay-group-label">Philippine e-wallets (PHP)</p>`,
+          ...ewalletMethods.map((m) => radioHtml(m, preferred && m.id === preferred.id)),
+        ]
+      : []),
+    ...(otherMethods.length
+      ? [
+          ewalletMethods.length ? `<p class="pay-group-label">Other methods</p>` : "",
+          ...otherMethods.map((m) =>
+            radioHtml(m, !preferred || (!PH_EWALLETS.has(preferred.id) && m.id === preferred.id))
+          ),
+        ]
+      : []),
+  ].join("");
 
   const payHelp = `
         <div class="pay-help" id="payHelpBox">
@@ -833,15 +868,16 @@ function viewCheckout() {
           <p id="payHelpText">
             ${
               stripeOn || paymongoOn
-                ? "Pick a method below. You’ll be redirected to a secure payment page (Stripe or PayMongo). Codes unlock after payment."
-                : "Demo mode — no real money. Orders complete instantly for testing."
+                ? "Pick a method below. You’ll be redirected to a secure payment page. Codes unlock after payment succeeds."
+                : "Demo mode — no real money. Orders complete instantly for testing. Add PayMongo keys to accept real GCash / Maya / GrabPay / ShopeePay."
             }
           </p>
           ${
-            hasGcash || hasMaya
+            hasEwallet
               ? `<p class="muted" style="margin:8px 0 0;font-size:0.8rem;text-transform:none;letter-spacing:0;font-weight:400">
-            <strong style="color:#fff">GCash / Maya</strong> charge in <strong style="color:#fff">PHP</strong> via PayMongo.
-            ${paymongoOn ? "Live/test keys are configured." : "Currently demo until PayMongo keys are set on the server."}
+            <strong style="color:var(--text)">GCash, Maya, GrabPay &amp; ShopeePay</strong> bill in
+            <strong style="color:var(--text)">PHP</strong> via PayMongo (for Filipino customers).
+            ${paymongoOn ? "Keys are configured — live or test mode." : "Showing demo e-wallets until PayMongo is configured on the server."}
           </p>`
               : ""
           }
@@ -860,15 +896,8 @@ function viewCheckout() {
           }
         </div>`;
 
-  const defaultMethod = methods[0]?.id || "card";
-  const defaultBtn =
-    defaultMethod === "gcash"
-      ? "Continue to GCash"
-      : defaultMethod === "paymaya"
-        ? "Continue to Maya"
-        : defaultMethod === "card" && stripeOn
-          ? "Continue to Stripe"
-          : "Continue to pay";
+  const defaultMethod = preferred?.id || methods[0]?.id || "gcash";
+  const defaultBtn = payButtonLabel(defaultMethod);
 
   return `
     <div class="page">
@@ -876,8 +905,12 @@ function viewCheckout() {
         <p class="eyebrow">Payment</p>
         <h1 class="page-title">Checkout</h1>
         <p class="muted" style="margin-bottom:16px">
-          Pay with <strong style="color:#fff">Card</strong>, <strong style="color:#fff">GCash</strong>, or <strong style="color:#fff">Maya</strong>.
-          After payment, codes deliver <strong style="color:#fff">instantly</strong>.
+          Pay as a Filipino shopper with
+          <strong style="color:var(--text)">GCash</strong>,
+          <strong style="color:var(--text)">Maya</strong>,
+          <strong style="color:var(--text)">GrabPay</strong>, or
+          <strong style="color:var(--text)">ShopeePay</strong>
+          (plus Card). Codes deliver <strong style="color:var(--text)">instantly</strong> after payment.
         </p>
         ${cancelled ? `<p class="err" style="color:#ff8a8a;margin-bottom:12px">Payment cancelled. You can try again.</p>` : ""}
         <div class="checkout">
@@ -888,7 +921,7 @@ function viewCheckout() {
             <h3>Payment currency</h3>
             <div id="pageFxMount" style="margin-bottom:16px"></div>
             <p class="muted" style="margin:-8px 0 16px;font-size:0.78rem;text-transform:none;letter-spacing:0;font-weight:400">
-              GCash &amp; Maya always bill in PHP (converted automatically).
+              PH e-wallets always bill in <strong>PHP</strong> (converted automatically from your display currency).
             </p>
             <h3>Payment method</h3>
             <div class="pay-methods" role="radiogroup" aria-label="Payment method">
@@ -1339,18 +1372,7 @@ function bind() {
       const testBox = $("#stripeTestBox");
       if (testBox) testBox.hidden = method !== "card";
       if (!btn) return;
-      const label =
-        method === "gcash"
-          ? "Continue to GCash"
-          : method === "paymaya"
-            ? "Continue to Maya"
-            : method === "card" && state.stripeEnabled
-              ? "Continue to Stripe"
-              : method === "paypal"
-                ? "Continue to PayPal"
-                : method === "crypto"
-                  ? "Continue to Crypto"
-                  : "Continue to pay";
+      const label = payButtonLabel(method);
       btn.textContent = totalLabel ? `${label} · ${totalLabel}` : label;
     };
     form.querySelectorAll('input[name="method"]').forEach((el) => {
@@ -1369,10 +1391,9 @@ function bind() {
         payBtn.disabled = true;
         payBtn.textContent = "Processing…";
       }
-      const method = fd.get("method") || "card";
-      // E-wallets settle in PHP via PayMongo
-      const currency =
-        method === "gcash" || method === "paymaya" ? "PHP" : getCurrencyCode();
+      const method = String(fd.get("method") || "card");
+      // PH e-wallets settle in PHP via PayMongo
+      const currency = PH_EWALLETS.has(method) ? "PHP" : getCurrencyCode();
       const payload = {
         email: fd.get("email"),
         name: fd.get("name"),

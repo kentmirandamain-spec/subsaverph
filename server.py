@@ -502,7 +502,7 @@ def available_payment_methods() -> list:
     """Return enabled payment methods for the checkout UI.
 
     Card  → Stripe (if configured) or PayMongo card / demo
-    GCash / Maya (PayMaya) → PayMongo when PAYMONGO_SECRET_KEY is set
+    PH e-wallets (GCash, Maya, GrabPay, ShopeePay) → PayMongo when configured
     """
     methods = []
     has_stripe = bool((os.environ.get("STRIPE_SECRET_KEY") or "").strip())
@@ -521,6 +521,7 @@ def available_payment_methods() -> list:
                 "label": "Card",
                 "provider": "stripe",
                 "desc": "Visa / Mastercard via Stripe",
+                "group": "card",
             }
         )
     elif has_paymongo:
@@ -530,6 +531,7 @@ def available_payment_methods() -> list:
                 "label": "Card",
                 "provider": "paymongo",
                 "desc": "Visa / Mastercard via PayMongo",
+                "group": "card",
             }
         )
     elif demo_only:
@@ -539,25 +541,49 @@ def available_payment_methods() -> list:
                 "label": "Card",
                 "provider": "demo",
                 "desc": "Card (demo — no real charge)",
+                "group": "card",
             }
         )
 
-    # GCash + Maya (PayMaya) via PayMongo — Philippines e-wallets
+    # Philippine e-wallets via PayMongo (or demo preview)
+    # Types: https://docs.paymongo.com/docs/payment-acceptance-e-wallets
     if has_paymongo or demo_only:
+        provider = "paymongo" if has_paymongo else "demo"
+        suffix = " (PHP)" if has_paymongo else " (demo)"
         methods.append(
             {
                 "id": "gcash",
                 "label": "GCash",
-                "provider": "paymongo" if has_paymongo else "demo",
-                "desc": "Pay with GCash (PHP)" if has_paymongo else "GCash (demo)",
+                "provider": provider,
+                "desc": f"Pay with GCash{suffix}",
+                "group": "ewallet",
             }
         )
         methods.append(
             {
                 "id": "paymaya",
                 "label": "Maya",
-                "provider": "paymongo" if has_paymongo else "demo",
-                "desc": "Pay with Maya / PayMaya (PHP)" if has_paymongo else "Maya (demo)",
+                "provider": provider,
+                "desc": f"Pay with Maya / PayMaya{suffix}",
+                "group": "ewallet",
+            }
+        )
+        methods.append(
+            {
+                "id": "grab_pay",
+                "label": "GrabPay",
+                "provider": provider,
+                "desc": f"Pay with GrabPay{suffix}",
+                "group": "ewallet",
+            }
+        )
+        methods.append(
+            {
+                "id": "shopeepay",
+                "label": "ShopeePay",
+                "provider": provider,
+                "desc": f"Pay with ShopeePay{suffix}",
+                "group": "ewallet",
             }
         )
 
@@ -642,7 +668,7 @@ def payments_config():
 def api_checkout_start():
     """
     Unified checkout start.
-    method: card | gcash | paymaya | paypal | crypto | demo
+    method: card | gcash | paymaya | grab_pay | shopeepay | paypal | crypto | demo
     Returns { url } for redirect providers, or { order } for demo.
     """
     data = request.get_json(silent=True) or {}
@@ -651,6 +677,13 @@ def api_checkout_start():
     currency = (data.get("currency") or "PHP").strip().upper()
     items = data.get("items") or []
     method = (data.get("method") or "card").strip().lower()
+    # Aliases
+    if method in ("maya", "paymaya_wallet"):
+        method = "paymaya"
+    if method in ("grabpay", "grab-pay"):
+        method = "grab_pay"
+    if method in ("shopee_pay", "shopee-pay"):
+        method = "shopeepay"
 
     if not email or "@" not in email:
         return jsonify({"error": "Valid email is required for delivery"}), 400
@@ -667,6 +700,7 @@ def api_checkout_start():
     provider = (methods.get(method) or {}).get("provider") or "demo"
     base = public_base_url()
     cart_meta = [{"id": r["id"], "qty": r["qty"]} for r in normalized]
+    paymongo_methods = ("gcash", "paymaya", "grab_pay", "shopeepay", "card")
 
     # ---- DEMO (no real money) ----
     if provider == "demo" or method == "demo":
@@ -688,8 +722,8 @@ def api_checkout_start():
     if method == "card" and provider == "stripe":
         return _stripe_session(email, name, currency, items, normalized, base)
 
-    # ---- GCash / Maya / Card via PayMongo ----
-    if provider == "paymongo" and method in ("gcash", "paymaya", "card"):
+    # ---- PH e-wallets + Card via PayMongo ----
+    if provider == "paymongo" and method in paymongo_methods:
         return _paymongo_checkout(email, name, method, normalized, cart_meta, base)
 
     # ---- PayPal ----
@@ -755,25 +789,30 @@ def _stripe_session(email, name, currency, items, normalized, base):
 
 
 def _paymongo_checkout(email, name, method, normalized, cart_meta, base):
-    """Start PayMongo Checkout for GCash, Maya (PayMaya), or card."""
+    """Start PayMongo Checkout for PH e-wallets (GCash, Maya, GrabPay, ShopeePay) or card."""
     secret = (os.environ.get("PAYMONGO_SECRET_KEY") or "").strip()
     if not secret:
         return jsonify(
             {
-                "error": "GCash / Maya not configured. Set PAYMONGO_SECRET_KEY on the server (PayMongo).",
+                "error": "PH e-wallets not configured. Set PAYMONGO_SECRET_KEY on the server (PayMongo dashboard).",
             }
         ), 503
 
     import base64
     import urllib.request
 
+    # Official PayMongo payment method types
     method_map = {
         "card": "card",
         "gcash": "gcash",
         "paymaya": "paymaya",
         "maya": "paymaya",
+        "grab_pay": "grab_pay",
+        "grabpay": "grab_pay",
+        "shopeepay": "shopeepay",
     }
     pm_type = method_map.get(method, "gcash")
+    is_ewallet = pm_type in ("gcash", "paymaya", "grab_pay", "shopeepay")
 
     # PayMongo Checkout line amounts are in centavos (PHP only)
     line_items = []
@@ -796,11 +835,11 @@ def _paymongo_checkout(email, name, method, normalized, cart_meta, base):
             }
         )
 
-    # GCash/Maya often require a sensible minimum (₱20+)
-    if total_centavos < 2000:
+    # E-wallets often require a sensible minimum (₱20+)
+    if is_ewallet and total_centavos < 2000:
         return jsonify(
             {
-                "error": "Minimum amount for GCash/Maya is ₱20.00. Add more items or use Card.",
+                "error": "Minimum amount for PH e-wallets (GCash / Maya / GrabPay / ShopeePay) is ₱20.00. Add more items or use Card.",
             }
         ), 400
 

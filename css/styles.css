@@ -1737,6 +1737,23 @@ html[data-theme="light"] .prefs-panel {
   margin: 8px 0 4px;
 }
 
+.pay-group-label {
+  margin: 14px 0 4px;
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--mute-2);
+}
+
+.pay-group-label:first-child {
+  margin-top: 0;
+}
+
+.pay-method-ewallet .pay-method-box {
+  border-color: var(--line-strong);
+}
+
 .pay-method {
   display: flex !important;
   flex-direction: row !important;
