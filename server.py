@@ -257,6 +257,7 @@ def health():
             "paymongoConfigured": paymongo_configured(),
             "xenditConfigured": xendit_configured(),
             "paypalConfigured": paypal_configured(),
+            "paypalMode": paypal_credentials()[2] if paypal_configured() else None,
             "ewalletProvider": ewallet_provider(),
         }
     )
@@ -546,11 +547,24 @@ def xendit_configured() -> bool:
     return bool((os.environ.get("XENDIT_SECRET_KEY") or "").strip())
 
 
-def paypal_configured() -> bool:
-    return bool(
-        (os.environ.get("PAYPAL_CLIENT_ID") or "").strip()
-        and (os.environ.get("PAYPAL_CLIENT_SECRET") or "").strip()
+def paypal_credentials() -> tuple[str, str, str, str]:
+    """Return (client_id, secret, mode, api_base). Strips whitespace/quotes from env."""
+    client_id = (os.environ.get("PAYPAL_CLIENT_ID") or "").strip().strip('"').strip("'")
+    secret = (os.environ.get("PAYPAL_CLIENT_SECRET") or "").strip().strip('"').strip("'")
+    mode = (os.environ.get("PAYPAL_MODE") or "sandbox").strip().lower()
+    if mode not in ("sandbox", "live"):
+        mode = "sandbox"
+    api_base = (
+        "https://api-m.sandbox.paypal.com"
+        if mode == "sandbox"
+        else "https://api-m.paypal.com"
     )
+    return client_id, secret, mode, api_base
+
+
+def paypal_configured() -> bool:
+    client_id, secret, _, _ = paypal_credentials()
+    return bool(client_id and secret)
 
 
 def ewallet_provider() -> str:
@@ -1176,38 +1190,61 @@ def _xendit_checkout(email, name, method, normalized, cart_meta, base):
     )
 
 
-def _paypal_checkout(email, name, currency, normalized, cart_meta, base):
-    client_id = os.environ.get("PAYPAL_CLIENT_ID")
-    secret = os.environ.get("PAYPAL_CLIENT_SECRET")
-    if not client_id or not secret:
-        return jsonify({"error": "PAYPAL_CLIENT_ID / PAYPAL_CLIENT_SECRET not set"}), 503
-
+def _paypal_oauth_token(client_id: str, secret: str, api_base: str, mode: str):
+    """Get PayPal access token; return (token|None, error_message|None)."""
     import base64
-    import urllib.parse
+    import urllib.error
     import urllib.request
 
-    api_base = (
-        "https://api-m.sandbox.paypal.com"
-        if os.environ.get("PAYPAL_MODE", "sandbox").lower() == "sandbox"
-        else "https://api-m.paypal.com"
-    )
-
-    # OAuth
-    auth = base64.b64encode(f"{client_id}:{secret}".encode()).decode()
+    auth = base64.b64encode(f"{client_id}:{secret}".encode("utf-8")).decode("ascii")
     token_req = urllib.request.Request(
         f"{api_base}/v1/oauth2/token",
         data=b"grant_type=client_credentials",
         headers={
             "Authorization": f"Basic {auth}",
             "Content-Type": "application/x-www-form-urlencoded",
+            "Accept": "application/json",
         },
         method="POST",
     )
     try:
         with urllib.request.urlopen(token_req, timeout=30) as resp:
-            token = json.loads(resp.read().decode("utf-8")).get("access_token")
+            payload = json.loads(resp.read().decode("utf-8"))
+            token = payload.get("access_token")
+            if not token:
+                return None, "PayPal auth returned no access_token"
+            return token, None
+    except urllib.error.HTTPError as e:
+        body = ""
+        try:
+            body = e.read().decode("utf-8", errors="replace")[:400]
+        except Exception:
+            pass
+        if e.code == 401:
+            other = "live" if mode == "sandbox" else "sandbox"
+            return None, (
+                f"PayPal 401 Unauthorized (mode={mode}). "
+                f"Client ID and Secret do not match, or they are for {other} while "
+                f"PAYPAL_MODE={mode}. "
+                f"Fix: Developer Dashboard → Apps → select {'Sandbox' if mode == 'sandbox' else 'Live'} "
+                f"→ copy Client ID + Secret again → set PAYPAL_MODE={mode} on Render → redeploy. "
+                f"Details: {body or e}"
+            )
+        return None, f"PayPal auth HTTP {e.code}: {body or e}"
     except Exception as e:
-        return jsonify({"error": f"PayPal auth error: {e}"}), 502
+        return None, f"PayPal auth error: {e}"
+
+
+def _paypal_checkout(email, name, currency, normalized, cart_meta, base):
+    client_id, secret, mode, api_base = paypal_credentials()
+    if not client_id or not secret:
+        return jsonify({"error": "PAYPAL_CLIENT_ID / PAYPAL_CLIENT_SECRET not set"}), 503
+
+    import urllib.request
+
+    token, auth_err = _paypal_oauth_token(client_id, secret, api_base, mode)
+    if not token:
+        return jsonify({"error": auth_err or "PayPal auth failed", "paypalMode": mode}), 502
 
     # PayPal supports major currencies; fall back to USD for others (e.g. PHP display)
     pay_currency = (currency or "USD").upper()
@@ -1484,32 +1521,16 @@ def paypal_cancel():
 
 
 def _paypal_capture(pending: dict) -> bool:
-    client_id = os.environ.get("PAYPAL_CLIENT_ID")
-    secret = os.environ.get("PAYPAL_CLIENT_SECRET")
+    client_id, secret, mode, api_base = paypal_credentials()
     order_id = pending.get("paypalOrderId")
     if not all([client_id, secret, order_id]):
         return False
-    import base64
     import urllib.request
 
-    api_base = (
-        "https://api-m.sandbox.paypal.com"
-        if os.environ.get("PAYPAL_MODE", "sandbox").lower() == "sandbox"
-        else "https://api-m.paypal.com"
-    )
-    auth = base64.b64encode(f"{client_id}:{secret}".encode()).decode()
+    token, auth_err = _paypal_oauth_token(client_id, secret, api_base, mode)
+    if not token:
+        return False
     try:
-        token_req = urllib.request.Request(
-            f"{api_base}/v1/oauth2/token",
-            data=b"grant_type=client_credentials",
-            headers={
-                "Authorization": f"Basic {auth}",
-                "Content-Type": "application/x-www-form-urlencoded",
-            },
-            method="POST",
-        )
-        with urllib.request.urlopen(token_req, timeout=30) as resp:
-            token = json.loads(resp.read().decode("utf-8")).get("access_token")
         cap_req = urllib.request.Request(
             f"{api_base}/v2/checkout/orders/{order_id}/capture",
             data=b"{}",
