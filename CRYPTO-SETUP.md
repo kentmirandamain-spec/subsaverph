@@ -101,7 +101,8 @@ Checkout help text should say NOWPayments is configured (not demo).
 | Issue | Fix |
 |-------|-----|
 | Still “Crypto (demo)” | Key missing/wrong env name / deploy not done |
-| NOWPayments HTTP 401/403 | Invalid API key |
+| NOWPayments HTTP 401 | Invalid API key |
+| **HTTP 403 / Cloudflare Error 1010** | Cloudflare blocked Python’s default HTTP client. SubSaverPH uses **curl_cffi** (Chrome TLS) after deploy. Redeploy latest code; if still blocked, email NOWPayments support with your server IP / Render region. |
 | Amount too low | Raise cart total |
 | Payment not completed yet | Wait for network confirmations; refresh success page; check IPN URL |
 | No email | `emailConfigured` + Resend/SMTP (separate) |

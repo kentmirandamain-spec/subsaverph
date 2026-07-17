@@ -586,6 +586,92 @@ def crypto_configured() -> bool:
     )
 
 
+def _nowpayments_http(method: str, url: str, *, api_key: str, json_body=None, timeout: int = 30):
+    """
+    Call NOWPayments API. Cloudflare blocks stock Python urllib (Error 1010).
+    Prefer curl_cffi (Chrome TLS), then requests, then urllib.
+    Returns (status_code, parsed_json_or_none, raw_text).
+    """
+    headers = {
+        "x-api-key": api_key,
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "User-Agent": "SubSaverPH/1.0 (+https://subsaverph.onrender.com; NOWPayments client)",
+    }
+    method_u = (method or "GET").upper()
+
+    # 1) curl_cffi — best chance past Cloudflare bot filter
+    try:
+        from curl_cffi import requests as cf_requests
+
+        r = cf_requests.request(
+            method_u,
+            url,
+            headers=headers,
+            json=json_body,
+            timeout=timeout,
+            impersonate="chrome120",
+        )
+        text = r.text or ""
+        try:
+            data = r.json() if text else None
+        except Exception:
+            data = None
+        return r.status_code, data, text[:800]
+    except Exception:
+        pass
+
+    # 2) requests
+    try:
+        import requests
+
+        r = requests.request(
+            method_u,
+            url,
+            headers=headers,
+            json=json_body,
+            timeout=timeout,
+        )
+        text = r.text or ""
+        try:
+            data = r.json() if text else None
+        except Exception:
+            data = None
+        return r.status_code, data, text[:800]
+    except Exception:
+        pass
+
+    # 3) urllib fallback
+    import urllib.error
+    import urllib.request
+
+    data_bytes = None
+    if json_body is not None:
+        data_bytes = json.dumps(json_body).encode("utf-8")
+    req = urllib.request.Request(url, data=data_bytes, headers=headers, method=method_u)
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            text = resp.read().decode("utf-8", errors="replace")
+            try:
+                data = json.loads(text) if text else None
+            except Exception:
+                data = None
+            return resp.getcode() or 200, data, text[:800]
+    except urllib.error.HTTPError as e:
+        text = ""
+        try:
+            text = e.read().decode("utf-8", errors="replace")
+        except Exception:
+            pass
+        try:
+            data = json.loads(text) if text else None
+        except Exception:
+            data = None
+        return e.code, data, (text or str(e))[:800]
+    except Exception as e:
+        return 0, None, str(e)[:800]
+
+
 def ewallet_provider() -> str:
     """
     Which backend powers PH e-wallets (gcash, maya, grab_pay, shopeepay).
@@ -1391,9 +1477,6 @@ def _crypto_checkout(email, name, normalized, cart_meta, base):
     if not api_key:
         return jsonify({"error": "NOWPAYMENTS_API_KEY not set"}), 503
 
-    import urllib.error
-    import urllib.request
-
     price_usd = cart_total_usd(normalized)
     if price_usd < 0.5:
         return jsonify(
@@ -1418,35 +1501,28 @@ def _crypto_checkout(email, name, normalized, cart_meta, base):
     api_base = (
         os.environ.get("NOWPAYMENTS_API_BASE") or "https://api.nowpayments.io/v1"
     ).rstrip("/")
-    req = urllib.request.Request(
-        f"{api_base}/invoice",
-        data=json.dumps(body).encode("utf-8"),
-        headers={
-            "x-api-key": api_key,
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-        },
-        method="POST",
+    status, inv, raw = _nowpayments_http(
+        "POST", f"{api_base}/invoice", api_key=api_key, json_body=body
     )
-    try:
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            inv = json.loads(resp.read().decode("utf-8"))
-    except urllib.error.HTTPError as e:
-        err = ""
-        try:
-            err = e.read().decode("utf-8", errors="replace")[:500]
-        except Exception:
-            pass
+    if status != 200 and status != 201:
+        hint = "Check NOWPAYMENTS_API_KEY and that your NOWPayments account is active."
+        if status == 403 or "1010" in (raw or "") or "cloudflare" in (raw or "").lower():
+            hint = (
+                "Cloudflare blocked the API call (Error 1010). "
+                "Redeploy so curl_cffi is installed, or contact NOWPayments support "
+                "to whitelist your server. Confirm the API key is correct."
+            )
         return jsonify(
             {
-                "error": f"NOWPayments error HTTP {e.code}: {err or e}",
-                "hint": "Check NOWPAYMENTS_API_KEY and that your NOWPayments account is active.",
+                "error": f"NOWPayments error HTTP {status}: {(raw or '')[:400]}",
+                "hint": hint,
             }
         ), 502
-    except Exception as e:
-        return jsonify({"error": f"NOWPayments error: {e}"}), 502
 
-    invoice_url = inv.get("invoice_url") or inv.get("invoice_url".upper())
+    if not isinstance(inv, dict):
+        return jsonify({"error": "Invalid NOWPayments response", "raw": raw}), 502
+
+    invoice_url = inv.get("invoice_url")
     if not invoice_url:
         return jsonify({"error": "No invoice_url from NOWPayments", "raw": inv}), 502
 
@@ -1673,18 +1749,14 @@ def _crypto_paid(pending: dict) -> bool:
     """Verify crypto payment via NOWPayments invoice / payment lookup."""
     api_key = (os.environ.get("NOWPAYMENTS_API_KEY") or "").strip().strip('"').strip("'")
     invoice_id = pending.get("invoiceId")
-    ref = None
     # Allow soft return if IPN may lag (optional)
     trust = os.environ.get("CRYPTO_TRUST_RETURN", "0") == "1"
     if not api_key:
         return trust
-    import urllib.error
-    import urllib.request
 
     api_base = (
         os.environ.get("NOWPAYMENTS_API_BASE") or "https://api.nowpayments.io/v1"
     ).rstrip("/")
-    headers = {"x-api-key": api_key, "Accept": "application/json"}
 
     def _status_ok(status: str) -> bool:
         s = (status or "").lower()
@@ -1692,14 +1764,10 @@ def _crypto_paid(pending: dict) -> bool:
 
     # 1) Invoice by id
     if invoice_id:
-        try:
-            req = urllib.request.Request(
-                f"{api_base}/invoice/{invoice_id}",
-                headers=headers,
-                method="GET",
-            )
-            with urllib.request.urlopen(req, timeout=30) as resp:
-                data = json.loads(resp.read().decode("utf-8"))
+        code, data, _raw = _nowpayments_http(
+            "GET", f"{api_base}/invoice/{invoice_id}", api_key=api_key
+        )
+        if code == 200 and isinstance(data, dict):
             status = (
                 data.get("payment_status")
                 or data.get("invoice_status")
@@ -1708,28 +1776,25 @@ def _crypto_paid(pending: dict) -> bool:
             )
             if _status_ok(status):
                 return True
-        except Exception:
-            pass
 
-    # 2) Find payment by order_id (our ref) if stored on pending path via list
-    # NOWPayments: GET /v1/payment/?limit=10 is account-wide; use payment-by-invoice if available
+    # 2) Payments linked to invoice
     if invoice_id:
-        try:
-            req = urllib.request.Request(
-                f"{api_base}/payment/?invoiceId={invoice_id}&limit=5",
-                headers=headers,
-                method="GET",
-            )
-            with urllib.request.urlopen(req, timeout=30) as resp:
-                data = json.loads(resp.read().decode("utf-8"))
-            payments = data.get("data") or data.get("payments") or []
+        code, data, _raw = _nowpayments_http(
+            "GET",
+            f"{api_base}/payment/?invoiceId={invoice_id}&limit=5",
+            api_key=api_key,
+        )
+        if code == 200 and data is not None:
+            payments = []
             if isinstance(data, list):
                 payments = data
+            elif isinstance(data, dict):
+                payments = data.get("data") or data.get("payments") or []
             for p in payments:
-                if _status_ok(p.get("payment_status") or p.get("status") or ""):
+                if isinstance(p, dict) and _status_ok(
+                    p.get("payment_status") or p.get("status") or ""
+                ):
                     return True
-        except Exception:
-            pass
 
     return trust
 
