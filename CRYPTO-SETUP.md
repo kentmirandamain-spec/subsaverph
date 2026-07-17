@@ -40,6 +40,8 @@ Optional:
 
 ```env
 NOWPAYMENTS_API_BASE=https://api.nowpayments.io/v1
+# Optional: force-display a known static egress IP (if you bought a static IP)
+# SERVER_OUTBOUND_IP=x.x.x.x
 # Only for debugging if IPN is slow (not recommended in production):
 # CRYPTO_TRUST_RETURN=0
 ```
@@ -48,22 +50,60 @@ Save → wait for **redeploy**.
 
 ---
 
-## 4. IPN / webhook (important for auto delivery)
+## 4. Whitelist your server IP in NOWPayments (important)
 
-In NOWPayments dashboard, set **IPN callback URL** (if there is a global setting) to:
+NOWPayments often requires your **server outbound IP** for API / payout security.
+
+### Get your IP
+
+After deploy, open either:
+
+- https://subsaverph.onrender.com/api/nowpayments/ip  
+- or https://subsaverph.onrender.com/api/health  
+
+Copy the value of **`outboundIp`** (example: `35.xxx.xxx.xxx`).
+
+### Add it in NOWPayments
+
+1. Log in: https://account.nowpayments.io/  
+2. **Settings** → **Payments** → **IP addresses** (or “Whitelist IPs”)  
+3. **Add** the `outboundIp` you copied  
+4. Save  
+
+**Note:** Free Render may **change** the outbound IP after redeploys.  
+If crypto breaks later, re-check `/api/nowpayments/ip` and update the whitelist.  
+For a stable IP: paid Render static outbound IP, or set `SERVER_OUTBOUND_IP` if you have a fixed egress.
+
+---
+
+## 5. IPN / webhook (important for auto delivery)
+
+In NOWPayments dashboard, set **IPN callback URL** to:
 
 ```text
 https://subsaverph.onrender.com/api/webhooks/nowpayments
 ```
 
+(Dashboard → Settings → Payments → Instant payment notifications)
+
 The checkout also sends this URL on each invoice.
+
+If you use Cloudflare or a firewall in front of the site, allow NOWPayments notification IPs (also listed on `/api/nowpayments/ip`):
+
+```text
+51.89.194.21
+51.75.77.69
+138.201.172.58
+65.21.158.36
+144.76.201.30
+```
 
 Webhook fulfills the order when status is `finished` / `confirmed` / `sending`.  
 When the buyer returns to the site, `/api/checkout/complete` also checks payment status.
 
 ---
 
-## 5. Customer flow
+## 6. Customer flow
 
 1. Cart → Checkout  
 2. Choose **Crypto**  
@@ -74,7 +114,7 @@ When the buyer returns to the site, `/api/checkout/complete` also checks payment
 
 ---
 
-## 6. Confirm it is live
+## 7. Confirm it is live
 
 Open: **https://subsaverph.onrender.com/api/health**
 
@@ -86,7 +126,7 @@ Checkout help text should say NOWPayments is configured (not demo).
 
 ---
 
-## 7. Test checklist
+## 8. Test checklist
 
 - [ ] Product has inventory codes  
 - [ ] Order total at least ~$0.50 USD (NOWPayments minimums)  

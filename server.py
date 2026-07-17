@@ -241,6 +241,55 @@ def require_admin(fn):
 # ---------- public API ----------
 
 
+def get_outbound_ip() -> str | None:
+    """Public IP this server uses for outbound API calls (whitelist in NOWPayments)."""
+    fixed = (os.environ.get("SERVER_OUTBOUND_IP") or "").strip()
+    if fixed:
+        return fixed
+    # Try several echo services (Render outbound IP)
+    urls = (
+        "https://api.ipify.org",
+        "https://ifconfig.me/ip",
+        "https://icanhazip.com",
+    )
+    for url in urls:
+        try:
+            import urllib.request
+
+            req = urllib.request.Request(
+                url,
+                headers={"User-Agent": "SubSaverPH/1.0"},
+                method="GET",
+            )
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                ip = resp.read().decode("utf-8", errors="replace").strip()
+                if ip and len(ip) < 64 and " " not in ip:
+                    return ip
+        except Exception:
+            continue
+    # curl_cffi fallback
+    try:
+        from curl_cffi import requests as cf_requests
+
+        r = cf_requests.get("https://api.ipify.org", timeout=5, impersonate="chrome120")
+        ip = (r.text or "").strip()
+        if ip and len(ip) < 64:
+            return ip
+    except Exception:
+        pass
+    return None
+
+
+# NOWPayments notification server IPs (whitelist on your firewall/Cloudflare if needed)
+NOWPAYMENTS_IPN_IPS = [
+    "51.89.194.21",
+    "51.75.77.69",
+    "138.201.172.58",
+    "65.21.158.36",
+    "144.76.201.30",
+]
+
+
 @app.get("/api/health")
 def health():
     try:
@@ -248,6 +297,7 @@ def health():
         mail_ok = mail_configured()
     except Exception:
         mail_ok = False
+    outbound = get_outbound_ip()
     return jsonify(
         {
             "ok": True,
@@ -260,6 +310,38 @@ def health():
             "paypalMode": paypal_credentials()[2] if paypal_configured() else None,
             "cryptoConfigured": crypto_configured(),
             "ewalletProvider": ewallet_provider(),
+            # Add this IP in NOWPayments → Settings → Payments → IP addresses
+            "outboundIp": outbound,
+            "outboundIpHint": (
+                "Whitelist this IP in NOWPayments dashboard (Settings → Payments → IP addresses). "
+                "On free Render the IP can change after redeploys."
+            ),
+            "nowpaymentsIpnIps": NOWPAYMENTS_IPN_IPS,
+            "nowpaymentsIpnUrl": f"{public_base_url()}/api/webhooks/nowpayments",
+        }
+    )
+
+
+@app.get("/api/nowpayments/ip")
+def nowpayments_ip_info():
+    """Simple page/API for copying server IP for NOWPayments whitelist."""
+    outbound = get_outbound_ip()
+    return jsonify(
+        {
+            "ok": True,
+            "outboundIp": outbound,
+            "instructions": [
+                "1. Copy outboundIp below",
+                "2. NOWPayments dashboard → Settings → Payments → IP addresses",
+                "3. Add / whitelist that IP (IPv4)",
+                "4. Save, then retry Crypto checkout",
+            ],
+            "ipnCallbackUrl": f"{public_base_url()}/api/webhooks/nowpayments",
+            "nowpaymentsNotificationIps": NOWPAYMENTS_IPN_IPS,
+            "note": (
+                "Free Render uses shared IPs that may change. "
+                "For a fixed IP, use a paid Render static outbound IP or set SERVER_OUTBOUND_IP env."
+            ),
         }
     )
 
