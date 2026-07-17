@@ -1,4 +1,4 @@
-﻿/* SubSaverPH â€” SpaceX-inspired Â· black canvas Â· no images */
+﻿/* SubSaverPH — monochrome galaxy storefront — no product images */
 
 @import url("https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Orbitron:wght@500;600;700&display=swap");
 
@@ -928,7 +928,7 @@ mark {
   margin-top: 12px;
 }
 
-/* Single product match â€” don't stretch a lone card across 3 columns */
+/* Single product match — don't stretch a lone card across 3 columns */
 .grid.search-grid.grid-single,
 .grid.grid-single {
   grid-template-columns: minmax(260px, 400px);
@@ -950,7 +950,7 @@ a.logo:hover {
   opacity: 0.85;
 }
 
-/* Wordmark text removed â€” logo is image only (SS + PH) */
+/* Wordmark text removed — logo is image only (SS + PH) */
 .logo-text {
   display: none !important;
 }
@@ -1595,7 +1595,7 @@ html[data-theme="light"] .badge {
   font-weight: 600;
 }
 
-/* DEAL GRID â€” text only */
+/* DEAL GRID — text only */
 .grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -2000,7 +2000,7 @@ html[data-theme="light"] .badge {
 }
 
 .list li::before {
-  content: "â€” ";
+  content: "\2014\00a0"; /* em dash + space (ASCII-safe escape) */
   color: var(--text);
 }
 
@@ -2009,8 +2009,36 @@ html[data-theme="light"] .badge {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   font-size: clamp(1.5rem, 3vw, 2.2rem);
-  line-height: 1.1;
+  line-height: 1.15;
   margin: 6px 0 10px;
+  max-width: none;
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+}
+
+.detail-info .detail-tagline {
+  margin: 0 0 6px;
+  color: var(--mute);
+  font-size: 1rem;
+  line-height: 1.45;
+  letter-spacing: 0.01em;
+}
+
+.detail-info .detail-desc {
+  margin: 14px 0 0;
+  color: var(--mute);
+  font-size: 0.95rem;
+  line-height: 1.65;
+  max-width: 52ch;
+}
+
+.detail-info .detail-meta {
+  margin: 8px 0 14px;
+  font-size: 0.85rem;
+  color: var(--mute-2);
+  letter-spacing: 0.02em;
+  text-transform: none;
+  font-weight: 500;
 }
 
 .price-hero {
@@ -2913,7 +2941,7 @@ html[data-theme="light"] .badge {
   }
 }
 
-/* â€”â€”â€” Minimal polish (same colors & style) â€”â€”â€” */
+/* --- Minimal polish (same colors & style) --- */
 .logo {
   transition: opacity var(--dur) var(--ease);
 }
@@ -2985,9 +3013,7 @@ html[data-theme="light"] .badge {
   color: var(--text);
 }
 
-.detail-info h1 {
-  max-width: 18ch;
-}
+/* detail title width handled above — do not clamp to 18ch */
 
 .price-hero {
   margin: 18px 0;

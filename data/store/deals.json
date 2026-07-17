@@ -16,7 +16,7 @@
     "badge": "Hot",
     "stock": "In stock",
     "delivery": "Instant access code",
-    "description": "SuperGrok 7-day pass — advanced reasoning, higher limits, and priority responses for a full week. Priced at ₱99 for SubSaverPH shoppers.",
+    "description": "SuperGrok 7-day pass - advanced reasoning, higher limits, and priority responses for a full week. Priced at PHP 99 for SubSaverPH shoppers.",
     "includes": [
       "SuperGrok model access",
       "7 days full access",
@@ -24,7 +24,7 @@
       "Priority responses",
       "Instant digital code"
     ],
-    "finePrint": "Demo listing — not affiliated with xAI. Features depend on region and account eligibility.",
+    "finePrint": "Demo listing - not affiliated with xAI. Features depend on region and account eligibility.",
     "active": true
   },
   {
@@ -44,7 +44,7 @@
     "badge": "Featured",
     "stock": "In stock",
     "delivery": "Instant access code",
-    "description": "SuperGrok monthly plan — a full 30 days of SuperGrok at ₱399. Ideal for heavy research, coding help, and daily use.",
+    "description": "SuperGrok monthly plan - a full 30 days of SuperGrok at PHP 399. Ideal for heavy research, coding help, and daily use.",
     "includes": [
       "SuperGrok model access",
       "30 days full access",
@@ -52,7 +52,7 @@
       "Priority responses",
       "Instant digital code"
     ],
-    "finePrint": "Demo listing — not affiliated with xAI. Fixed ₱399 base price (converts when you change currency).",
+    "finePrint": "Demo listing - not affiliated with xAI. Fixed PHP 399 base price (converts when you change currency).",
     "active": true
   },
   {
@@ -64,7 +64,7 @@
     "monogram": "CV",
     "price": 9.99,
     "original": 14.99,
-    "priceBase": "USD",
+    "priceBase": "PHP",
     "period": "month",
     "duration": "12 months",
     "rating": 4.9,
@@ -72,7 +72,7 @@
     "badge": "Bestseller",
     "stock": "SOLD OUT",
     "delivery": "Team invite / redeem link",
-    "description": "Canva Pro for creators and small teams — premium templates, Brand Kit, Background Remover, and Magic Studio tools at an outlet annual rate.",
+    "description": "Canva Pro for creators and small teams - premium templates, Brand Kit, Background Remover, and Magic Studio tools at an outlet annual rate.",
     "includes": [
       "100GB cloud storage",
       "Brand Kit",
@@ -80,7 +80,7 @@
       "Premium templates & assets",
       "Magic Studio features"
     ],
-    "finePrint": "Seat limits may apply. Demo product — not an official Canva reseller.",
+    "finePrint": "Seat limits may apply. Demo product - not an official Canva reseller.",
     "active": true
   },
   {
@@ -92,7 +92,7 @@
     "monogram": "CT",
     "price": 24.0,
     "original": 39.99,
-    "priceBase": "USD",
+    "priceBase": "PHP",
     "period": "month",
     "duration": "6 months · 5 seats",
     "rating": 4.7,
@@ -100,7 +100,7 @@
     "badge": "",
     "stock": "SOLD OUT",
     "delivery": "Workspace invite",
-    "description": "Teams workspace with shared Brand Kit, approval flows, and multi-seat access — discounted multi-month stack.",
+    "description": "Teams workspace with shared Brand Kit, approval flows, and multi-seat access - discounted multi-month stack.",
     "includes": [
       "Up to 5 seats",
       "Shared Brand Kit",
@@ -120,7 +120,7 @@
     "monogram": "CC",
     "price": 5.99,
     "original": 9.99,
-    "priceBase": "USD",
+    "priceBase": "PHP",
     "period": "month",
     "duration": "12 months",
     "rating": 4.8,
@@ -128,7 +128,7 @@
     "badge": "Creator pick",
     "stock": "SOLD OUT",
     "delivery": "License / account code",
-    "description": "CapCut Pro unlocks premium effects, auto captions, cloud backup, and export without watermarks — ideal for Shorts and Reels editors.",
+    "description": "CapCut Pro unlocks premium effects, auto captions, cloud backup, and export without watermarks - ideal for Shorts and Reels editors.",
     "includes": [
       "No watermark exports",
       "Premium effects & filters",
@@ -148,7 +148,7 @@
     "monogram": "C+",
     "price": 3.49,
     "original": 6.99,
-    "priceBase": "USD",
+    "priceBase": "PHP",
     "period": "month",
     "duration": "6 months",
     "rating": 4.5,
@@ -175,7 +175,7 @@
     "monogram": "NF",
     "price": 11.99,
     "original": 22.99,
-    "priceBase": "USD",
+    "priceBase": "PHP",
     "period": "month",
     "duration": "6 months prepaid",
     "rating": 4.7,
@@ -191,7 +191,7 @@
       "Spatial audio (where available)",
       "Ad-free catalog"
     ],
-    "finePrint": "Region and household rules apply. Not affiliated with Netflix — demo storefront only.",
+    "finePrint": "Region and household rules apply. Not affiliated with Netflix - demo storefront only.",
     "active": true
   },
   {
@@ -203,7 +203,7 @@
     "monogram": "NS",
     "price": 7.99,
     "original": 15.49,
-    "priceBase": "USD",
+    "priceBase": "PHP",
     "period": "month",
     "duration": "12 months",
     "rating": 4.6,
@@ -211,7 +211,7 @@
     "badge": "Bestseller",
     "stock": "SOLD OUT",
     "delivery": "Digital redeem code",
-    "description": "Standard plan for everyday watching — Full HD, two screens, and downloads at an annual prepaid rate.",
+    "description": "Standard plan for everyday watching - Full HD, two screens, and downloads at an annual prepaid rate.",
     "includes": [
       "Full HD (1080p)",
       "2 simultaneous streams",
@@ -231,7 +231,7 @@
     "monogram": "YT",
     "price": 6.99,
     "original": 13.99,
-    "priceBase": "USD",
+    "priceBase": "PHP",
     "period": "month",
     "duration": "12 months",
     "rating": 4.8,
@@ -239,7 +239,7 @@
     "badge": "Bestseller",
     "stock": "SOLD OUT",
     "delivery": "Family / individual code",
-    "description": "YouTube Premium individual plan — no ads on videos & Music, background play, and offline downloads. Prepaid yearly savings.",
+    "description": "YouTube Premium individual plan - no ads on videos & Music, background play, and offline downloads. Prepaid yearly savings.",
     "includes": [
       "Ad-free YouTube",
       "YouTube Music Premium",
@@ -259,7 +259,7 @@
     "monogram": "YF",
     "price": 11.49,
     "original": 22.99,
-    "priceBase": "USD",
+    "priceBase": "PHP",
     "period": "month",
     "duration": "6 months",
     "rating": 4.7,
@@ -267,7 +267,7 @@
     "badge": "Family",
     "stock": "SOLD OUT",
     "delivery": "Family plan invite",
-    "description": "Family plan covering up to five members in the same household — ad-free video and Music for everyone.",
+    "description": "Family plan covering up to five members in the same household - ad-free video and Music for everyone.",
     "includes": [
       "Up to 5 members",
       "Ad-free video + Music",

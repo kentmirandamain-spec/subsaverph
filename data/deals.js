@@ -1,4 +1,4 @@
-/** SubSaverPH catalog — text-only, no images */
+/** SubSaverPH catalog - text-only, no images */
 window.DEALS = [
   {
     id: "supergrok-7d",
@@ -18,7 +18,7 @@ window.DEALS = [
     stock: "In stock",
     delivery: "Instant access code",
     description:
-      "SuperGrok 7-day pass — advanced reasoning, higher limits, and priority responses for a full week. Priced at ₱99 for SubSaverPH shoppers.",
+      "SuperGrok 7-day pass - advanced reasoning, higher limits, and priority responses for a full week. Priced at PHP 99 for SubSaverPH shoppers.",
     includes: [
       "SuperGrok model access",
       "7 days full access",
@@ -27,7 +27,7 @@ window.DEALS = [
       "Instant digital code",
     ],
     finePrint:
-      "Demo listing — not affiliated with xAI. Features depend on region and account eligibility.",
+      "Demo listing - not affiliated with xAI. Features depend on region and account eligibility.",
   },
   {
     id: "supergrok-1m",
@@ -47,7 +47,7 @@ window.DEALS = [
     stock: "In stock",
     delivery: "Instant access code",
     description:
-      "SuperGrok monthly plan — a full 30 days of SuperGrok at ₱399. Ideal for heavy research, coding help, and daily use.",
+      "SuperGrok monthly plan - a full 30 days of SuperGrok at PHP 399. Ideal for heavy research, coding help, and daily use.",
     includes: [
       "SuperGrok model access",
       "30 days full access",
@@ -56,7 +56,7 @@ window.DEALS = [
       "Instant digital code",
     ],
     finePrint:
-      "Demo listing — not affiliated with xAI. Fixed ₱399 base price (converts when you change currency).",
+      "Demo listing - not affiliated with xAI. Fixed PHP 399 base price (converts when you change currency).",
   },
   {
     id: "canva-pro",
@@ -75,7 +75,7 @@ window.DEALS = [
     stock: "In stock",
     delivery: "Team invite / redeem link",
     description:
-      "Canva Pro for creators and small teams — premium templates, Brand Kit, Background Remover, and Magic Studio tools at an outlet annual rate.",
+      "Canva Pro for creators and small teams - premium templates, Brand Kit, Background Remover, and Magic Studio tools at an outlet annual rate.",
     includes: [
       "100GB cloud storage",
       "Brand Kit",
@@ -83,7 +83,7 @@ window.DEALS = [
       "Premium templates & assets",
       "Magic Studio features",
     ],
-    finePrint: "Seat limits may apply. Demo product — not an official Canva reseller.",
+    finePrint: "Seat limits may apply. Demo product - not an official Canva reseller.",
   },
   {
     id: "canva-teams",
@@ -102,7 +102,7 @@ window.DEALS = [
     stock: "Limited",
     delivery: "Workspace invite",
     description:
-      "Teams workspace with shared Brand Kit, approval flows, and multi-seat access — discounted multi-month stack.",
+      "Teams workspace with shared Brand Kit, approval flows, and multi-seat access - discounted multi-month stack.",
     includes: [
       "Up to 5 seats",
       "Shared Brand Kit",
@@ -129,7 +129,7 @@ window.DEALS = [
     stock: "In stock",
     delivery: "License / account code",
     description:
-      "CapCut Pro unlocks premium effects, auto captions, cloud backup, and export without watermarks — ideal for Shorts and Reels editors.",
+      "CapCut Pro unlocks premium effects, auto captions, cloud backup, and export without watermarks - ideal for Shorts and Reels editors.",
     includes: [
       "No watermark exports",
       "Premium effects & filters",
@@ -191,7 +191,7 @@ window.DEALS = [
       "Ad-free catalog",
     ],
     finePrint:
-      "Region and household rules apply. Not affiliated with Netflix — demo storefront only.",
+      "Region and household rules apply. Not affiliated with Netflix - demo storefront only.",
   },
   {
     id: "netflix-std",
@@ -210,7 +210,7 @@ window.DEALS = [
     stock: "In stock",
     delivery: "Digital redeem code",
     description:
-      "Standard plan for everyday watching — Full HD, two screens, and downloads at an annual prepaid rate.",
+      "Standard plan for everyday watching - Full HD, two screens, and downloads at an annual prepaid rate.",
     includes: [
       "Full HD (1080p)",
       "2 simultaneous streams",
@@ -237,7 +237,7 @@ window.DEALS = [
     stock: "In stock",
     delivery: "Family / individual code",
     description:
-      "YouTube Premium individual plan — no ads on videos & Music, background play, and offline downloads. Prepaid yearly savings.",
+      "YouTube Premium individual plan - no ads on videos & Music, background play, and offline downloads. Prepaid yearly savings.",
     includes: [
       "Ad-free YouTube",
       "YouTube Music Premium",
@@ -264,7 +264,7 @@ window.DEALS = [
     stock: "In stock",
     delivery: "Family plan invite",
     description:
-      "Family plan covering up to five members in the same household — ad-free video and Music for everyone.",
+      "Family plan covering up to five members in the same household - ad-free video and Music for everyone.",
     includes: [
       "Up to 5 members",
       "Ad-free video + Music",

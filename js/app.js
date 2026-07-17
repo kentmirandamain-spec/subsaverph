@@ -707,8 +707,8 @@ function viewDeal() {
           <div class="detail-info">
             <p class="cat">${escapeHtml(d.brand)} · ${escapeHtml(d.category)} · <span class="${soldOut ? "is-sold-out" : ""}">${escapeHtml(stockLabel(d))}</span></p>
             <h1>${escapeHtml(d.name)}</h1>
-            <p class="tag">${escapeHtml(d.tagline)}</p>
-            <p class="muted" style="margin:8px 0 14px">★ ${d.rating} · ${d.reviews.toLocaleString()} ${escapeHtml(t("reviews"))}</p>
+            <p class="detail-tagline">${escapeHtml(d.tagline)}</p>
+            <p class="detail-meta">★ ${d.rating} · ${Number(d.reviews || 0).toLocaleString()} ${escapeHtml(t("reviews"))}</p>
 
             <div id="pageFxMount" style="margin-bottom:14px"></div>
 
@@ -726,12 +726,12 @@ function viewDeal() {
             <p class="muted" style="font-size:0.8rem;letter-spacing:0.08em;text-transform:uppercase;font-weight:600">
               ${escapeHtml(d.duration)} · ${escapeHtml(d.delivery)}
             </p>
-            <p class="tag" style="margin:14px 0">${escapeHtml(d.description)}</p>
+            <p class="detail-desc">${escapeHtml(d.description)}</p>
             ${
               d.period === "month"
                 ? `<div class="compare">
-              <div><span>Yearly at deal rate</span><strong>${formatDealPrice({ ...d, price: yearly }, "price")}</strong></div>
-              <div><span>Yearly at retail</span><strong class="strike">${formatDealPrice({ ...d, price: yearlyWas }, "price")}</strong></div>
+              <div><span>${escapeHtml(t("yearly_deal") || "Yearly at deal rate")}</span><strong>${formatDealPrice({ ...d, price: yearly }, "price")}</strong></div>
+              <div><span>${escapeHtml(t("yearly_retail") || "Yearly at retail")}</span><strong class="strike">${formatDealPrice({ ...d, price: yearlyWas }, "price")}</strong></div>
             </div>`
                 : ""
             }
