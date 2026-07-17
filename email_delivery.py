@@ -461,11 +461,17 @@ def _send_via_resend(
         method="POST",
     )
     try:
-        with urllib.request.urlopen(req, timeout=30) as resp:
+        with urllib.request.urlopen(req, timeout=20) as resp:
             raw = resp.read().decode("utf-8")
             return True, raw[:300]
     except urllib.error.HTTPError as e:
         err = e.read().decode("utf-8", errors="replace")
+        if "<!DOCTYPE" in err or "<html" in err.lower():
+            return (
+                False,
+                f"Resend HTTP {e.code}: provider returned an HTML page (not JSON). "
+                "Check RESEND_API_KEY is valid and api.resend.com is reachable from the server.",
+            )
         return False, f"Resend HTTP {e.code}: {err[:400]}"
     except Exception as e:
         return False, f"Resend error: {e}"

@@ -16,28 +16,48 @@ const state = {
   orders: [],
 };
 
+function friendlyApiError(status, raw, data) {
+  const text = String(raw || "");
+  const looksHtml =
+    /^\s*<!DOCTYPE/i.test(text) ||
+    /^\s*<html/i.test(text) ||
+    text.includes("cf-error") ||
+    text.includes("Cloudflare") ||
+    text.includes("Attention Required");
+  if (looksHtml) {
+    return (
+      `Host/Cloudflare returned an error page (HTTP ${status || "?"}) instead of API JSON. ` +
+      `Usually: origin timeout, brief Render restart, or Cloudflare security. ` +
+      `Wait 30s, hard-refresh (Ctrl+F5), try again. In Cloudflare: Security → turn Bot Fight Mode off for this site, or set Security Level to Medium.`
+    );
+  }
+  return String(
+    (data && (data.error || data.detail || data.message)) ||
+      `Request failed (HTTP ${status || "?"})`
+  ).slice(0, 500);
+}
+
 async function api(path, opts = {}) {
-  const headers = { "Content-Type": "application/json", ...(opts.headers || {}) };
-  const res = await fetch(path, {
-    credentials: "same-origin",
-    ...opts,
-    headers,
-  });
+  const headers = { "Content-Type": "application/json", Accept: "application/json", ...(opts.headers || {}) };
+  let res;
+  try {
+    res = await fetch(path, {
+      credentials: "same-origin",
+      ...opts,
+      headers,
+    });
+  } catch (e) {
+    throw new Error(`Network error: ${e.message || e}. Check your connection and try again.`);
+  }
   const raw = await res.text();
   let data = {};
   try {
     data = raw ? JSON.parse(raw) : {};
   } catch {
-    data = { error: raw ? raw.slice(0, 280) : "" };
+    data = {};
   }
   if (!res.ok) {
-    const msg =
-      data.error ||
-      data.detail ||
-      data.message ||
-      res.statusText ||
-      `Request failed (HTTP ${res.status})`;
-    throw new Error(String(msg).slice(0, 500));
+    throw new Error(friendlyApiError(res.status, raw, data));
   }
   return data;
 }
@@ -251,10 +271,13 @@ function testInvoicePanel(opts = {}) {
           ${dealOpts}
         </select>
       </label>
-      <button class="btn" type="submit" style="margin-top:4px">Send test invoice</button>
+      <div class="row-actions" style="margin-top:8px;flex-wrap:wrap;gap:8px">
+        <button class="btn" type="submit" data-mode="send">Send test invoice</button>
+        <button class="btn ghost" type="submit" data-mode="preview">Preview only (no send)</button>
+      </div>
       <p class="muted" style="margin-top:12px;font-size:0.85rem">
-        Use the <strong>same email as your Resend account</strong> if you have not verified <code>subsaverph.com</code> yet
-        (Resend testing mode only allows that address). Check spam. Subject: <em>SubSaverPH Payment TEST… — login details</em>
+        Use the <strong>same email as your Resend account</strong> if you have not verified <code>subsaverph.com</code> yet.
+        If you see a long HTML error, wait and retry — that is Cloudflare/host, not the invoice itself.
       </p>
     </form>`;
 }
@@ -694,11 +717,13 @@ function bindShell() {
   $("#testInvoiceForm")?.addEventListener("submit", async (e) => {
     e.preventDefault();
     const fd = new FormData(e.target);
-    const btn = e.target.querySelector('button[type="submit"]');
-    if (btn) {
-      btn.disabled = true;
-      btn.textContent = "Sending…";
-    }
+    const modeBtn = e.submitter;
+    const previewOnly = modeBtn?.dataset?.mode === "preview";
+    const buttons = [...e.target.querySelectorAll('button[type="submit"]')];
+    buttons.forEach((b) => {
+      b.disabled = true;
+    });
+    if (modeBtn) modeBtn.textContent = previewOnly ? "Building…" : "Sending…";
     try {
       const data = await api("/api/admin/test-invoice", {
         method: "POST",
@@ -706,18 +731,25 @@ function bindShell() {
           email: fd.get("email"),
           name: fd.get("name") || "Test Customer",
           productId: fd.get("productId") || "",
+          previewOnly: !!previewOnly,
         }),
       });
-      toast(
-        `Test invoice sent to ${data.to} (${data.productName || "sample"}). Check inbox / spam.`
-      );
+      if (data.previewOnly) {
+        const lines = (data.plainPreview || "").split("\n").slice(0, 18).join(" · ");
+        toast(`Preview OK — subject: ${data.subject || "—"}. ${lines}`.slice(0, 420));
+      } else {
+        toast(
+          `Test invoice sent to ${data.to} (${data.productName || "sample"}). Check inbox / spam.`
+        );
+      }
     } catch (err) {
       toast(err.message, true);
     } finally {
-      if (btn) {
-        btn.disabled = false;
-        btn.textContent = "Send test invoice";
-      }
+      buttons.forEach((b) => {
+        b.disabled = false;
+        if (b.dataset.mode === "preview") b.textContent = "Preview only (no send)";
+        else b.textContent = "Send test invoice";
+      });
     }
   });
 }

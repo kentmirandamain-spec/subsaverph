@@ -3027,27 +3027,42 @@ def admin_test_invoice():
     """
     Send a sample order invoice email (username, password, product details).
     Safe: does not charge, does not consume stock, does not save an order.
+    Body: { email, name?, productId?, previewOnly? }
     """
     try:
-        from email_delivery import mail_configured, send_order_invoice, _from_header
+        from email_delivery import (
+            mail_configured,
+            send_order_invoice,
+            build_invoice_content,
+            _from_header,
+        )
     except Exception as e:
         return jsonify({"error": f"Email module error: {e}"}), 500
 
-    if not mail_configured():
-        return jsonify(
-            {
-                "error": "Email not configured. Set RESEND_API_KEY (or SMTP_*) on Render Environment.",
-            }
-        ), 400
-
     try:
         data = request.get_json(silent=True) or {}
+        preview_only = bool(
+            data.get("previewOnly")
+            or data.get("preview")
+            or data.get("dryRun")
+        )
+
+        if not preview_only and not mail_configured():
+            return jsonify(
+                {
+                    "error": "Email not configured. Set RESEND_API_KEY (or SMTP_*) on Render Environment.",
+                }
+            ), 400
+
         to_email = (data.get("email") or "").strip()
         if not to_email or "@" not in to_email:
             settings = load_settings()
             to_email = (settings.get("supportEmail") or "").strip()
         if not to_email or "@" not in to_email:
-            return jsonify({"error": "Provide a valid email address to send the test to"}), 400
+            if preview_only:
+                to_email = "preview@example.com"
+            else:
+                return jsonify({"error": "Provide a valid email address to send the test to"}), 400
 
         name = (data.get("name") or "Test Customer").strip() or "Test Customer"
         deals = load_deals(include_inactive=True)
@@ -3132,10 +3147,37 @@ def admin_test_invoice():
             "message": "Admin test invoice — not a real order.",
         }
 
+        # Fast path: build invoice only (no outbound Resend call — avoids CF timeouts)
+        if preview_only:
+            subject, text, _html = build_invoice_content(order)
+            return jsonify(
+                {
+                    "ok": True,
+                    "previewOnly": True,
+                    "to": to_email,
+                    "orderId": order_id,
+                    "productName": item.get("name"),
+                    "subject": subject,
+                    "plainPreview": text[:1200],
+                    "hasUsername": "demo.login@example.com" in text,
+                    "hasPassword": "DemoOnly-NotARealPassword" in text,
+                    "mailConfigured": mail_configured(),
+                    "fromAddress": _from_header() if mail_configured() else None,
+                    "note": "Preview only — email was NOT sent.",
+                }
+            )
+
         # No BCC on test sends (avoids Resend free-tier multi-recipient failures)
         result = send_order_invoice(order, skip_notify=True)
         if not result.get("ok"):
             detail = str(result.get("detail") or "Failed to send test invoice")
+            # Never return provider HTML blobs as the only clue
+            if "<!DOCTYPE" in detail or "<html" in detail.lower():
+                detail = (
+                    "Email provider returned an HTML error page. "
+                    "Check RESEND_API_KEY and MAIL_FROM on Render. "
+                    f"Raw: {detail[:180]}"
+                )
             return (
                 jsonify(
                     {
@@ -3157,7 +3199,7 @@ def admin_test_invoice():
                 "to": to_email,
                 "orderId": order_id,
                 "provider": result.get("provider"),
-                "detail": result.get("detail"),
+                "detail": str(result.get("detail") or "")[:300],
                 "productName": item.get("name"),
                 "fromAddress": result.get("fromAddress") or _from_header(),
                 "note": (
