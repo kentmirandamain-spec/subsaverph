@@ -292,8 +292,19 @@ def api_catalog():
             "brands": ["All", *brands],
             "categories": ["All", *categories],
             "paymentMode": payment_mode(),
-            "stripeEnabled": stripe_configured(),
-            "stripePublishableKey": os.environ.get("STRIPE_PUBLISHABLE_KEY") or "",
+            # Frontend only enables Stripe Checkout when both configured AND STRIPE_SHOW=1
+            "stripeEnabled": stripe_configured()
+            and (os.environ.get("STRIPE_SHOW") or "0").strip().lower()
+            in ("1", "true", "yes", "on"),
+            "stripePublishableKey": (
+                (os.environ.get("STRIPE_PUBLISHABLE_KEY") or "")
+                if (
+                    stripe_configured()
+                    and (os.environ.get("STRIPE_SHOW") or "0").strip().lower()
+                    in ("1", "true", "yes", "on")
+                )
+                else ""
+            ),
             "paymongoEnabled": paymongo_configured(),
             "xenditEnabled": xendit_configured(),
             "paypalEnabled": paypal_configured(),
@@ -602,16 +613,29 @@ def available_payment_methods() -> list:
     """
     methods = []
     has_stripe = bool((os.environ.get("STRIPE_SECRET_KEY") or "").strip())
+    # Stripe UI off by default (hard for non-US merchants). Set STRIPE_SHOW=1 to re-enable.
+    show_stripe = (os.environ.get("STRIPE_SHOW") or "0").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+        "on",
+    )
     has_paymongo = paymongo_configured()
     has_xendit = xendit_configured()
     has_paypal = paypal_configured()
     has_crypto = crypto_configured()
     ewallet_prov = ewallet_provider()
-    any_live = has_stripe or has_paymongo or has_xendit or has_paypal or has_crypto
+    any_live = (
+        (has_stripe and show_stripe)
+        or has_paymongo
+        or has_xendit
+        or has_paypal
+        or has_crypto
+    )
     demo_only = not any_live
 
-    # Card (prefer Stripe)
-    if has_stripe:
+    # Card — Stripe hidden unless STRIPE_SHOW=1
+    if has_stripe and show_stripe:
         methods.append(
             {
                 "id": "card",

@@ -831,7 +831,7 @@ function paymentMethodsList() {
   const list = state.paymentMethods && state.paymentMethods.length
     ? state.paymentMethods
     : [
-        { id: "card", label: "Card", desc: "Visa / Mastercard", group: "card" },
+        // Card/Stripe omitted from fallback — use PayPal for card payments
         { id: "gcash", label: "GCash", desc: "Pay with GCash (PHP)", group: "ewallet" },
         { id: "paymaya", label: "Maya", desc: "Pay with Maya / PayMaya (PHP)", group: "ewallet" },
         { id: "grab_pay", label: "GrabPay", desc: "Pay with GrabPay (PHP)", group: "ewallet" },
