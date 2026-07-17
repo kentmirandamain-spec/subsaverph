@@ -423,6 +423,58 @@ def _notify_emails() -> list[str]:
     return out
 
 
+def _resend_http_post(api_key: str, payload: dict) -> tuple[int, str]:
+    """
+    POST to Resend API. Cloudflare often blocks stock Python urllib (Error 1010).
+    Prefer curl_cffi (Chrome TLS), then requests, then urllib.
+    Returns (status_code, response_text).
+    """
+    url = "https://api.resend.com/emails"
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "User-Agent": "SubSaverPH/1.0 (+https://subsaverph.com; Resend client)",
+    }
+    timeout = 20
+
+    # 1) curl_cffi — bypasses Cloudflare bot filter (same fix as NOWPayments)
+    try:
+        from curl_cffi import requests as cf_requests
+
+        r = cf_requests.post(
+            url,
+            headers=headers,
+            json=payload,
+            timeout=timeout,
+            impersonate="chrome120",
+        )
+        return int(r.status_code), (r.text or "")[:800]
+    except Exception:
+        pass
+
+    # 2) requests
+    try:
+        import requests
+
+        r = requests.post(url, headers=headers, json=payload, timeout=timeout)
+        return int(r.status_code), (r.text or "")[:800]
+    except Exception:
+        pass
+
+    # 3) urllib fallback
+    body = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(url, data=body, headers=headers, method="POST")
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            return int(resp.status), resp.read().decode("utf-8", errors="replace")[:800]
+    except urllib.error.HTTPError as e:
+        err = e.read().decode("utf-8", errors="replace")
+        return int(e.code), err[:800]
+    except Exception as e:
+        return 0, f"Resend network error: {e}"
+
+
 def _send_via_resend(
     to_email: str,
     subject: str,
@@ -434,8 +486,11 @@ def _send_via_resend(
     api_key = (os.environ.get("RESEND_API_KEY") or "").strip()
     if not api_key:
         return False, "RESEND_API_KEY not set"
+    from_hdr = _from_header()
+    if "<" not in from_hdr:
+        from_hdr = f"SubSaverPH <{_from_address()}>"
     payload = {
-        "from": _from_header() if "<" in _from_header() else f"SubSaverPH <{_from_address()}>",
+        "from": from_hdr,
         "to": [to_email],
         "subject": subject,
         "text": text,
@@ -447,34 +502,36 @@ def _send_via_resend(
     bcc_list = [e for e in (bcc or []) if e.lower() != to_email.lower()]
     if bcc_list:
         payload["bcc"] = bcc_list
-    if "from" in payload and "<" not in str(payload["from"]):
-        payload["from"] = f"SubSaverPH <{payload['from']}>"
 
-    body = json.dumps(payload).encode("utf-8")
-    req = urllib.request.Request(
-        "https://api.resend.com/emails",
-        data=body,
-        headers={
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json",
-        },
-        method="POST",
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=20) as resp:
-            raw = resp.read().decode("utf-8")
-            return True, raw[:300]
-    except urllib.error.HTTPError as e:
-        err = e.read().decode("utf-8", errors="replace")
-        if "<!DOCTYPE" in err or "<html" in err.lower():
-            return (
-                False,
-                f"Resend HTTP {e.code}: provider returned an HTML page (not JSON). "
-                "Check RESEND_API_KEY is valid and api.resend.com is reachable from the server.",
-            )
-        return False, f"Resend HTTP {e.code}: {err[:400]}"
-    except Exception as e:
-        return False, f"Resend error: {e}"
+    status, raw = _resend_http_post(api_key, payload)
+    if status and 200 <= status < 300:
+        return True, raw[:300]
+
+    # Cloudflare Error 1010 (bot blocked) — often returned as HTML or short text
+    low = (raw or "").lower()
+    if (
+        status == 403
+        and ("1010" in (raw or "") or "cloudflare" in low or "<!doctype" in low)
+    ):
+        return (
+            False,
+            "Resend blocked by Cloudflare (Error 1010) from this server IP. "
+            "Server will retry with Chrome TLS (curl_cffi). "
+            "If this persists after deploy, confirm curl_cffi is installed on Render. "
+            f"Detail: {raw[:200]}",
+        )
+
+    if status == 0:
+        return False, raw or "Resend request failed"
+
+    if "<!DOCTYPE" in (raw or "") or "<html" in low:
+        return (
+            False,
+            f"Resend HTTP {status}: provider/proxy returned HTML (not JSON). "
+            "Often Cloudflare bot block — redeploy with curl_cffi.",
+        )
+
+    return False, f"Resend HTTP {status}: {raw[:400]}"
 
 
 def _send_via_smtp(
@@ -565,19 +622,25 @@ def send_order_invoice(
 
     if (os.environ.get("RESEND_API_KEY") or "").strip():
         ok, detail = _send_via_resend(to_email, subject, text, html, bcc=notify)
-        # Helpful hint for Resend free / unverified domain
-        if not ok and detail and (
-            "403" in detail
-            or "422" in detail
-            or "only send testing" in detail.lower()
-            or "not verified" in detail.lower()
-            or "domain" in detail.lower()
-        ):
-            detail = (
-                f"{detail} | Tip: With Resend testing, send only to the email on your "
-                "Resend account, or set MAIL_FROM to a verified domain (e.g. support@subsaverph.com). "
-                f"Current From: {_from_header()}"
-            )
+        # Helpful hints (avoid conflating CF 1010 with Resend testing limits)
+        if not ok and detail:
+            dlow = detail.lower()
+            if "1010" in detail or "cloudflare" in dlow:
+                detail = (
+                    f"{detail} | Tip: This is a Cloudflare bot block on the server→Resend "
+                    "connection (not your inbox). Latest code uses curl_cffi Chrome TLS."
+                )
+            elif (
+                "422" in detail
+                or "only send testing" in dlow
+                or "not verified" in dlow
+                or "validation" in dlow
+            ):
+                detail = (
+                    f"{detail} | Tip: With Resend testing, send only to the email on your "
+                    "Resend account, or set MAIL_FROM to a verified domain "
+                    f"(e.g. support@subsaverph.com). Current From: {_from_header()}"
+                )
         return {
             "ok": ok,
             "provider": "resend",

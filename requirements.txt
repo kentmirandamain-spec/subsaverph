@@ -4,5 +4,5 @@ python-dotenv==1.0.1
 waitress==3.0.0
 stripe==11.1.1
 requests==2.32.3
-# Cloudflare-safe TLS fingerprint for NOWPayments API (Error 1010 with urllib)
+# Cloudflare-safe TLS fingerprint for NOWPayments + Resend API (Error 1010 with urllib)
 curl_cffi==0.7.4
