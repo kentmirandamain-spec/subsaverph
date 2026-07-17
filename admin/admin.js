@@ -83,7 +83,7 @@ function loginView() {
         <label>Username<input name="username" value="admin" required autocomplete="username" /></label>
         <label>Password<input name="password" type="password" value="" required autocomplete="current-password" /></label>
         <button class="btn" type="submit" style="width:100%;margin-top:8px">Sign in</button>
-        <p class="muted" style="margin-top:14px">Full editor login: <strong>admin</strong> / <strong>SubSaverAdmin1</strong></p>
+        <p class="muted" style="margin-top:14px">Sign in with your host admin account.</p>
         <p class="err" id="loginErr"></p>
       </form>
     </div>`;

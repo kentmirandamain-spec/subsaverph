@@ -16,6 +16,10 @@ services:
       - key: FORCE_HTTPS
         value: "1"
       - key: PAYMENT_MODE
-        value: "instant_demo"
+        value: "live"
       - key: PUBLIC_URL
-        value: "https://subsaverph.onrender.com"
+        value: "https://subsaverph.com"
+      - key: ALLOW_DEMO_CHECKOUT
+        value: "0"
+      - key: LIQPAY_TRUST_RETURN
+        value: "0"

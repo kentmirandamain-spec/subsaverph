@@ -1223,7 +1223,12 @@ function checkoutTermsModalHtml(cart, totals) {
 }
 
 function viewSuccess() {
-  const order = JSON.parse(sessionStorage.getItem("subsaverph_last") || "null");
+  let order = null;
+  try {
+    order = JSON.parse(sessionStorage.getItem("subsaverph_last") || "null");
+  } catch {
+    order = null;
+  }
   // hash format: #/success?session_id=cs_xxx or ?provider=paymongo&ref=...
   const hashQuery = location.hash.includes("?")
     ? location.hash.slice(location.hash.indexOf("?") + 1)

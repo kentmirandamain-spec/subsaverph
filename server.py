@@ -10,9 +10,13 @@ from __future__ import annotations
 import json
 import os
 import re
+import threading
 import uuid
 from functools import wraps
 from pathlib import Path
+
+# Serialize inventory reserve / order writes (multi-thread Waitress)
+_STORE_LOCK = threading.RLock()
 
 from flask import (
     Flask,
@@ -295,31 +299,32 @@ def parse_credential_entry(entry) -> dict:
 
 def reserve_codes(product_id: str, qty: int) -> list[dict]:
     """Take qty available codes for product. Mutates inventory. Returns credential dicts."""
-    inv = load_inventory()
-    codes = inv.get(product_id) or []
-    available = [c for c in codes if c.get("status", "available") == "available"]
-    if len(available) < qty:
-        raise ValueError(
-            f"Not enough stock for {product_id}. Need {qty}, have {len(available)}."
-        )
-    taken: list[dict] = []
-    need = qty
-    for c in codes:
-        if need <= 0:
-            break
-        if c.get("status", "available") == "available":
-            c["status"] = "sold"
-            c["soldAt"] = __import__("datetime").datetime.utcnow().isoformat() + "Z"
-            # Prefer structured fields on the inventory row
-            if c.get("username") or c.get("password"):
-                cred = parse_credential_entry(c)
-            else:
-                cred = parse_credential_entry(c.get("code", ""))
-            taken.append(cred)
-            need -= 1
-    inv[product_id] = codes
-    save_inventory(inv)
-    return taken
+    with _STORE_LOCK:
+        inv = load_inventory()
+        codes = inv.get(product_id) or []
+        available = [c for c in codes if c.get("status", "available") == "available"]
+        if len(available) < qty:
+            raise ValueError(
+                f"Not enough stock for {product_id}. Need {qty}, have {len(available)}."
+            )
+        taken: list[dict] = []
+        need = qty
+        for c in codes:
+            if need <= 0:
+                break
+            if c.get("status", "available") == "available":
+                c["status"] = "sold"
+                c["soldAt"] = __import__("datetime").datetime.utcnow().isoformat() + "Z"
+                # Prefer structured fields on the inventory row
+                if c.get("username") or c.get("password"):
+                    cred = parse_credential_entry(c)
+                else:
+                    cred = parse_credential_entry(c.get("code", ""))
+                taken.append(cred)
+                need -= 1
+        inv[product_id] = codes
+        save_inventory(inv)
+        return taken
 
 
 def slugify(text: str) -> str:
@@ -500,15 +505,49 @@ def api_catalog():
 
 def payment_mode() -> str:
     """
-    stripe        → real Stripe Checkout (requires STRIPE_SECRET_KEY)
-    instant_demo  → deliver codes without real charge (testing)
+    stripe / live  → real payment providers
+    instant_demo   → free fulfill only when demo is allowed
     """
     mode = (os.environ.get("PAYMENT_MODE") or "").strip().lower()
     if mode:
         return mode
+    if any_live_payment_provider():
+        return "live"
     if os.environ.get("STRIPE_SECRET_KEY"):
         return "stripe"
     return "instant_demo"
+
+
+def any_live_payment_provider() -> bool:
+    """True when at least one real money processor is configured."""
+    show_stripe = (os.environ.get("STRIPE_SHOW") or "0").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+        "on",
+    )
+    return bool(
+        (stripe_configured() and show_stripe)
+        or paymongo_configured()
+        or xendit_configured()
+        or paypal_configured()
+        or crypto_configured()
+        or liqpay_configured()
+    )
+
+
+def demo_checkout_allowed() -> bool:
+    """
+    Free demo fulfill is OFF whenever a live payment provider is configured,
+    unless ALLOW_DEMO_CHECKOUT=1 is set explicitly.
+    """
+    flag = (os.environ.get("ALLOW_DEMO_CHECKOUT") or "").strip().lower()
+    if flag in ("1", "true", "yes", "on"):
+        return True
+    if flag in ("0", "false", "no", "off"):
+        return False
+    # Default: allow demo only when no live providers exist
+    return not any_live_payment_provider()
 
 
 def stripe_configured() -> bool:
@@ -961,15 +1000,8 @@ def available_payment_methods() -> list:
     has_crypto = crypto_configured()
     has_liqpay = liqpay_configured()
     ewallet_prov = ewallet_provider()
-    any_live = (
-        (has_stripe and show_stripe)
-        or has_paymongo
-        or has_xendit
-        or has_paypal
-        or has_crypto
-        or has_liqpay
-    )
-    demo_only = not any_live
+    allow_demo = demo_checkout_allowed()
+    demo_only = allow_demo and not any_live_payment_provider()
 
     # Card — Stripe hidden unless STRIPE_SHOW=1
     if has_stripe and show_stripe:
@@ -1013,10 +1045,10 @@ def available_payment_methods() -> list:
             }
         )
 
-    # Philippine e-wallets via PayMongo or Xendit (or demo preview)
+    # Philippine e-wallets — only when a real backend is configured (or pure demo mode)
     if ewallet_prov in ("paymongo", "xendit") or demo_only:
-        provider = ewallet_prov if ewallet_prov != "demo" else "demo"
-        if demo_only:
+        provider = ewallet_prov if ewallet_prov in ("paymongo", "xendit") else "demo"
+        if demo_only and provider == "demo":
             provider = "demo"
         label_src = {
             "paymongo": "PayMongo",
@@ -1073,49 +1105,71 @@ def available_payment_methods() -> list:
             }
         )
 
-    # PayPal — always offered (live when keys set, otherwise demo checkout)
-    methods.append(
-        {
-            "id": "paypal",
-            "label": "PayPal",
-            "provider": "paypal" if has_paypal else "demo",
-            "desc": (
-                "Pay with PayPal balance or linked card"
-                if has_paypal
-                else "PayPal (demo — set PAYPAL_CLIENT_ID + SECRET for live)"
-            ),
-            "group": "other",
-        }
-    )
-    # Crypto (NOWPayments) — always offered (live when API key set)
-    methods.append(
-        {
-            "id": "crypto",
-            "label": "Crypto",
-            "provider": "nowpayments" if has_crypto else "demo",
-            "desc": (
-                "USDT, BTC, ETH & more via NOWPayments"
-                if has_crypto
-                else "Crypto (demo — set NOWPAYMENTS_API_KEY for live)"
-            ),
-            "group": "other",
-        }
-    )
+    # PayPal — live only (no free demo PayPal when keys missing)
+    if has_paypal:
+        methods.append(
+            {
+                "id": "paypal",
+                "label": "PayPal",
+                "provider": "paypal",
+                "desc": "Pay with PayPal balance or linked card",
+                "group": "other",
+            }
+        )
+    elif demo_only:
+        methods.append(
+            {
+                "id": "paypal",
+                "label": "PayPal",
+                "provider": "demo",
+                "desc": "PayPal (demo — set PAYPAL_CLIENT_ID + SECRET for live)",
+                "group": "other",
+            }
+        )
 
-    # LiqPay — cards / wallets via LiqPay hosted page
-    methods.append(
-        {
-            "id": "liqpay",
-            "label": "LiqPay",
-            "provider": "liqpay" if has_liqpay else "demo",
-            "desc": (
-                "Card & wallets via LiqPay"
-                if has_liqpay
-                else "LiqPay (demo — set LIQPAY_PUBLIC_KEY + LIQPAY_PRIVATE_KEY)"
-            ),
-            "group": "other",
-        }
-    )
+    # Crypto — live only
+    if has_crypto:
+        methods.append(
+            {
+                "id": "crypto",
+                "label": "Crypto",
+                "provider": "nowpayments",
+                "desc": "USDT, BTC, ETH & more via NOWPayments",
+                "group": "other",
+            }
+        )
+    elif demo_only:
+        methods.append(
+            {
+                "id": "crypto",
+                "label": "Crypto",
+                "provider": "demo",
+                "desc": "Crypto (demo — set NOWPAYMENTS_API_KEY for live)",
+                "group": "other",
+            }
+        )
+
+    # LiqPay — live only
+    if has_liqpay:
+        methods.append(
+            {
+                "id": "liqpay",
+                "label": "LiqPay",
+                "provider": "liqpay",
+                "desc": "Card & wallets via LiqPay",
+                "group": "other",
+            }
+        )
+    elif demo_only:
+        methods.append(
+            {
+                "id": "liqpay",
+                "label": "LiqPay",
+                "provider": "demo",
+                "desc": "LiqPay (demo — set LIQPAY_PUBLIC_KEY + LIQPAY_PRIVATE_KEY)",
+                "group": "other",
+            }
+        )
 
     # Deduplicate by id keeping first
     seen = set()
@@ -1125,19 +1179,33 @@ def available_payment_methods() -> list:
             continue
         seen.add(m["id"])
         out.append(m)
-    return out or [
-        {
-            "id": "demo",
-            "label": "Instant demo",
-            "provider": "demo",
-            "desc": "Test delivery without real money",
-        }
-    ]
+    if out:
+        return out
+    if allow_demo:
+        return [
+            {
+                "id": "demo",
+                "label": "Instant demo",
+                "provider": "demo",
+                "desc": "Test delivery without real money",
+            }
+        ]
+    return []
 
 
 @app.post("/api/checkout")
 def api_checkout():
-    """Demo / instant fulfill (no real money)."""
+    """Demo / instant fulfill (no real money). Disabled when live payments are on."""
+    if not demo_checkout_allowed():
+        return (
+            jsonify(
+                {
+                    "error": "Demo checkout is disabled. Use PayPal, crypto, or another live method.",
+                    "hint": "Set ALLOW_DEMO_CHECKOUT=1 only for testing.",
+                }
+            ),
+            403,
+        )
     data = request.get_json(silent=True) or {}
     email = (data.get("email") or "").strip()
     name = (data.get("name") or "").strip()
@@ -1213,8 +1281,18 @@ def api_checkout_start():
     cart_meta = [{"id": r["id"], "qty": r["qty"]} for r in normalized]
     ewallet_methods = ("gcash", "paymaya", "grab_pay", "shopeepay", "card", "xendit")
 
-    # ---- DEMO (no real money) ----
+    # ---- DEMO (no real money) — blocked when live payments are configured ----
     if provider == "demo" or method == "demo":
+        if not demo_checkout_allowed():
+            return (
+                jsonify(
+                    {
+                        "error": "Demo / free checkout is disabled on this live store.",
+                        "hint": "Use a configured payment method (PayPal, crypto, etc.).",
+                    }
+                ),
+                403,
+            )
         try:
             order = fulfill_order(
                 email=email,
@@ -2092,8 +2170,8 @@ def api_checkout_complete():
         if not ok:
             return jsonify({"error": "Crypto payment not confirmed yet"}), 402
     elif provider == "liqpay" or pending.get("provider") == "liqpay":
-        # Prefer server_url webhook; allow return if already fulfilled or soft trust
-        if os.environ.get("LIQPAY_TRUST_RETURN", "1") != "1":
+        # Prefer server_url webhook. Soft trust is OFF by default (set LIQPAY_TRUST_RETURN=1 only for testing).
+        if os.environ.get("LIQPAY_TRUST_RETURN", "0") != "1":
             return jsonify(
                 {
                     "error": "Waiting for LiqPay callback. Refresh in a few seconds.",
@@ -2325,8 +2403,14 @@ def paymongo_webhook():
     if not pending:
         return jsonify({"ok": True, "skipped": "unknown ref"})
 
-    # Only fulfill paid-like events
-    event_ok = "payment.paid" in typ or "checkout_session.payment.paid" in typ or True
+    # Only fulfill paid-like events (never trust all event types)
+    typ_l = str(typ or "").lower()
+    event_ok = (
+        "payment.paid" in typ_l
+        or "checkout_session.payment.paid" in typ_l
+        or typ_l.endswith(".paid")
+        or typ_l == "payment.paid"
+    )
     if event_ok:
         try:
             fulfill_order(
