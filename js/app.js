@@ -58,6 +58,7 @@ const state = {
   paymongoEnabled: false,
   xenditEnabled: false,
   paypalEnabled: false,
+  cryptoEnabled: false,
   ewalletProvider: "demo",
   paymentMethods: [],
 };
@@ -836,7 +837,7 @@ function paymentMethodsList() {
         { id: "grab_pay", label: "GrabPay", desc: "Pay with GrabPay (PHP)", group: "ewallet" },
         { id: "shopeepay", label: "ShopeePay", desc: "Pay with ShopeePay (PHP)", group: "ewallet" },
         { id: "paypal", label: "PayPal", desc: "Pay with PayPal balance or linked card", group: "other" },
-        { id: "crypto", label: "Crypto", desc: "USDT, BTC, ETH", group: "other" },
+        { id: "crypto", label: "Crypto", desc: "USDT, BTC, ETH & more", group: "other" },
         { id: "demo", label: "Demo", desc: "Test without real money", group: "other" },
       ];
   return list;
@@ -853,7 +854,9 @@ function payButtonLabel(method) {
   if (method === "card" && state.stripeEnabled) return "Continue to Stripe";
   if (method === "card" && state.xenditEnabled) return "Continue to Xendit Card";
   if (method === "paypal") return state.paypalEnabled ? "Continue to PayPal" : "Pay with PayPal (demo)";
-  if (method === "crypto") return "Continue to crypto pay";
+  if (method === "crypto") {
+    return state.cryptoEnabled ? "Continue to crypto pay" : "Pay with crypto (demo)";
+  }
   return "Continue to pay";
 }
 
@@ -870,6 +873,7 @@ function viewCheckout() {
   const paymongoOn = !!state.paymongoEnabled;
   const xenditOn = !!state.xenditEnabled;
   const paypalOn = !!state.paypalEnabled || methods.some((m) => m.id === "paypal");
+  const cryptoOn = !!state.cryptoEnabled || methods.some((m) => m.id === "crypto");
   const ewalletBackend = state.ewalletProvider || (paymongoOn ? "paymongo" : xenditOn ? "xendit" : "demo");
   const isTestKey = String(state.stripePublishableKey || "").startsWith("pk_test_");
   const hasEwallet = methods.some((m) => PH_EWALLETS.has(m.id));
@@ -912,9 +916,9 @@ function viewCheckout() {
           <strong>How payment works</strong>
           <p id="payHelpText">
             ${
-              stripeOn || paymongoOn || xenditOn || state.paypalEnabled
+              stripeOn || paymongoOn || xenditOn || state.paypalEnabled || state.cryptoEnabled
                 ? "Pick a method below. You’ll be redirected to a secure payment page. Codes unlock after payment succeeds."
-                : "Demo mode — no real money. Add payment keys for live GCash / Maya / PayPal / Card."
+                : "Demo mode — no real money. Add payment keys for live GCash / Maya / PayPal / Crypto / Card."
             }
           </p>
           ${
@@ -939,6 +943,18 @@ function viewCheckout() {
               state.paypalEnabled
                 ? "live PayPal Checkout is configured. You’ll approve payment on PayPal, then return here for codes."
                 : "shown in demo mode until you set PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET."
+            }
+          </p>`
+              : ""
+          }
+          ${
+            cryptoOn
+              ? `<p class="muted" style="margin:8px 0 0;font-size:0.8rem;text-transform:none;letter-spacing:0;font-weight:400">
+            <strong style="color:var(--text)">Crypto</strong> —
+            ${
+              state.cryptoEnabled
+                ? "NOWPayments is configured (USDT, BTC, ETH, etc.). Pay on the hosted crypto page, then return for codes."
+                : "shown in demo mode until you set NOWPAYMENTS_API_KEY (see CRYPTO-SETUP.md)."
             }
           </p>`
               : ""
@@ -1578,6 +1594,7 @@ async function loadLiveCatalog() {
     state.paymongoEnabled = !!data.paymongoEnabled;
     state.xenditEnabled = !!data.xenditEnabled;
     state.paypalEnabled = !!data.paypalEnabled;
+    state.cryptoEnabled = !!data.cryptoEnabled;
     state.ewalletProvider = data.ewalletProvider || "demo";
     state.paymentMethods = Array.isArray(data.paymentMethods)
       ? data.paymentMethods

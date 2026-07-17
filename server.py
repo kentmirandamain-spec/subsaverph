@@ -258,6 +258,7 @@ def health():
             "xenditConfigured": xendit_configured(),
             "paypalConfigured": paypal_configured(),
             "paypalMode": paypal_credentials()[2] if paypal_configured() else None,
+            "cryptoConfigured": crypto_configured(),
             "ewalletProvider": ewallet_provider(),
         }
     )
@@ -296,6 +297,7 @@ def api_catalog():
             "paymongoEnabled": paymongo_configured(),
             "xenditEnabled": xendit_configured(),
             "paypalEnabled": paypal_configured(),
+            "cryptoEnabled": crypto_configured(),
             "ewalletProvider": ewallet_provider(),
             "paymentMethods": available_payment_methods(),
         }
@@ -567,6 +569,12 @@ def paypal_configured() -> bool:
     return bool(client_id and secret)
 
 
+def crypto_configured() -> bool:
+    return bool(
+        (os.environ.get("NOWPAYMENTS_API_KEY") or "").strip().strip('"').strip("'")
+    )
+
+
 def ewallet_provider() -> str:
     """
     Which backend powers PH e-wallets (gcash, maya, grab_pay, shopeepay).
@@ -597,7 +605,7 @@ def available_payment_methods() -> list:
     has_paymongo = paymongo_configured()
     has_xendit = xendit_configured()
     has_paypal = paypal_configured()
-    has_crypto = bool((os.environ.get("NOWPAYMENTS_API_KEY") or "").strip())
+    has_crypto = crypto_configured()
     ewallet_prov = ewallet_provider()
     any_live = has_stripe or has_paymongo or has_xendit or has_paypal or has_crypto
     demo_only = not any_live
@@ -718,16 +726,20 @@ def available_payment_methods() -> list:
             "group": "other",
         }
     )
-    if has_crypto or demo_only:
-        methods.append(
-            {
-                "id": "crypto",
-                "label": "Crypto",
-                "provider": "nowpayments" if has_crypto else "demo",
-                "desc": "USDT, BTC, ETH & more" if has_crypto else "Crypto (demo)",
-                "group": "other",
-            }
-        )
+    # Crypto (NOWPayments) — always offered (live when API key set)
+    methods.append(
+        {
+            "id": "crypto",
+            "label": "Crypto",
+            "provider": "nowpayments" if has_crypto else "demo",
+            "desc": (
+                "USDT, BTC, ETH & more via NOWPayments"
+                if has_crypto
+                else "Crypto (demo — set NOWPAYMENTS_API_KEY for live)"
+            ),
+            "group": "other",
+        }
+    )
 
     # Deduplicate by id keeping first
     seen = set()
@@ -1351,47 +1363,66 @@ def _paypal_checkout(email, name, currency, normalized, cart_meta, base):
 
 
 def _crypto_checkout(email, name, normalized, cart_meta, base):
-    api_key = os.environ.get("NOWPAYMENTS_API_KEY")
+    api_key = (os.environ.get("NOWPAYMENTS_API_KEY") or "").strip().strip('"').strip("'")
     if not api_key:
         return jsonify({"error": "NOWPAYMENTS_API_KEY not set"}), 503
 
+    import urllib.error
     import urllib.request
 
     price_usd = cart_total_usd(normalized)
+    if price_usd < 0.5:
+        return jsonify(
+            {
+                "error": "Order total too low for crypto (minimum about $0.50 USD).",
+            }
+        ), 400
+
     ref = f"cr_{uuid.uuid4().hex[:16]}"
-    # Invoice creates a hosted payment page
+    # Hosted invoice page — server return URLs avoid broken hash redirects
     body = {
-        "price_amount": price_usd,
+        "price_amount": round(price_usd, 2),
         "price_currency": "usd",
         "order_id": ref,
-        "order_description": f"SubSaverPH for {email}",
+        "order_description": f"SubSaverPH digital codes ({email})",
         "ipn_callback_url": f"{base}/api/webhooks/nowpayments",
-        "success_url": f"{base}/#/success?provider=crypto&ref={ref}",
-        "cancel_url": f"{base}/#/checkout?cancelled=1",
+        "success_url": f"{base}/api/checkout/crypto/return?ref={ref}",
+        "cancel_url": f"{base}/api/checkout/crypto/cancel",
+        "is_fixed_rate": True,
+        "is_fee_paid_by_user": False,
     }
-    api_base = os.environ.get("NOWPAYMENTS_API_BASE", "https://api.nowpayments.io/v1")
+    api_base = (
+        os.environ.get("NOWPAYMENTS_API_BASE") or "https://api.nowpayments.io/v1"
+    ).rstrip("/")
     req = urllib.request.Request(
         f"{api_base}/invoice",
         data=json.dumps(body).encode("utf-8"),
         headers={
             "x-api-key": api_key,
             "Content-Type": "application/json",
+            "Accept": "application/json",
         },
         method="POST",
     )
     try:
         with urllib.request.urlopen(req, timeout=30) as resp:
             inv = json.loads(resp.read().decode("utf-8"))
-    except Exception as e:
+    except urllib.error.HTTPError as e:
         err = ""
-        if hasattr(e, "read"):
-            try:
-                err = e.read().decode("utf-8")  # type: ignore
-            except Exception:
-                pass
-        return jsonify({"error": f"NOWPayments error: {e} {err}"}), 502
+        try:
+            err = e.read().decode("utf-8", errors="replace")[:500]
+        except Exception:
+            pass
+        return jsonify(
+            {
+                "error": f"NOWPayments error HTTP {e.code}: {err or e}",
+                "hint": "Check NOWPAYMENTS_API_KEY and that your NOWPayments account is active.",
+            }
+        ), 502
+    except Exception as e:
+        return jsonify({"error": f"NOWPayments error: {e}"}), 502
 
-    invoice_url = inv.get("invoice_url")
+    invoice_url = inv.get("invoice_url") or inv.get("invoice_url".upper())
     if not invoice_url:
         return jsonify({"error": "No invoice_url from NOWPayments", "raw": inv}), 502
 
@@ -1403,7 +1434,9 @@ def _crypto_checkout(email, name, normalized, cart_meta, base):
         "method": "crypto",
         "provider": "nowpayments",
         "invoiceId": inv.get("id"),
+        "tokenId": inv.get("token_id"),
         "currency": "USD",
+        "amountUsd": round(price_usd, 2),
         "createdAt": __import__("datetime").datetime.utcnow().isoformat() + "Z",
     }
     write_json(STORE / "pending_payments.json", pending)
@@ -1415,8 +1448,25 @@ def _crypto_checkout(email, name, normalized, cart_meta, base):
             "method": "crypto",
             "url": invoice_url,
             "ref": ref,
+            "invoiceId": inv.get("id"),
         }
     )
+
+
+@app.get("/api/checkout/crypto/return")
+def crypto_return():
+    """NOWPayments success redirect → success page to verify + fulfill."""
+    ref = (request.args.get("ref") or "").strip()
+    base = public_base_url()
+    if not ref:
+        return redirect(f"{base}/#/checkout?cancelled=1")
+    return redirect(f"{base}/#/success?provider=crypto&ref={ref}")
+
+
+@app.get("/api/checkout/crypto/cancel")
+def crypto_cancel():
+    base = public_base_url()
+    return redirect(f"{base}/#/checkout?cancelled=1")
 
 
 @app.get("/api/checkout/complete")
@@ -1596,26 +1646,68 @@ def _paymongo_paid(pending: dict) -> bool:
 
 
 def _crypto_paid(pending: dict) -> bool:
-    api_key = os.environ.get("NOWPAYMENTS_API_KEY")
+    """Verify crypto payment via NOWPayments invoice / payment lookup."""
+    api_key = (os.environ.get("NOWPAYMENTS_API_KEY") or "").strip().strip('"').strip("'")
     invoice_id = pending.get("invoiceId")
-    if not api_key or not invoice_id:
-        return os.environ.get("CRYPTO_TRUST_RETURN", "0") == "1"
+    ref = None
+    # Allow soft return if IPN may lag (optional)
+    trust = os.environ.get("CRYPTO_TRUST_RETURN", "0") == "1"
+    if not api_key:
+        return trust
+    import urllib.error
     import urllib.request
 
-    api_base = os.environ.get("NOWPAYMENTS_API_BASE", "https://api.nowpayments.io/v1")
-    req = urllib.request.Request(
-        f"{api_base}/invoice/{invoice_id}",
-        headers={"x-api-key": api_key},
-        method="GET",
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-        # invoice payments statuses
-        status = (data.get("payment_status") or data.get("status") or "").lower()
-        return status in ("finished", "confirmed", "sending", "paid")
-    except Exception:
-        return False
+    api_base = (
+        os.environ.get("NOWPAYMENTS_API_BASE") or "https://api.nowpayments.io/v1"
+    ).rstrip("/")
+    headers = {"x-api-key": api_key, "Accept": "application/json"}
+
+    def _status_ok(status: str) -> bool:
+        s = (status or "").lower()
+        return s in ("finished", "confirmed", "sending", "paid")
+
+    # 1) Invoice by id
+    if invoice_id:
+        try:
+            req = urllib.request.Request(
+                f"{api_base}/invoice/{invoice_id}",
+                headers=headers,
+                method="GET",
+            )
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+            status = (
+                data.get("payment_status")
+                or data.get("invoice_status")
+                or data.get("status")
+                or ""
+            )
+            if _status_ok(status):
+                return True
+        except Exception:
+            pass
+
+    # 2) Find payment by order_id (our ref) if stored on pending path via list
+    # NOWPayments: GET /v1/payment/?limit=10 is account-wide; use payment-by-invoice if available
+    if invoice_id:
+        try:
+            req = urllib.request.Request(
+                f"{api_base}/payment/?invoiceId={invoice_id}&limit=5",
+                headers=headers,
+                method="GET",
+            )
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+            payments = data.get("data") or data.get("payments") or []
+            if isinstance(data, list):
+                payments = data
+            for p in payments:
+                if _status_ok(p.get("payment_status") or p.get("status") or ""):
+                    return True
+        except Exception:
+            pass
+
+    return trust
 
 
 def _xendit_paid(pending: dict) -> bool:

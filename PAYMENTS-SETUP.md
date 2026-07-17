@@ -58,8 +58,11 @@ Use `live` when going live.
 ### Crypto (NOWPayments)
 ```
 NOWPAYMENTS_API_KEY=...
+PUBLIC_URL=https://YOUR-APP.onrender.com
 ```
-IPN: `https://YOUR-APP.onrender.com/api/webhooks/nowpayments`
+IPN / webhook: `https://YOUR-APP.onrender.com/api/webhooks/nowpayments`  
+
+Full guide: **CRYPTO-SETUP.md**
 
 ---
 
