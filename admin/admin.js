@@ -230,10 +230,11 @@ function stockView() {
     form = `
       <div class="panel">
         <h2 style="margin-top:0;font-size:1rem">Add codes → ${escapeHtml(prod?.name || state.stockProductId)}</h2>
-        <p class="muted">Paste one code / license key / redeem link per line. When a customer pays, one code is delivered instantly.</p>
+        <p class="muted">One login per line. Customers see <strong>Username</strong> + <strong>Password</strong> with copy buttons after payment.</p>
+        <p class="muted" style="font-size:0.85rem">Formats: <code>user@mail.com | Pass123</code> · <code>Username: u Password: p</code> · <code>u:p</code> · or a single access code</p>
         <form id="stockForm">
-          <label>Codes (one per line)
-            <textarea name="codes" placeholder="CODE-AAAA-1111&#10;CODE-BBBB-2222&#10;https://redeem.example/xyz" required></textarea>
+          <label>Logins / codes (one per line)
+            <textarea name="codes" placeholder="user@email.com | MyPassword123&#10;Username: buyer@mail.com Password: GrokPass#1&#10;CODE-ONLY-IF-NEEDED" required></textarea>
           </label>
           <div class="row-actions">
             <button class="btn" type="submit">Save stock</button>

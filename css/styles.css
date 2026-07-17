@@ -2345,6 +2345,124 @@ html[data-theme="light"] .badge {
   color: var(--text);
 }
 
+/* Success login credentials panel */
+.success-card-wide {
+  max-width: 560px;
+  text-align: left;
+}
+
+.success-card-wide .ok,
+.success-card-wide h1 {
+  text-align: center;
+}
+
+.success-order-id {
+  color: var(--text);
+}
+
+.cred-panel {
+  margin-top: 28px;
+  border: 1px solid var(--line-strong);
+  background: var(--soft-fill);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.cred-panel-head {
+  padding: 16px 18px 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.cred-panel-head h2 {
+  margin: 0 0 6px;
+  font-family: var(--display);
+  font-size: 0.85rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.cred-panel-head p {
+  margin: 0;
+  font-size: 0.82rem;
+}
+
+.cred-list {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cred-card {
+  border: 1px solid var(--line);
+  background: var(--panel-solid, #0a0a0a);
+  padding: 14px 16px 16px;
+  border-radius: var(--radius-sm);
+}
+
+.cred-product {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--mute);
+  margin-bottom: 12px;
+}
+
+.cred-field {
+  margin-bottom: 10px;
+}
+
+.cred-field label {
+  display: block;
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--mute-2);
+  margin-bottom: 6px;
+  font-weight: 700;
+}
+
+.cred-value-row {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.cred-value {
+  flex: 1;
+  min-width: 0;
+  display: block;
+  padding: 12px 14px;
+  border: 1px solid var(--line-strong);
+  background: var(--input-bg, rgba(0, 0, 0, 0.45));
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 0.9rem;
+  letter-spacing: 0.02em;
+  word-break: break-all;
+  color: var(--text);
+  text-align: left;
+  user-select: all;
+}
+
+.cred-copy {
+  flex-shrink: 0;
+  min-width: 72px;
+  padding: 10px 12px !important;
+}
+
+.cred-copy-both {
+  width: 100%;
+}
+
+html[data-theme="light"] .cred-card {
+  background: #fff;
+}
+
+html[data-theme="light"] .cred-value {
+  background: #f4f4f5;
+}
+
 /* CART */
 .overlay {
   position: fixed;

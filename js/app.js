@@ -1135,41 +1135,118 @@ function viewSuccess() {
   if (!order) {
     return `<div class="success"><div class="empty"><h2>No order</h2><a class="btn solid" href="#/deals">Shop</a></div></div>`;
   }
-  const lines = (order.items || [])
-    .map((i) => {
-      const codes = (i.codes || []).length
-        ? i.codes
-            .map(
-              (c) =>
-                `<div class="code-row"><span>${escapeHtml(i.monogram || "")} ${escapeHtml(i.name)}</span><code>${escapeHtml(c)}</code></div>`
-            )
-            .join("")
-        : `<div class="code-row"><span>${escapeHtml(i.name)}</span><code>No stock — contact support</code></div>`;
-      return codes;
+
+  /** Build credential cards from credentials[] or parse codes[] */
+  const credCards = (order.items || [])
+    .map((item) => {
+      let creds = Array.isArray(item.credentials) ? item.credentials : [];
+      if (!creds.length && Array.isArray(item.codes)) {
+        creds = item.codes.map((c) => parseCredentialClient(c));
+      }
+      if (!creds.length) {
+        return `<div class="cred-card">
+          <div class="cred-product">${escapeHtml(item.monogram || "")} ${escapeHtml(item.name || "Product")}</div>
+          <p class="muted" style="margin:8px 0 0">No login on file — contact support with order ID.</p>
+        </div>`;
+      }
+      return creds
+        .map((cr, idx) => {
+          const user = cr.username || cr.user || "";
+          const pass = cr.password || cr.pass || "";
+          const code = cr.code || (!user && !pass ? cr.raw || "" : "");
+          const title =
+            (order.items || []).length > 1 || creds.length > 1
+              ? `${item.name || "Product"}${creds.length > 1 ? ` #${idx + 1}` : ""}`
+              : item.name || "Your access";
+          if (user || pass) {
+            return `
+            <div class="cred-card" data-cred-card>
+              <div class="cred-product">${escapeHtml(item.monogram || "")} ${escapeHtml(title)}</div>
+              <div class="cred-field">
+                <label>Username / Email</label>
+                <div class="cred-value-row">
+                  <code class="cred-value" data-copy-text>${escapeHtml(user || "—")}</code>
+                  <button type="button" class="btn sm cred-copy" data-copy="${escapeHtml(user)}" ${user ? "" : "disabled"}>Copy</button>
+                </div>
+              </div>
+              <div class="cred-field">
+                <label>Password</label>
+                <div class="cred-value-row">
+                  <code class="cred-value" data-copy-text>${escapeHtml(pass || "—")}</code>
+                  <button type="button" class="btn sm cred-copy" data-copy="${escapeHtml(pass)}" ${pass ? "" : "disabled"}>Copy</button>
+                </div>
+              </div>
+              <button type="button" class="btn solid sm full cred-copy-both" data-copy-user="${escapeHtml(user)}" data-copy-pass="${escapeHtml(pass)}" style="margin-top:12px">
+                Copy username + password
+              </button>
+            </div>`;
+          }
+          return `
+            <div class="cred-card" data-cred-card>
+              <div class="cred-product">${escapeHtml(item.monogram || "")} ${escapeHtml(title)}</div>
+              <div class="cred-field">
+                <label>Access code</label>
+                <div class="cred-value-row">
+                  <code class="cred-value" data-copy-text>${escapeHtml(code || "—")}</code>
+                  <button type="button" class="btn sm cred-copy" data-copy="${escapeHtml(code)}" ${code ? "" : "disabled"}>Copy</button>
+                </div>
+              </div>
+            </div>`;
+        })
+        .join("");
     })
     .join("");
 
   const emailNote = order.emailSent
-    ? `Invoice + access codes were emailed to <strong style="color:var(--text)">${escapeHtml(order.email)}</strong>. Check inbox and spam.`
+    ? `Invoice + login details were emailed to <strong style="color:var(--text)">${escapeHtml(order.email)}</strong>. Check inbox and spam.`
     : order.email
-      ? `Codes are shown below. Email to <strong style="color:var(--text)">${escapeHtml(order.email)}</strong> was not confirmed${order.emailDetail ? ` (${escapeHtml(String(order.emailDetail).slice(0, 80))})` : ""}. Save codes here.`
-      : `Save your codes below.`;
+      ? `Logins are shown below. Email to <strong style="color:var(--text)">${escapeHtml(order.email)}</strong> was not confirmed${order.emailDetail ? ` (${escapeHtml(String(order.emailDetail).slice(0, 80))})` : ""}. Save them here.`
+      : `Save your login details below.`;
 
   return `
     <div class="success">
-      <div class="success-card">
+      <div class="success-card success-card-wide">
         <div class="ok">OK</div>
         <h1>Order delivered</h1>
-        <p class="muted">Order <strong style="color:#fff">${escapeHtml(order.id)}</strong><br/>${emailNote}</p>
+        <p class="muted">Order <strong class="success-order-id">${escapeHtml(order.id)}</strong><br/>${emailNote}</p>
         <p style="margin-top:12px;font-weight:600">${escapeHtml(order.currency || getCurrencyCode())} · ${escapeHtml(order.paymentMode || "instant")} · Instant digital delivery</p>
-        <div class="codes">${lines}</div>
-        <p class="muted" style="font-size:0.8rem">Save these codes now (and check your email inbox/spam). Redeem on the official service.</p>
+
+        <div class="cred-panel" role="region" aria-label="Your product login">
+          <div class="cred-panel-head">
+            <h2>Your login</h2>
+            <p class="muted">Username and password for each product — tap Copy to paste into the app.</p>
+          </div>
+          <div class="cred-list">${credCards}</div>
+        </div>
+
+        <p class="muted" style="font-size:0.8rem;margin-top:16px">Save these credentials now. Redeem / sign in on the official service. Not affiliated with listed brands.</p>
         <div class="cta" style="justify-content:center;margin-top:22px">
           <a class="btn solid" href="#/deals">More deals</a>
           <a class="btn" href="#/home">Home</a>
         </div>
       </div>
     </div>`;
+}
+
+/** Client-side parse of legacy code strings into username/password */
+function parseCredentialClient(raw) {
+  const text = String(raw || "").trim();
+  if (!text) return { username: "", password: "", raw: "", code: "" };
+  let m = text.match(/user(?:name)?\s*[:\-]\s*(.+?)\s+(?:pass(?:word)?|pwd)\s*[:\-]\s*(.+)$/i);
+  if (m) return { username: m[1].trim(), password: m[2].trim(), raw: text, code: "" };
+  if (text.includes("|")) {
+    const [a, b] = text.split("|").map((s) => s.trim());
+    if (a && b) return { username: a, password: b, raw: text, code: "" };
+  }
+  if (text.includes(" / ")) {
+    const [a, b] = text.split(" / ").map((s) => s.trim());
+    if (a && b) return { username: a, password: b, raw: text, code: "" };
+  }
+  if ((text.match(/:/g) || []).length === 1) {
+    const [a, b] = text.split(":").map((s) => s.trim());
+    if (a && b && !a.includes(" ")) return { username: a, password: b, raw: text, code: "" };
+  }
+  return { username: "", password: "", raw: text, code: text };
 }
 
 function bindProductSearch() {
@@ -1404,6 +1481,49 @@ function render() {
 }
 
 function bind() {
+  // Success page: copy username / password
+  $$(".cred-copy").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const text = btn.getAttribute("data-copy") || "";
+      if (!text) return;
+      try {
+        await navigator.clipboard.writeText(text);
+        const prev = btn.textContent;
+        btn.textContent = "Copied!";
+        toast("Copied");
+        setTimeout(() => {
+          btn.textContent = prev || "Copy";
+        }, 1400);
+      } catch {
+        // Fallback
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        ta.remove();
+        toast("Copied");
+      }
+    });
+  });
+  $$(".cred-copy-both").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const u = btn.getAttribute("data-copy-user") || "";
+      const p = btn.getAttribute("data-copy-pass") || "";
+      const text = `Username: ${u}\nPassword: ${p}`;
+      try {
+        await navigator.clipboard.writeText(text);
+        btn.textContent = "Copied both!";
+        toast("Username & password copied");
+        setTimeout(() => {
+          btn.textContent = "Copy username + password";
+        }, 1600);
+      } catch {
+        toast("Could not copy — select text manually");
+      }
+    });
+  });
+
   $$("[data-add]").forEach((btn) => {
     btn.addEventListener("click", () => {
       const deal = getDeal(btn.dataset.add);

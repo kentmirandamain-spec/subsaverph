@@ -199,8 +199,77 @@ def stock_count(product_id: str) -> int:
     return sum(1 for c in codes if c.get("status", "available") == "available")
 
 
-def reserve_codes(product_id: str, qty: int) -> list[str]:
-    """Take qty available codes for product. Mutates inventory."""
+def parse_credential_entry(entry) -> dict:
+    """
+    Normalize inventory entry into {username, password, raw, code}.
+    Supports:
+      - {username, password, code}
+      - "Username: x Password: y"
+      - "user | password"
+      - "user:password"
+      - "user / password"
+      - plain access code (shown as code only)
+    """
+    if isinstance(entry, dict):
+        u = (
+            entry.get("username")
+            or entry.get("user")
+            or entry.get("email")
+            or entry.get("login")
+            or ""
+        )
+        p = entry.get("password") or entry.get("pass") or entry.get("pwd") or ""
+        raw = (entry.get("code") or entry.get("raw") or entry.get("value") or "").strip()
+        u = str(u).strip()
+        p = str(p).strip()
+        if u or p:
+            return {
+                "username": u,
+                "password": p,
+                "raw": raw or (f"{u}:{p}" if u and p else u or p),
+                "code": raw if raw and not (u or p) else "",
+            }
+        text = raw
+    else:
+        text = str(entry or "").strip()
+
+    if not text:
+        return {"username": "", "password": "", "raw": "", "code": ""}
+
+    m = re.search(
+        r"user(?:name)?\s*[:\-]\s*(.+?)\s+(?:pass(?:word)?|pwd)\s*[:\-]\s*(.+)$",
+        text,
+        re.I | re.S,
+    )
+    if m:
+        return {
+            "username": m.group(1).strip(),
+            "password": m.group(2).strip(),
+            "raw": text,
+            "code": "",
+        }
+
+    if "|" in text:
+        left, right = [x.strip() for x in text.split("|", 1)]
+        if left and right:
+            return {"username": left, "password": right, "raw": text, "code": ""}
+
+    if " / " in text:
+        left, right = [x.strip() for x in text.split(" / ", 1)]
+        if left and right and len(left) < 120 and len(right) < 120:
+            return {"username": left, "password": right, "raw": text, "code": ""}
+
+    if text.count(":") == 1:
+        left, right = text.split(":", 1)
+        left, right = left.strip(), right.strip()
+        if left and right and " " not in left and len(left) < 120:
+            return {"username": left, "password": right, "raw": text, "code": ""}
+
+    return {"username": "", "password": "", "raw": text, "code": text}
+
+
+def reserve_codes(product_id: str, qty: int) -> list[dict]:
+    """Take qty available codes for product. Mutates inventory. Returns credential dicts."""
     inv = load_inventory()
     codes = inv.get(product_id) or []
     available = [c for c in codes if c.get("status", "available") == "available"]
@@ -208,7 +277,7 @@ def reserve_codes(product_id: str, qty: int) -> list[str]:
         raise ValueError(
             f"Not enough stock for {product_id}. Need {qty}, have {len(available)}."
         )
-    taken = []
+    taken: list[dict] = []
     need = qty
     for c in codes:
         if need <= 0:
@@ -216,7 +285,12 @@ def reserve_codes(product_id: str, qty: int) -> list[str]:
         if c.get("status", "available") == "available":
             c["status"] = "sold"
             c["soldAt"] = __import__("datetime").datetime.utcnow().isoformat() + "Z"
-            taken.append(c.get("code", ""))
+            # Prefer structured fields on the inventory row
+            if c.get("username") or c.get("password"):
+                cred = parse_credential_entry(c)
+            else:
+                cred = parse_credential_entry(c.get("code", ""))
+            taken.append(cred)
             need -= 1
     inv[product_id] = codes
     save_inventory(inv)
@@ -555,7 +629,16 @@ def fulfill_order(
         deal = row["deal"]
         qty = row["qty"]
         pid = row["id"]
-        codes = reserve_codes(pid, qty)
+        creds = reserve_codes(pid, qty)
+        # codes: display strings for email/back-compat; credentials: structured for UI
+        code_strings = []
+        for cr in creds:
+            if cr.get("username") or cr.get("password"):
+                code_strings.append(
+                    f"Username: {cr.get('username') or '—'}  Password: {cr.get('password') or '—'}"
+                )
+            else:
+                code_strings.append(cr.get("raw") or cr.get("code") or "")
         line_results.append(
             {
                 "id": pid,
@@ -565,7 +648,8 @@ def fulfill_order(
                 "price": deal.get("price"),
                 "priceBase": deal.get("priceBase", "USD"),
                 "duration": deal.get("duration"),
-                "codes": codes,
+                "codes": code_strings,
+                "credentials": creds,
             }
         )
 
