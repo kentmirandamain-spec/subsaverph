@@ -309,8 +309,6 @@ def health():
             "paypalConfigured": paypal_configured(),
             "paypalMode": paypal_credentials()[2] if paypal_configured() else None,
             "cryptoConfigured": crypto_configured(),
-            "hitpayConfigured": hitpay_configured(),
-            "dragonpayConfigured": dragonpay_configured(),
             "ewalletProvider": ewallet_provider(),
             # Add this IP in NOWPayments → Settings → Payments → IP addresses
             "outboundIp": outbound,
@@ -393,8 +391,6 @@ def api_catalog():
             "xenditEnabled": xendit_configured(),
             "paypalEnabled": paypal_configured(),
             "cryptoEnabled": crypto_configured(),
-            "hitpayEnabled": hitpay_configured(),
-            "dragonpayEnabled": dragonpay_configured(),
             "ewalletProvider": ewallet_provider(),
             "paymentMethods": available_payment_methods(),
         }
@@ -672,28 +668,6 @@ def crypto_configured() -> bool:
     )
 
 
-def hitpay_configured() -> bool:
-    return bool((os.environ.get("HITPAY_API_KEY") or "").strip().strip('"').strip("'"))
-
-
-def hitpay_api_base() -> str:
-    mode = (os.environ.get("HITPAY_MODE") or "sandbox").strip().lower()
-    if mode == "live":
-        return "https://api.hit-pay.com/v1"
-    return "https://api.sandbox.hit-pay.com/v1"
-
-
-def dragonpay_configured() -> bool:
-    mid = (os.environ.get("DRAGONPAY_MERCHANT_ID") or "").strip()
-    pw = (os.environ.get("DRAGONPAY_PASSWORD") or "").strip()
-    return bool(mid and pw)
-
-
-def dragonpay_pay_url() -> str:
-    mode = (os.environ.get("DRAGONPAY_MODE") or "test").strip().lower()
-    if mode in ("live", "production", "prod"):
-        return "https://gw.dragonpay.ph/Pay.aspx"
-    return "https://test.dragonpay.ph/Pay.aspx"
 
 
 def _nowpayments_http(method: str, url: str, *, api_key: str, json_body=None, timeout: int = 30):
@@ -820,8 +794,6 @@ def available_payment_methods() -> list:
     has_xendit = xendit_configured()
     has_paypal = paypal_configured()
     has_crypto = crypto_configured()
-    has_hitpay = hitpay_configured()
-    has_dragonpay = dragonpay_configured()
     ewallet_prov = ewallet_provider()
     any_live = (
         (has_stripe and show_stripe)
@@ -829,8 +801,6 @@ def available_payment_methods() -> list:
         or has_xendit
         or has_paypal
         or has_crypto
-        or has_hitpay
-        or has_dragonpay
     )
     demo_only = not any_live
 
@@ -965,35 +935,6 @@ def available_payment_methods() -> list:
         }
     )
 
-    # HitPay — cards + PH e-wallets (hosted checkout)
-    methods.append(
-        {
-            "id": "hitpay",
-            "label": "HitPay",
-            "provider": "hitpay" if has_hitpay else "demo",
-            "desc": (
-                "Cards, GCash, Maya, GrabPay & more (HitPay)"
-                if has_hitpay
-                else "HitPay (demo — set HITPAY_API_KEY for live)"
-            ),
-            "group": "other",
-        }
-    )
-
-    # Dragonpay — PH banks, OTC, e-wallets
-    methods.append(
-        {
-            "id": "dragonpay",
-            "label": "Dragonpay",
-            "provider": "dragonpay" if has_dragonpay else "demo",
-            "desc": (
-                "GCash, Maya, bank & OTC via Dragonpay"
-                if has_dragonpay
-                else "Dragonpay (demo — set DRAGONPAY_MERCHANT_ID + PASSWORD)"
-            ),
-            "group": "other",
-        }
-    )
 
     # Deduplicate by id keeping first
     seen = set()
@@ -1057,7 +998,7 @@ def payments_config():
 def api_checkout_start():
     """
     Unified checkout start.
-    method: card | gcash | paymaya | grab_pay | shopeepay | xendit | paypal | crypto | hitpay | dragonpay | demo
+    method: card | gcash | paymaya | grab_pay | shopeepay | xendit | paypal | crypto | demo
     Returns { url } for redirect providers, or { order } for demo.
     """
     data = request.get_json(silent=True) or {}
@@ -1127,371 +1068,9 @@ def api_checkout_start():
     if method == "crypto" and provider == "nowpayments":
         return _crypto_checkout(email, name, normalized, cart_meta, base)
 
-    # ---- HitPay (cards + e-wallets hosted) ----
-    if method == "hitpay" and provider == "hitpay":
-        return _hitpay_checkout(email, name, normalized, cart_meta, base)
-
-    # ---- Dragonpay (PH multi-channel) ----
-    if method == "dragonpay" and provider == "dragonpay":
-        return _dragonpay_checkout(email, name, normalized, cart_meta, base)
 
     return jsonify({"error": "Payment method not configured on server"}), 503
 
-
-def _hitpay_paid(pending: dict) -> bool:
-    """Optional status check via HitPay API (payment request id)."""
-    api_key = (os.environ.get("HITPAY_API_KEY") or "").strip()
-    pr_id = pending.get("hitpayPaymentRequestId")
-    if not api_key or not pr_id:
-        return os.environ.get("HITPAY_TRUST_RETURN", "1") == "1"
-    import urllib.request
-
-    api = hitpay_api_base().rstrip("/")
-    req = urllib.request.Request(
-        f"{api}/payment-requests/{pr_id}",
-        headers={
-            "X-BUSINESS-API-KEY": api_key,
-            "X-Requested-With": "XMLHttpRequest",
-            "Accept": "application/json",
-        },
-        method="GET",
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=20) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-        st = str(data.get("status") or "").lower()
-        return st in ("completed", "succeeded", "paid")
-    except Exception:
-        return os.environ.get("HITPAY_TRUST_RETURN", "1") == "1"
-
-
-def _hitpay_checkout(email, name, normalized, cart_meta, base):
-    """Create HitPay payment request and return hosted checkout URL."""
-    api_key = (os.environ.get("HITPAY_API_KEY") or "").strip().strip('"').strip("'")
-    if not api_key:
-        return jsonify({"error": "HITPAY_API_KEY not set"}), 503
-
-    import urllib.parse
-    import urllib.request
-    import urllib.error
-
-    amount_php = cart_total_php(normalized)
-    if amount_php < 1:
-        return jsonify({"error": "Order total too low for HitPay"}), 400
-
-    ref = f"hp_{uuid.uuid4().hex[:16]}"
-    redirect_url = f"{base}/api/checkout/hitpay/return?ref={ref}"
-
-    # form-urlencoded body (HitPay requirement)
-    form = {
-        "amount": f"{amount_php:.2f}",
-        "currency": "PHP",
-        "email": email,
-        "name": name or email,
-        "purpose": "SubSaverPH digital codes",
-        "reference_number": ref,
-        "redirect_url": redirect_url,
-        "allow_repeated_payments": "false",
-    }
-    # Optional: limit methods if merchant enabled them (omit = all enabled in dashboard)
-    # form["payment_methods[]"] = "card"  # can add multiple via list encoding
-
-    data = urllib.parse.urlencode(form).encode("utf-8")
-    api = hitpay_api_base().rstrip("/")
-    req = urllib.request.Request(
-        f"{api}/payment-requests",
-        data=data,
-        headers={
-            "X-BUSINESS-API-KEY": api_key,
-            "Content-Type": "application/x-www-form-urlencoded",
-            "X-Requested-With": "XMLHttpRequest",
-            "Accept": "application/json",
-            "User-Agent": "SubSaverPH/1.0",
-        },
-        method="POST",
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            payload = json.loads(resp.read().decode("utf-8"))
-    except urllib.error.HTTPError as e:
-        err = ""
-        try:
-            err = e.read().decode("utf-8", errors="replace")[:500]
-        except Exception:
-            pass
-        return jsonify(
-            {
-                "error": f"HitPay error HTTP {e.code}: {err or e}",
-                "hint": "Check HITPAY_API_KEY and HITPAY_MODE (sandbox|live). Sandbox keys need sandbox API.",
-            }
-        ), 502
-    except Exception as e:
-        return jsonify({"error": f"HitPay error: {e}"}), 502
-
-    checkout_url = payload.get("url")
-    pr_id = payload.get("id")
-    if not checkout_url:
-        return jsonify({"error": "HitPay did not return checkout url", "raw": payload}), 502
-
-    pending = read_json(STORE / "pending_payments.json", {})
-    pending[ref] = {
-        "email": email,
-        "name": name,
-        "cart": cart_meta,
-        "method": "hitpay",
-        "provider": "hitpay",
-        "hitpayPaymentRequestId": pr_id,
-        "currency": "PHP",
-        "amount": amount_php,
-        "createdAt": __import__("datetime").datetime.utcnow().isoformat() + "Z",
-    }
-    write_json(STORE / "pending_payments.json", pending)
-
-    return jsonify(
-        {
-            "ok": True,
-            "provider": "hitpay",
-            "method": "hitpay",
-            "url": checkout_url,
-            "ref": ref,
-            "paymentRequestId": pr_id,
-        }
-    )
-
-
-def _dragonpay_checkout(email, name, normalized, cart_meta, base):
-    """Build Dragonpay Pay.aspx redirect URL with SHA1 digest."""
-    import hashlib
-    import urllib.parse
-
-    merchant_id = (os.environ.get("DRAGONPAY_MERCHANT_ID") or "").strip()
-    password = (os.environ.get("DRAGONPAY_PASSWORD") or "").strip()
-    if not merchant_id or not password:
-        return jsonify({"error": "DRAGONPAY_MERCHANT_ID / DRAGONPAY_PASSWORD not set"}), 503
-
-    amount_php = cart_total_php(normalized)
-    if amount_php < 1:
-        return jsonify({"error": "Order total too low for Dragonpay"}), 400
-
-    # txnid max 40 chars; amount format ####.##
-    ref = f"dp{uuid.uuid4().hex[:14]}"
-    amount_str = f"{amount_php:.2f}"
-    ccy = "PHP"
-    description = "SubSaverPH digital codes"
-    # digest = sha1(merchantid:txnid:amount:ccy:description:email:key)
-    raw = f"{merchant_id}:{ref}:{amount_str}:{ccy}:{description}:{email}:{password}"
-    digest = hashlib.sha1(raw.encode("utf-8")).hexdigest()
-
-    params = {
-        "merchantid": merchant_id,
-        "txnid": ref,
-        "amount": amount_str,
-        "ccy": ccy,
-        "description": description,
-        "email": email,
-        "digest": digest,
-    }
-    # Optional param1/param2 for return context
-    params["param1"] = email[:80]
-    params["param2"] = "subsaverph"
-
-    pay_url = dragonpay_pay_url() + "?" + urllib.parse.urlencode(params)
-
-    pending = read_json(STORE / "pending_payments.json", {})
-    pending[ref] = {
-        "email": email,
-        "name": name,
-        "cart": cart_meta,
-        "method": "dragonpay",
-        "provider": "dragonpay",
-        "currency": "PHP",
-        "amount": amount_php,
-        "createdAt": __import__("datetime").datetime.utcnow().isoformat() + "Z",
-    }
-    write_json(STORE / "pending_payments.json", pending)
-
-    return jsonify(
-        {
-            "ok": True,
-            "provider": "dragonpay",
-            "method": "dragonpay",
-            "url": pay_url,
-            "ref": ref,
-        }
-    )
-
-
-@app.get("/api/checkout/hitpay/return")
-def hitpay_return():
-    """HitPay redirects here after payment (status in query)."""
-    ref = (request.args.get("ref") or "").strip()
-    # HitPay also sends reference / status on redirect_url
-    status = (request.args.get("status") or "").lower()
-    base = public_base_url()
-    if not ref:
-        ref = (request.args.get("reference") or request.args.get("reference_number") or "").strip()
-    if not ref:
-        return redirect(f"{base}/#/checkout?cancelled=1")
-    if status in ("failed", "error", "cancelled", "canceled"):
-        return redirect(f"{base}/#/checkout?cancelled=1")
-    return redirect(f"{base}/#/success?provider=hitpay&ref={ref}")
-
-
-@app.route("/api/webhooks/hitpay", methods=["GET", "POST"])
-def hitpay_webhook():
-    """HitPay payment_request.completed webhook."""
-    if request.method == "GET":
-        return jsonify({"ok": True, "webhook": "hitpay", "message": "HitPay webhook ready"})
-
-    raw = request.get_data(as_text=True) or ""
-    payload = request.get_json(silent=True) or {}
-    # Also support form-style older webhooks
-    if not payload and request.form:
-        payload = {k: request.form.get(k) for k in request.form}
-
-    salt = (os.environ.get("HITPAY_SALT") or "").strip()
-    sig = (request.headers.get("Hitpay-Signature") or request.headers.get("hitpay-signature") or "").strip()
-    if salt and sig and raw:
-        import hashlib
-        import hmac as hmac_mod
-
-        computed = hmac_mod.new(salt.encode("utf-8"), raw.encode("utf-8"), hashlib.sha256).hexdigest()
-        if not hmac_mod.compare_digest(computed, sig):
-            # Some HitPay versions sign form fields differently — try reference check soft-fail only if salt set
-            return jsonify({"ok": False, "error": "invalid_signature"}), 401
-
-    ref = (
-        str(payload.get("reference_number") or payload.get("reference") or "")
-    ).strip()
-    status = str(payload.get("status") or "").lower()
-    # Nested payments
-    payments = payload.get("payments") or []
-    paid = status in ("completed", "succeeded", "paid")
-    if not paid and isinstance(payments, list):
-        for p in payments:
-            if str((p or {}).get("status") or "").lower() in ("succeeded", "completed", "paid"):
-                paid = True
-                break
-
-    if not ref:
-        return jsonify({"ok": True, "skipped": "no_ref"})
-    if not paid:
-        return jsonify({"ok": True, "skipped": status or "not_paid"})
-
-    for existing in load_orders():
-        if existing.get("providerRef") == ref:
-            return jsonify({"ok": True, "duplicate": True})
-
-    pending_all = read_json(STORE / "pending_payments.json", {})
-    pending = pending_all.get(ref)
-    if not pending:
-        return jsonify({"ok": True, "skipped": "unknown_ref"})
-
-    try:
-        fulfill_order(
-            email=pending.get("email") or payload.get("email") or "",
-            name=pending.get("name") or payload.get("name") or "",
-            currency=pending.get("currency") or "PHP",
-            items=pending.get("cart") or [],
-            payment_mode_name="hitpay",
-            method="hitpay",
-            provider_ref=ref,
-        )
-        pending_all.pop(ref, None)
-        write_json(STORE / "pending_payments.json", pending_all)
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 409
-    return jsonify({"ok": True, "fulfilled": True, "ref": ref})
-
-
-@app.route("/api/webhooks/dragonpay", methods=["GET", "POST"])
-def dragonpay_webhook():
-    """
-    Dragonpay postback.
-    Typically GET or POST with: txnid, refno, status, message, amount, ccy, procid, digest, param1, param2
-    status S = success, F = failure, P = pending, U = unknown
-    """
-    data = {}
-    if request.method == "GET":
-        data = {k: request.args.get(k) for k in request.args}
-        # Health check with no params
-        if not data.get("txnid") and not data.get("status"):
-            return "Dragonpay postback ready", 200, {"Content-Type": "text/plain"}
-    else:
-        data = {k: request.form.get(k) for k in request.form} if request.form else {}
-        if not data:
-            data = request.get_json(silent=True) or {}
-            data = {k: data.get(k) for k in data} if isinstance(data, dict) else {}
-        if not data:
-            data = {k: request.args.get(k) for k in request.args}
-
-    txnid = str(data.get("txnid") or data.get("txnId") or "").strip()
-    status = str(data.get("status") or "").strip().upper()
-    refno = str(data.get("refno") or data.get("refNo") or "").strip()
-    amount = str(data.get("amount") or "").strip()
-    ccy = str(data.get("ccy") or "PHP").strip()
-    message = str(data.get("message") or "").strip()
-
-    # Optional digest verify: sha1(txnid:refno:status:message:merchantpwd) — variants exist
-    password = (os.environ.get("DRAGONPAY_PASSWORD") or "").strip()
-    digest = str(data.get("digest") or "").strip()
-    if password and digest and txnid:
-        import hashlib
-
-        for raw in (
-            f"{txnid}:{refno}:{status}:{message}:{password}",
-            f"{txnid}:{refno}:{status}:{amount}:{password}",
-        ):
-            if hashlib.sha1(raw.encode("utf-8")).hexdigest().lower() == digest.lower():
-                break
-        # Don't hard-fail all variants — still process S status; log soft mismatch by continuing
-
-    if status != "S":
-        # Dragonpay expects plain "result=OK" for ack
-        return "result=OK", 200, {"Content-Type": "text/plain"}
-
-    if not txnid:
-        return "result=OK", 200, {"Content-Type": "text/plain"}
-
-    for existing in load_orders():
-        if existing.get("providerRef") == txnid:
-            return "result=OK", 200, {"Content-Type": "text/plain"}
-
-    pending_all = read_json(STORE / "pending_payments.json", {})
-    pending = pending_all.get(txnid)
-    if not pending:
-        return "result=OK", 200, {"Content-Type": "text/plain"}
-
-    try:
-        fulfill_order(
-            email=pending.get("email") or "",
-            name=pending.get("name") or "",
-            currency=pending.get("currency") or ccy or "PHP",
-            items=pending.get("cart") or [],
-            payment_mode_name="dragonpay",
-            method="dragonpay",
-            provider_ref=txnid,
-        )
-        pending_all.pop(txnid, None)
-        write_json(STORE / "pending_payments.json", pending_all)
-    except Exception:
-        # Still ACK so Dragonpay does not infinite-retry harshly; order can complete on return
-        return "result=OK", 200, {"Content-Type": "text/plain"}
-
-    return "result=OK", 200, {"Content-Type": "text/plain"}
-
-
-@app.get("/api/checkout/dragonpay/return")
-def dragonpay_return():
-    """Customer return URL after Dragonpay (configure in merchant portal if used)."""
-    txnid = (request.args.get("txnid") or request.args.get("ref") or "").strip()
-    status = (request.args.get("status") or "").strip().upper()
-    base = public_base_url()
-    if not txnid:
-        return redirect(f"{base}/#/checkout?cancelled=1")
-    if status and status != "S":
-        return redirect(f"{base}/#/checkout?cancelled=1")
-    return redirect(f"{base}/#/success?provider=dragonpay&ref={txnid}")
 
 
 def _stripe_session(email, name, currency, items, normalized, base):
@@ -2133,26 +1712,6 @@ def api_checkout_complete():
         ok = _crypto_paid(pending)
         if not ok:
             return jsonify({"error": "Crypto payment not confirmed yet"}), 402
-    elif provider == "hitpay" or pending.get("provider") == "hitpay":
-        ok = _hitpay_paid(pending)
-        if not ok and os.environ.get("HITPAY_TRUST_RETURN", "1") != "1":
-            return jsonify(
-                {
-                    "error": "HitPay payment not confirmed yet. Wait a moment and refresh.",
-                    "hint": "Ensure HitPay webhook is registered to /api/webhooks/hitpay",
-                }
-            ), 402
-        # default HITPAY_TRUST_RETURN=1 so return redirect can complete after pay
-    elif provider == "dragonpay" or pending.get("provider") == "dragonpay":
-        # Prefer postback fulfillment; allow return if postback already done or trust
-        ok = True
-        if os.environ.get("DRAGONPAY_TRUST_RETURN", "1") != "1":
-            # Without trust, only succeed if already fulfilled (checked above) or skip
-            return jsonify(
-                {
-                    "error": "Waiting for Dragonpay postback. Refresh in a few seconds.",
-                }
-            ), 402
 
     try:
         order = fulfill_order(

@@ -59,8 +59,6 @@ const state = {
   xenditEnabled: false,
   paypalEnabled: false,
   cryptoEnabled: false,
-  hitpayEnabled: false,
-  dragonpayEnabled: false,
   ewalletProvider: "demo",
   paymentMethods: [],
 };
@@ -840,8 +838,6 @@ function paymentMethodsList() {
         { id: "shopeepay", label: "ShopeePay", desc: "Pay with ShopeePay (PHP)", group: "ewallet" },
         { id: "paypal", label: "PayPal", desc: "Pay with PayPal balance or linked card", group: "other" },
         { id: "crypto", label: "Crypto", desc: "USDT, BTC, ETH & more", group: "other" },
-        { id: "hitpay", label: "HitPay", desc: "Cards, GCash, Maya & more", group: "other" },
-        { id: "dragonpay", label: "Dragonpay", desc: "GCash, Maya, bank & OTC", group: "other" },
         { id: "demo", label: "Demo", desc: "Test without real money", group: "other" },
       ];
   return list;
@@ -861,12 +857,6 @@ function payButtonLabel(method) {
   if (method === "crypto") {
     return state.cryptoEnabled ? "Continue to crypto pay" : "Pay with crypto (demo)";
   }
-  if (method === "hitpay") {
-    return state.hitpayEnabled ? "Continue to HitPay" : "Pay with HitPay (demo)";
-  }
-  if (method === "dragonpay") {
-    return state.dragonpayEnabled ? "Continue to Dragonpay" : "Pay with Dragonpay (demo)";
-  }
   return "Continue to pay";
 }
 
@@ -884,8 +874,6 @@ function viewCheckout() {
   const xenditOn = !!state.xenditEnabled;
   const paypalOn = !!state.paypalEnabled || methods.some((m) => m.id === "paypal");
   const cryptoOn = !!state.cryptoEnabled || methods.some((m) => m.id === "crypto");
-  const hitpayOn = !!state.hitpayEnabled || methods.some((m) => m.id === "hitpay");
-  const dragonpayOn = !!state.dragonpayEnabled || methods.some((m) => m.id === "dragonpay");
   const ewalletBackend = state.ewalletProvider || (paymongoOn ? "paymongo" : xenditOn ? "xendit" : "demo");
   const isTestKey = String(state.stripePublishableKey || "").startsWith("pk_test_");
   const hasEwallet = methods.some((m) => PH_EWALLETS.has(m.id));
@@ -933,10 +921,8 @@ function viewCheckout() {
               xenditOn ||
               state.paypalEnabled ||
               state.cryptoEnabled ||
-              state.hitpayEnabled ||
-              state.dragonpayEnabled
                 ? "Pick a method below. You’ll be redirected to a secure payment page. Codes unlock after payment succeeds."
-                : "Demo mode — no real money. Add payment keys for live PayPal / Crypto / HitPay / Dragonpay."
+                : "Demo mode — no real money. Add payment keys for live PayPal / Crypto."
             }
           </p>
           ${
@@ -973,30 +959,6 @@ function viewCheckout() {
               state.cryptoEnabled
                 ? "NOWPayments is configured (USDT, BTC, ETH, etc.). Pay on the hosted crypto page, then return for codes."
                 : "shown in demo mode until you set NOWPAYMENTS_API_KEY (see CRYPTO-SETUP.md)."
-            }
-          </p>`
-              : ""
-          }
-          ${
-            hitpayOn
-              ? `<p class="muted" style="margin:8px 0 0;font-size:0.8rem;text-transform:none;letter-spacing:0;font-weight:400">
-            <strong style="color:var(--text)">HitPay</strong> —
-            ${
-              state.hitpayEnabled
-                ? "HitPay hosted checkout (cards + PH wallets if enabled on your HitPay account)."
-                : "demo until you set HITPAY_API_KEY (see HITPAY-DRAGONPAY-SETUP.md)."
-            }
-          </p>`
-              : ""
-          }
-          ${
-            dragonpayOn
-              ? `<p class="muted" style="margin:8px 0 0;font-size:0.8rem;text-transform:none;letter-spacing:0;font-weight:400">
-            <strong style="color:var(--text)">Dragonpay</strong> —
-            ${
-              state.dragonpayEnabled
-                ? "Dragonpay multi-channel (GCash, Maya, banks, OTC)."
-                : "demo until you set DRAGONPAY_MERCHANT_ID + DRAGONPAY_PASSWORD."
             }
           </p>`
               : ""
@@ -1637,8 +1599,6 @@ async function loadLiveCatalog() {
     state.xenditEnabled = !!data.xenditEnabled;
     state.paypalEnabled = !!data.paypalEnabled;
     state.cryptoEnabled = !!data.cryptoEnabled;
-    state.hitpayEnabled = !!data.hitpayEnabled;
-    state.dragonpayEnabled = !!data.dragonpayEnabled;
     state.ewalletProvider = data.ewalletProvider || "demo";
     state.paymentMethods = Array.isArray(data.paymentMethods)
       ? data.paymentMethods
