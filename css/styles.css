@@ -2854,7 +2854,8 @@ html[data-theme="light"] .badge {
   transform: translateX(-50%) translateY(0);
 }
 
-@media (max-width: 960px) {
+/* ========== TABLET (≤1024px) ========== */
+@media (max-width: 1024px) {
   .grid {
     grid-template-columns: 1fr 1fr;
   }
@@ -2875,44 +2876,246 @@ html[data-theme="light"] .badge {
     grid-template-columns: 1fr;
     gap: 4px;
   }
-}
 
-@media (max-width: 900px) {
-  .nav-inner {
-    grid-template-columns: auto 1fr auto;
-    grid-template-areas:
-      "logo tools tools"
-      "search search search";
+  .filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 8px;
   }
-  .logo { grid-area: logo; }
-  .links { display: none; }
-  .nav-search { grid-area: search; }
-  .tools { grid-area: tools; justify-self: end; }
+
+  .filters h3 {
+    width: 100%;
+    margin-bottom: 4px;
+  }
+
+  .filters .radio {
+    margin: 0;
+  }
+
+  .detail-panel {
+    order: 2;
+  }
+
+  .detail-info {
+    order: 1;
+  }
+
+  .detail {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .checkout .summary {
+    order: -1;
+  }
 }
 
-@media (max-width: 700px) {
+/* ========== TABLET + PHONE NAV (≤900px) ==========
+   Hide desktop links AND show hamburger (was broken: links hidden
+   at 900px but menu only at 700px → no navigation on tablets). */
+@media (max-width: 900px) {
+  :root {
+    --nav-h: 108px;
+  }
+
+  .nav {
+    height: auto;
+    min-height: var(--nav-h);
+  }
+
+  .nav-inner {
+    width: min(var(--max), calc(100% - 24px));
+    grid-template-columns: auto 1fr;
+    grid-template-areas:
+      "logo tools"
+      "search search";
+    gap: 10px 12px;
+    padding: 10px 0 12px;
+    align-items: center;
+  }
+
+  .logo {
+    grid-area: logo;
+  }
+
+  .nav-search {
+    grid-area: search;
+    height: 42px;
+  }
+
+  .tools {
+    grid-area: tools;
+    justify-self: end;
+    gap: 6px;
+    flex-wrap: nowrap;
+  }
+
+  /* Desktop inline links off; mobile drawer menu on */
   .links {
     display: none;
   }
+
   .links.open {
     display: flex;
     flex-direction: column;
-    position: absolute;
+    position: fixed;
     top: var(--nav-h);
     left: 0;
     right: 0;
-    background: rgba(0, 0, 0, 0.96);
-    padding: 16px 20px 24px;
-    gap: 12px;
+    max-height: calc(100dvh - var(--nav-h));
+    overflow: auto;
+    background: rgba(0, 0, 0, 0.97);
+    backdrop-filter: blur(12px);
+    padding: 12px 20px calc(20px + env(safe-area-inset-bottom, 0px));
+    gap: 4px;
     border-bottom: 1px solid var(--line);
-    z-index: 110;
+    z-index: 1200;
+    -webkit-overflow-scrolling: touch;
   }
+
+  html[data-theme="light"] .links.open {
+    background: rgba(255, 255, 255, 0.98);
+  }
+
+  .links.open a {
+    display: block;
+    padding: 14px 8px;
+    font-size: 0.85rem;
+    letter-spacing: 0.12em;
+    opacity: 1;
+    border-bottom: 1px solid var(--line);
+    min-height: 48px;
+    line-height: 1.4;
+  }
+
+  .links.open a:last-child {
+    border-bottom: none;
+  }
+
   .menu {
-    display: grid;
+    display: grid !important;
+    place-items: center;
+    min-width: 44px;
+    min-height: 44px;
   }
-  .fx span {
+
+  .tools .icon {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  /* Compact currency on tablet/phone */
+  .fx-caption {
     display: none;
   }
+
+  .fx-btn {
+    padding: 8px 10px;
+    min-height: 40px;
+    gap: 4px;
+  }
+
+  .fx-panel,
+  .prefs-panel {
+    position: fixed;
+    top: calc(var(--nav-h) + 4px);
+    right: 12px;
+    left: auto;
+    width: min(320px, calc(100vw - 24px));
+    max-height: min(70dvh, 420px);
+    overflow: auto;
+    z-index: 1300;
+  }
+
+  .prefs-panel {
+    right: 12px;
+  }
+
+  .wrap,
+  .page-inner,
+  .hero-inner,
+  .mission-inner,
+  .section-inner {
+    width: min(var(--max), calc(100% - 28px));
+  }
+
+  .page {
+    padding: calc(var(--nav-h) + 24px) 0 var(--space-5);
+  }
+
+  .hero {
+    padding: calc(var(--nav-h) + 32px) 0 48px;
+    min-height: auto;
+  }
+
+  .display {
+    font-size: clamp(1.85rem, 8.5vw, 3.2rem);
+  }
+
+  .lead {
+    font-size: 0.98rem;
+  }
+
+  .cta .btn {
+    flex: 1 1 auto;
+    min-width: min(100%, 160px);
+  }
+
+  .price-hero {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .buy {
+    flex-direction: column;
+  }
+
+  .buy .btn {
+    width: 100%;
+  }
+
+  .drawer {
+    width: 100%;
+    max-width: 100%;
+    height: 100dvh;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .form,
+  .summary {
+    padding: var(--space-3) var(--space-2);
+  }
+
+  .pay-methods {
+    grid-template-columns: 1fr;
+  }
+
+  .toast {
+    left: 12px;
+    right: 12px;
+    transform: translateY(12px);
+    width: auto;
+    text-align: center;
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .toast.show {
+    transform: translateY(0);
+  }
+}
+
+/* ========== PHONE (≤640px) ========== */
+@media (max-width: 640px) {
+  :root {
+    --nav-h: 112px;
+    --space-5: 48px;
+    --space-6: 56px;
+  }
+
   .grid,
   .brands,
   .strip,
@@ -2920,31 +3123,104 @@ html[data-theme="light"] .badge {
   .compare {
     grid-template-columns: 1fr;
   }
+
   .strip div {
     border-right: none;
     border-bottom: 1px solid var(--line);
   }
-  .hero {
-    padding: calc(var(--nav-h) + 56px) 0 56px;
-    min-height: auto;
-  }
+
   .section-inner {
-    padding: 56px 0;
+    padding: 48px 0;
   }
+
   .meta {
-    gap: 20px;
+    gap: 16px;
   }
+
   .actions {
     grid-template-columns: 1fr;
   }
+
   .product-search.large {
     flex-wrap: wrap;
   }
+
   .product-search .search-go {
     width: 100%;
   }
-  :root {
-    --nav-h: 96px;
+
+  .card {
+    min-height: 0;
+  }
+
+  .card .actions,
+  .card .row-actions {
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    padding: 14px 20px;
+    min-height: 48px;
+  }
+
+  .btn.sm {
+    min-height: 40px;
+    padding: 10px 14px;
+  }
+
+  .detail-desc {
+    max-width: none;
+  }
+
+  .detail-info h1 {
+    font-size: clamp(1.35rem, 7vw, 1.85rem);
+  }
+
+  .save-big {
+    font-size: 2.2rem;
+  }
+
+  .cart-line {
+    grid-template-columns: 40px 1fr;
+    gap: 10px;
+  }
+
+  .cart-line > :last-child {
+    grid-column: 2;
+  }
+
+  .search-suggest {
+    max-height: min(50dvh, 280px);
+  }
+
+  .footer {
+    padding-bottom: calc(32px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Avoid horizontal overflow from wide content */
+  .page,
+  .hero,
+  .section,
+  .mission,
+  main {
+    overflow-x: clip;
+  }
+
+  body {
+    overflow-x: hidden;
+  }
+}
+
+/* Prevent iOS zoom on form focus (font-size ≥16px) */
+@media (max-width: 900px) {
+  .nav-search input,
+  .fx-search-wrap input,
+  .form input:not([type="checkbox"]),
+  .form select,
+  .form textarea,
+  .prefs-select,
+  .product-search input {
+    font-size: 16px !important;
   }
 }
 
@@ -3806,15 +4082,12 @@ html[data-theme="light"] .footer {
   background: linear-gradient(180deg, transparent, rgba(240, 240, 240, 0.95));
 }
 
-@media (max-width: 700px) {
+@media (max-width: 640px) {
   .meta > div {
     border-right: none;
     min-width: 0;
   }
   .strip {
-    width: calc(100% - 24px);
-  }
-  .card {
-    min-height: 0;
+    width: 100%;
   }
 }

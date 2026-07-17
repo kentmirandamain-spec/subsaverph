@@ -1655,15 +1655,37 @@ async function init() {
     renderCart();
   });
 
-  $("#menuBtn")?.addEventListener("click", () => {
-    $("#navLinks").classList.toggle("open");
+  const closeMobileMenu = () => {
+    $("#navLinks")?.classList.remove("open");
+    $("#menuBtn")?.setAttribute("aria-expanded", "false");
+  };
+
+  $("#menuBtn")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const links = $("#navLinks");
+    if (!links) return;
+    const open = !links.classList.contains("open");
+    links.classList.toggle("open", open);
+    $("#menuBtn")?.setAttribute("aria-expanded", open ? "true" : "false");
+  });
+
+  // Close hamburger menu after navigation or outside tap
+  $("#navLinks")?.addEventListener("click", (e) => {
+    if (e.target.closest("a")) closeMobileMenu();
+  });
+  document.addEventListener("click", (e) => {
+    if (e.target.closest("#menuBtn") || e.target.closest("#navLinks")) return;
+    closeMobileMenu();
   });
 
   window.addEventListener("scroll", () => {
     $("#siteNav").classList.toggle("scrolled", window.scrollY > 40);
+    // Don't keep mobile nav open while scrolling the page
+    if (window.scrollY > 80) closeMobileMenu();
   });
 
   window.addEventListener("hashchange", () => {
+    closeMobileMenu();
     parseRoute();
     window.scrollTo(0, 0);
   });
