@@ -30,4 +30,4 @@ Allow: /logo.png
 Allow: /favicon.ico
 Allow: /og-image.png
 
-Sitemap: https://subsaverph.onrender.com/sitemap.xml
+Sitemap: https://subsaverph.com/sitemap.xml

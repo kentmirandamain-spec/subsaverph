@@ -503,7 +503,7 @@ function applySiteChrome() {
   setText("#footerCompanyBlurb", c("footer_company_blurb", "footerCompanyBlurb"));
   setText("#footerBrand", s.footerBrand || s.siteName || "SubSaverPH");
   setText("#footerServiceArea", c("footer_service_area", "footerServiceArea"));
-  setText("#footerWebsiteLabel", s.footerWebsite || "subsaverph.onrender.com");
+  setText("#footerWebsiteLabel", s.footerWebsite || "subsaverph.com");
   setText("#footerSupportLabel", s.footerSupport || s.supportEmail || "support@subsaverph.com");
   setText("#footerBusinessType", c("footer_business_type", "footerBusinessType"));
   setText("#footerDisclaimer", c("footer_disclaimer", "footerDisclaimer"));

@@ -820,7 +820,7 @@ def _nowpayments_http(method: str, url: str, *, api_key: str, json_body=None, ti
         "x-api-key": api_key,
         "Content-Type": "application/json",
         "Accept": "application/json",
-        "User-Agent": "SubSaverPH/1.0 (+https://subsaverph.onrender.com; NOWPayments client)",
+        "User-Agent": "SubSaverPH/1.0 (+https://subsaverph.com; NOWPayments client)",
     }
     method_u = (method or "GET").upper()
 
