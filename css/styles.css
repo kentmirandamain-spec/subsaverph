@@ -377,6 +377,111 @@ body {
   }
 }
 
+/* ---------- Shooting stars (sporadic streaks) ---------- */
+.shooting-star {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100px;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(220, 230, 255, 0.15) 20%,
+    rgba(255, 255, 255, 0.95) 85%,
+    #fff 100%
+  );
+  box-shadow:
+    0 0 6px 1px rgba(200, 220, 255, 0.7),
+    0 0 14px 2px rgba(140, 170, 255, 0.35);
+  opacity: 0;
+  pointer-events: none;
+  transform-origin: right center;
+  will-change: transform, opacity;
+}
+
+.shooting-star::after {
+  content: "";
+  position: absolute;
+  right: -2px;
+  top: 50%;
+  width: 5px;
+  height: 5px;
+  margin-top: -2.5px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 8px 2px rgba(255, 255, 255, 0.9);
+}
+
+/* Each star: different path, delay, and long idle between streaks */
+.ss-1 {
+  top: 12%;
+  left: 8%;
+  animation: shoot-se 9s linear infinite;
+  animation-delay: 2s;
+}
+
+.ss-2 {
+  top: 22%;
+  left: 55%;
+  width: 80px;
+  animation: shoot-se 11s linear infinite;
+  animation-delay: 7s;
+}
+
+.ss-3 {
+  top: 8%;
+  left: 30%;
+  width: 120px;
+  animation: shoot-se 13s linear infinite;
+  animation-delay: 14s;
+}
+
+.ss-4 {
+  top: 40%;
+  left: 15%;
+  width: 70px;
+  animation: shoot-se 10s linear infinite;
+  animation-delay: 21s;
+}
+
+.ss-5 {
+  top: 18%;
+  left: 70%;
+  width: 90px;
+  animation: shoot-se 12s linear infinite;
+  animation-delay: 28s;
+}
+
+/* Diagonal down-right streak; visible only briefly at the start of each cycle */
+@keyframes shoot-se {
+  0% {
+    opacity: 0;
+    transform: rotate(32deg) translate3d(0, 0, 0) scaleX(0.3);
+  }
+  2% {
+    opacity: 1;
+  }
+  8% {
+    opacity: 1;
+    transform: rotate(32deg) translate3d(55vw, 38vh, 0) scaleX(1);
+  }
+  10% {
+    opacity: 0;
+    transform: rotate(32deg) translate3d(70vw, 48vh, 0) scaleX(0.6);
+  }
+  100% {
+    opacity: 0;
+    transform: rotate(32deg) translate3d(70vw, 48vh, 0) scaleX(0.3);
+  }
+}
+
+html[data-theme="light"] .shooting-star {
+  opacity: 0 !important;
+  animation: none !important;
+}
+
 /* Content sits above galaxy */
 body.galaxy > *:not(.galaxy-bg) {
   position: relative;
@@ -422,8 +527,12 @@ html[data-theme="light"] .galaxy-stars-c {
   .galaxy-stars-b,
   .galaxy-stars-c,
   .galaxy-nebula,
-  .galaxy-dust {
+  .galaxy-dust,
+  .shooting-star {
     animation: none !important;
+  }
+  .shooting-star {
+    display: none;
   }
 }
 
