@@ -3022,6 +3022,13 @@ def normalize_deal(data: dict, deal_id: str) -> dict:
         except (TypeError, ValueError):
             return default
 
+    def lines(v):
+        if isinstance(v, list):
+            return [str(x).strip() for x in v if str(x).strip()]
+        if isinstance(v, str):
+            return [x.strip() for x in v.replace("\r", "").split("\n") if x.strip()]
+        return []
+
     return {
         "id": deal_id,
         "name": (data.get("name") or "Untitled plan").strip(),
@@ -3042,6 +3049,12 @@ def normalize_deal(data: dict, deal_id: str) -> dict:
         "description": (data.get("description") or "").strip(),
         "includes": includes,
         "finePrint": (data.get("finePrint") or "").strip(),
+        # Extra admin-editable product details (shown on product page)
+        "accountType": (data.get("accountType") or "").strip(),
+        "validity": (data.get("validity") or "").strip(),
+        "howToRedeem": (data.get("howToRedeem") or "").strip(),
+        "importantNotes": (data.get("importantNotes") or "").strip(),
+        "extraDetails": lines(data.get("extraDetails")),
         "active": bool(data.get("active", True)),
     }
 

@@ -181,7 +181,17 @@ function settingsView() {
       </div>
       <label>About body (blank line = new paragraph; lines starting with • become bullets)<textarea name="aboutBody" rows="10">${escapeHtml(s.aboutBody || "")}</textarea></label>
 
-      <h3 class="settings-h">Terms of Use</h3>
+      <h3 class="settings-h">Checkout — purchase rules (before pay)</h3>
+      <p class="muted" style="margin-top:0">Shown in the “Review &amp; continue” popup before payment. One bullet per line for list fields.</p>
+      <label>Popup title<input name="checkoutTermsTitle" value="${escapeAttr(s.checkoutTermsTitle || "Purchase details & rules")}" /></label>
+      <label>Eyebrow label<input name="checkoutTermsEyebrow" value="${escapeAttr(s.checkoutTermsEyebrow || "Before you pay")}" /></label>
+      <label>“What you are buying” (one line = one bullet)<textarea name="checkoutWhatYouBuy" rows="5" placeholder="You are purchasing prepaid digital access…">${escapeHtml(s.checkoutWhatYouBuy || "")}</textarea></label>
+      <label>Rules &amp; regulations (one line = one bullet)<textarea name="checkoutRules" rows="10" placeholder="Digital goods are non-refundable once delivered…">${escapeHtml(s.checkoutRules || "")}</textarea></label>
+      <label>Support blurb (under rules)<textarea name="checkoutSupportText" rows="3">${escapeHtml(s.checkoutSupportText || "")}</textarea></label>
+      <label>Accept checkbox text<input name="checkoutAcceptLabel" value="${escapeAttr(s.checkoutAcceptLabel || "I have read and accept the purchase details, rules, and regulations above.")}" /></label>
+      <label>Confirm button prefix<input name="checkoutConfirmLabel" value="${escapeAttr(s.checkoutConfirmLabel || "Accept & pay")}" placeholder="Accept & pay" /></label>
+
+      <h3 class="settings-h">Terms of Use (legal page)</h3>
       <div class="grid2">
         <label>Terms title<input name="termsTitle" value="${escapeAttr(s.termsTitle || "")}" /></label>
         <label>Last updated<input name="termsUpdated" value="${escapeAttr(s.termsUpdated || "")}" /></label>
@@ -305,6 +315,11 @@ function emptyDeal() {
     description: "",
     includes: [],
     finePrint: "",
+    accountType: "",
+    validity: "",
+    howToRedeem: "",
+    importantNotes: "",
+    extraDetails: [],
     active: true,
     _isNew: true,
   };
@@ -312,6 +327,9 @@ function emptyDeal() {
 
 function dealModal(deal) {
   const includes = Array.isArray(deal.includes) ? deal.includes.join("\n") : "";
+  const extraDetails = Array.isArray(deal.extraDetails)
+    ? deal.extraDetails.join("\n")
+    : deal.extraDetails || "";
   return `
     <div class="modal-bg" id="modalBg">
       <form class="modal" id="dealForm">
@@ -342,13 +360,24 @@ function dealModal(deal) {
           <label>Badge<input name="badge" value="${escapeAttr(deal.badge || "")}" /></label>
         </div>
         <div class="grid2">
-          <label>Stock<input name="stock" value="${escapeAttr(deal.stock || "")}" /></label>
+          <label>Stock label<input name="stock" value="${escapeAttr(deal.stock || "")}" /></label>
           <label>Delivery<input name="delivery" value="${escapeAttr(deal.delivery || "")}" /></label>
         </div>
         <label>Tagline<input name="tagline" value="${escapeAttr(deal.tagline || "")}" /></label>
-        <label>Description<textarea name="description">${escapeHtml(deal.description || "")}</textarea></label>
-        <label>Includes (one per line)<textarea name="includes">${escapeHtml(includes)}</textarea></label>
-        <label>Fine print<textarea name="finePrint">${escapeHtml(deal.finePrint || "")}</textarea></label>
+        <label>Description<textarea name="description" rows="4">${escapeHtml(deal.description || "")}</textarea></label>
+        <label>Includes (one per line)<textarea name="includes" rows="4">${escapeHtml(includes)}</textarea></label>
+        <label>Fine print<textarea name="finePrint" rows="2">${escapeHtml(deal.finePrint || "")}</textarea></label>
+
+        <h3 class="settings-h" style="margin-top:16px">More product details (storefront)</h3>
+        <p class="muted" style="margin-top:0">Extra fields shown on the product page. Leave blank to hide.</p>
+        <div class="grid2">
+          <label>Account type<input name="accountType" value="${escapeAttr(deal.accountType || "")}" placeholder="e.g. Shared login / Private / Redeem code" /></label>
+          <label>Validity / access length<input name="validity" value="${escapeAttr(deal.validity || "")}" placeholder="e.g. 7 days from delivery" /></label>
+        </div>
+        <label>How to redeem / use<textarea name="howToRedeem" rows="4" placeholder="Step-by-step for the customer after purchase">${escapeHtml(deal.howToRedeem || "")}</textarea></label>
+        <label>Important notes<textarea name="importantNotes" rows="3" placeholder="Warnings, region limits, device limits…">${escapeHtml(deal.importantNotes || "")}</textarea></label>
+        <label>Extra detail lines (one per line)<textarea name="extraDetails" rows="4" placeholder="Works on mobile&#10;Change password after login&#10;Region: Global">${escapeHtml(extraDetails)}</textarea></label>
+
         <div class="grid2">
           <label>Rating<input name="rating" type="number" step="0.1" value="${escapeAttr(deal.rating ?? 4.5)}" /></label>
           <label>Reviews<input name="reviews" type="number" value="${escapeAttr(deal.reviews ?? 0)}" /></label>
@@ -383,6 +412,11 @@ function formToDeal(fd, existing) {
     description: fd.get("description"),
     includes: fd.get("includes"),
     finePrint: fd.get("finePrint"),
+    accountType: fd.get("accountType"),
+    validity: fd.get("validity"),
+    howToRedeem: fd.get("howToRedeem"),
+    importantNotes: fd.get("importantNotes"),
+    extraDetails: fd.get("extraDetails"),
     rating: fd.get("rating"),
     reviews: fd.get("reviews"),
     active: fd.get("active") === "on",

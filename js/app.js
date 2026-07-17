@@ -730,6 +730,7 @@ function viewDeal() {
               ${escapeHtml(d.duration)} · ${escapeHtml(d.delivery)}
             </p>
             <p class="detail-desc">${escapeHtml(d.description)}</p>
+            ${productExtraDetailsHtml(d)}
             ${
               d.period === "month"
                 ? `<div class="compare">
@@ -753,6 +754,67 @@ function viewDeal() {
         </div>
       </div>
     </div>`;
+}
+
+/** Extra admin-edited product detail blocks */
+function productExtraDetailsHtml(d) {
+  const blocks = [];
+  if (d.accountType) {
+    blocks.push(
+      `<div class="detail-extra-item"><span class="detail-extra-label">Account type</span><p>${escapeHtml(d.accountType)}</p></div>`
+    );
+  }
+  if (d.validity) {
+    blocks.push(
+      `<div class="detail-extra-item"><span class="detail-extra-label">Validity</span><p>${escapeHtml(d.validity)}</p></div>`
+    );
+  }
+  if (d.howToRedeem) {
+    blocks.push(
+      `<div class="detail-extra-item"><span class="detail-extra-label">How to use / redeem</span><p class="detail-extra-pre">${escapeHtml(d.howToRedeem)}</p></div>`
+    );
+  }
+  if (d.importantNotes) {
+    blocks.push(
+      `<div class="detail-extra-item"><span class="detail-extra-label">Important notes</span><p class="detail-extra-pre">${escapeHtml(d.importantNotes)}</p></div>`
+    );
+  }
+  const extras = Array.isArray(d.extraDetails)
+    ? d.extraDetails
+    : String(d.extraDetails || "")
+        .split("\n")
+        .map((x) => x.trim())
+        .filter(Boolean);
+  if (extras.length) {
+    blocks.push(
+      `<div class="detail-extra-item"><span class="detail-extra-label">More details</span><ul class="detail-extra-list">${extras
+        .map((x) => `<li>${escapeHtml(x)}</li>`)
+        .join("")}</ul></div>`
+    );
+  }
+  if (!blocks.length) return "";
+  return `<div class="detail-extra">${blocks.join("")}</div>`;
+}
+
+function settingsLines(text, fallbackLines = []) {
+  const raw = String(text || "").trim();
+  if (!raw) return fallbackLines;
+  return raw
+    .replace(/\r/g, "")
+    .split("\n")
+    .map((l) => l.replace(/^[\s•\-\*]+/, "").trim())
+    .filter(Boolean);
+}
+
+function bulletsHtml(lines) {
+  if (!lines.length) return "";
+  return `<ul>${lines.map((l) => `<li>${formatRuleLine(l)}</li>`).join("")}</ul>`;
+}
+
+/** Allow **bold** markers in admin text for rules */
+function formatRuleLine(line) {
+  const esc = escapeHtml(line);
+  return esc.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
 }
 
 function viewHow() {
@@ -1062,13 +1124,44 @@ function viewCheckout() {
         </div>
       </div>
 
-      <!-- Pre-payment rules / terms modal -->
+      ${checkoutTermsModalHtml(cart, t)}
+    </div>`;
+}
+
+function checkoutTermsModalHtml(cart, totals) {
+  const s = siteSettings() || state.settings || {};
+  const eyebrow = s.checkoutTermsEyebrow || "Before you pay";
+  const title = s.checkoutTermsTitle || "Purchase details & rules";
+  const whatLines = settingsLines(s.checkoutWhatYouBuy, [
+    "You are purchasing a **prepaid digital access account or code** for the selected product (e.g. SuperGrok, Canva, streaming).",
+    "Delivery is **digital** — username/password or access code is shown after successful payment (and emailed when email is configured).",
+    "SubSaverPH is an **independent reseller / storefront**. We are **not** affiliated with, endorsed by, or sponsored by xAI, Canva, CapCut, Netflix, YouTube, Google, or any listed brand.",
+  ]);
+  const ruleLines = settingsLines(s.checkoutRules, [
+    "**Digital goods are non-refundable** once login details or codes are delivered, except where the credentials are defective or not delivered — contact support with your order ID.",
+    "You must be at least **18 years old** and able to form a binding contract.",
+    "Use the product only for **personal, lawful use** and follow the official service’s terms of use.",
+    "**Do not** resell, share publicly, or abuse accounts in a way that violates the brand’s policies.",
+    "Change the password after first login when possible; keep credentials private.",
+    "Prices may be shown in other currencies; the amount charged is confirmed at payment (PH e-wallets bill in PHP when applicable).",
+    "By paying you confirm you understand this is a digital delivery product and you accept these rules.",
+  ]);
+  const supportEmail = s.supportEmail || "support@subsaverph.com";
+  const supportText =
+    s.checkoutSupportText ||
+    `Questions or delivery issues: email ${supportEmail} and include your order ID.`;
+  const acceptLabel =
+    s.checkoutAcceptLabel ||
+    "I have read and accept the purchase details, rules, and regulations above.";
+  const confirmPrefix = s.checkoutConfirmLabel || "Accept & pay";
+
+  return `
       <div class="terms-modal" id="termsModal" hidden>
         <div class="terms-modal-backdrop" data-terms-close></div>
         <div class="terms-modal-panel" role="dialog" aria-modal="true" aria-labelledby="termsModalTitle">
           <div class="terms-modal-head">
-            <p class="eyebrow" style="margin:0">Before you pay</p>
-            <h2 id="termsModalTitle">Purchase details &amp; rules</h2>
+            <p class="eyebrow" style="margin:0">${escapeHtml(eyebrow)}</p>
+            <h2 id="termsModalTitle">${escapeHtml(title)}</h2>
             <button type="button" class="icon terms-modal-x" data-terms-close aria-label="Close">×</button>
           </div>
           <div class="terms-modal-body">
@@ -1085,57 +1178,45 @@ function viewCheckout() {
                   )
                   .join("")}
               </ul>
-              <p class="terms-total"><span>Total</span><strong>${formatMoney(t.total)}</strong></p>
+              <p class="terms-total"><span>Total</span><strong>${formatMoney(totals.total)}</strong></p>
             </section>
 
             <section class="terms-block">
               <h3>What you are buying</h3>
-              <ul>
-                <li>You are purchasing a <strong>prepaid digital access account or code</strong> for the selected product (e.g. SuperGrok, Canva, streaming).</li>
-                <li>Delivery is <strong>digital</strong> — username/password or access code is shown after successful payment (and emailed when email is configured).</li>
-                <li>SubSaverPH is an <strong>independent reseller / storefront</strong>. We are <strong>not</strong> affiliated with, endorsed by, or sponsored by xAI, Canva, CapCut, Netflix, YouTube, Google, or any listed brand.</li>
-              </ul>
+              ${bulletsHtml(whatLines)}
             </section>
 
             <section class="terms-block">
               <h3>Rules &amp; regulations</h3>
-              <ul>
-                <li><strong>Digital goods are non-refundable</strong> once login details or codes are delivered, except where the credentials are defective or not delivered — contact support with your order ID.</li>
-                <li>You must be at least <strong>18 years old</strong> and able to form a binding contract.</li>
-                <li>Use the product only for <strong>personal, lawful use</strong> and follow the official service’s terms of use.</li>
-                <li><strong>Do not</strong> resell, share publicly, or abuse accounts in a way that violates the brand’s policies.</li>
-                <li>Change the password after first login when possible; keep credentials private.</li>
-                <li>Prices may be shown in other currencies; the amount charged is confirmed at payment (PH e-wallets bill in PHP when applicable).</li>
-                <li>By paying you confirm you understand this is a digital delivery product and you accept these rules.</li>
-              </ul>
+              ${bulletsHtml(ruleLines)}
             </section>
 
             <section class="terms-block">
               <h3>Support</h3>
               <p class="muted" style="margin:0;text-transform:none;letter-spacing:0;font-weight:400;font-size:0.9rem">
-                Questions or delivery issues: <a href="mailto:support@subsaverph.com">support@subsaverph.com</a>
-                — include your order ID. Full policies:
-                <a href="#/terms">Terms of Use</a> ·
-                <a href="#/privacy">Privacy Policy</a>.
+                ${escapeHtml(supportText)}
+                <br/>
+                <a href="mailto:${escapeHtml(supportEmail)}">${escapeHtml(supportEmail)}</a>
+                · <a href="#/terms">Terms of Use</a>
+                · <a href="#/privacy">Privacy Policy</a>
               </p>
             </section>
           </div>
           <div class="terms-modal-foot">
             <label class="check terms-accept-label">
               <input type="checkbox" id="termsAccept" />
-              <span>I have read and accept the purchase details, rules, and regulations above.</span>
+              <span>${escapeHtml(acceptLabel)}</span>
             </label>
             <p class="err" id="termsErr" style="color:#ff8a8a;font-size:0.85rem;min-height:1.2em;margin:0"></p>
             <div class="terms-actions">
               <button type="button" class="btn" data-terms-close>Back</button>
-              <button type="button" class="btn solid" id="termsConfirmBtn" disabled>
-                Accept &amp; pay · ${formatMoney(t.total)}
+              <button type="button" class="btn solid" id="termsConfirmBtn" disabled data-confirm-prefix="${escapeHtml(confirmPrefix)}">
+                ${escapeHtml(confirmPrefix)} · ${formatMoney(totals.total)}
               </button>
             </div>
           </div>
         </div>
-      </div>
-    </div>`;
+      </div>`;
 }
 
 function viewSuccess() {

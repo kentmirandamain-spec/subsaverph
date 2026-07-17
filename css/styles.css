@@ -1895,6 +1895,52 @@ html[data-theme="light"] .badge {
   max-width: 52ch;
 }
 
+.detail-extra {
+  margin: 20px 0 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 52ch;
+}
+
+.detail-extra-item {
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+
+.detail-extra-label {
+  display: block;
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--mute-2);
+  margin-bottom: 6px;
+}
+
+.detail-extra-item p {
+  margin: 0;
+  color: var(--mute);
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+
+.detail-extra-pre {
+  white-space: pre-wrap;
+}
+
+.detail-extra-list {
+  margin: 0;
+  padding-left: 1.15rem;
+  color: var(--mute);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.detail-extra-list li {
+  margin: 4px 0;
+}
+
 .detail-info .detail-meta {
   margin: 8px 0 14px;
   font-size: 0.85rem;
