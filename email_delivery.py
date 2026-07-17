@@ -37,15 +37,31 @@ def mail_configured() -> bool:
 
 
 def _from_address() -> str:
-    return (
+    """Bare email only (never 'Name <email>')."""
+    raw = (
         (os.environ.get("SMTP_FROM") or "").strip()
         or (os.environ.get("MAIL_FROM") or "").strip()
         or (os.environ.get("SMTP_USER") or "").strip()
         or "noreply@subsaverph.local"
     )
+    # Accept "Name <user@domain>" or bare address
+    if "<" in raw and ">" in raw:
+        try:
+            return raw.split("<", 1)[1].split(">", 1)[0].strip()
+        except Exception:
+            pass
+    return raw
 
 
 def _from_header() -> str:
+    """Full From header: Name <email@domain>."""
+    raw = (
+        (os.environ.get("SMTP_FROM") or "").strip()
+        or (os.environ.get("MAIL_FROM") or "").strip()
+    )
+    # Already a full "Name <email>" value — use as-is
+    if raw and "<" in raw and ">" in raw and "@" in raw:
+        return raw
     name = (os.environ.get("MAIL_FROM_NAME") or "SubSaverPH").strip()
     return formataddr((name, _from_address()))
 
@@ -507,10 +523,15 @@ def _send_via_smtp(
         return False, f"SMTP error: {e}"
 
 
-def send_order_invoice(order: dict[str, Any]) -> dict[str, Any]:
+def send_order_invoice(
+    order: dict[str, Any],
+    *,
+    skip_notify: bool = False,
+) -> dict[str, Any]:
     """
     Send invoice + codes to the customer email.
     Optional BCC to ORDER_NOTIFY_EMAIL / MAIL_NOTIFY_TO / MAIL_REPLY_TO (you receive a copy).
+    Set skip_notify=True for admin test emails (no BCC).
     Returns { ok, provider, detail, skipped?, notified? }
     """
     to_email = (order.get("email") or "").strip()
@@ -525,17 +546,39 @@ def send_order_invoice(order: dict[str, Any]) -> dict[str, Any]:
             "skipped": True,
         }
 
-    subject, text, html = build_invoice_content(order)
-    notify = _notify_emails()
+    try:
+        subject, text, html = build_invoice_content(order)
+    except Exception as e:
+        return {
+            "ok": False,
+            "provider": None,
+            "detail": f"Failed building invoice content: {e}",
+        }
+
+    notify = [] if skip_notify else _notify_emails()
 
     if (os.environ.get("RESEND_API_KEY") or "").strip():
         ok, detail = _send_via_resend(to_email, subject, text, html, bcc=notify)
+        # Helpful hint for Resend free / unverified domain
+        if not ok and detail and (
+            "403" in detail
+            or "422" in detail
+            or "only send testing" in detail.lower()
+            or "not verified" in detail.lower()
+            or "domain" in detail.lower()
+        ):
+            detail = (
+                f"{detail} | Tip: With Resend testing, send only to the email on your "
+                "Resend account, or set MAIL_FROM to a verified domain (e.g. support@subsaverph.com). "
+                f"Current From: {_from_header()}"
+            )
         return {
             "ok": ok,
             "provider": "resend",
             "detail": detail,
             "notified": bool(ok and notify),
             "notifyTo": notify if ok else [],
+            "fromAddress": _from_header(),
         }
 
     ok, detail = _send_via_smtp(to_email, subject, text, html, bcc=notify)
@@ -545,4 +588,5 @@ def send_order_invoice(order: dict[str, Any]) -> dict[str, Any]:
         "detail": detail,
         "notified": bool(ok and notify),
         "notifyTo": notify if ok else [],
+        "fromAddress": _from_header(),
     }

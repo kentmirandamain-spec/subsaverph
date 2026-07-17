@@ -17,13 +17,28 @@ const state = {
 };
 
 async function api(path, opts = {}) {
+  const headers = { "Content-Type": "application/json", ...(opts.headers || {}) };
   const res = await fetch(path, {
     credentials: "same-origin",
-    headers: { "Content-Type": "application/json", ...(opts.headers || {}) },
     ...opts,
+    headers,
   });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || res.statusText || "Request failed");
+  const raw = await res.text();
+  let data = {};
+  try {
+    data = raw ? JSON.parse(raw) : {};
+  } catch {
+    data = { error: raw ? raw.slice(0, 280) : "" };
+  }
+  if (!res.ok) {
+    const msg =
+      data.error ||
+      data.detail ||
+      data.message ||
+      res.statusText ||
+      `Request failed (HTTP ${res.status})`;
+    throw new Error(String(msg).slice(0, 500));
+  }
   return data;
 }
 
@@ -31,11 +46,12 @@ function toast(msg, isErr = false) {
   state.msg = isErr ? "" : msg;
   state.err = isErr ? msg : "";
   render();
+  const ms = isErr || String(msg).length > 80 ? 8000 : 2800;
   setTimeout(() => {
     state.msg = "";
     state.err = "";
     render();
-  }, 2500);
+  }, ms);
 }
 
 function loginView() {
@@ -236,7 +252,10 @@ function testInvoicePanel(opts = {}) {
         </select>
       </label>
       <button class="btn" type="submit" style="margin-top:4px">Send test invoice</button>
-      <p class="muted" style="margin-top:12px;font-size:0.85rem">Check spam if it does not arrive in 1–2 minutes. Subject: <em>SubSaverPH Payment TEST… — login details</em></p>
+      <p class="muted" style="margin-top:12px;font-size:0.85rem">
+        Use the <strong>same email as your Resend account</strong> if you have not verified <code>subsaverph.com</code> yet
+        (Resend testing mode only allows that address). Check spam. Subject: <em>SubSaverPH Payment TEST… — login details</em>
+      </p>
     </form>`;
 }
 
