@@ -3021,6 +3021,154 @@ def admin_orders():
     return jsonify({"orders": load_orders()[:100]})
 
 
+@app.post("/api/admin/test-invoice")
+@require_admin
+def admin_test_invoice():
+    """
+    Send a sample order invoice email (username, password, product details).
+    Safe: does not charge, does not consume stock, does not save an order.
+    """
+    try:
+        from email_delivery import mail_configured, send_order_invoice
+    except Exception as e:
+        return jsonify({"error": f"Email module error: {e}"}), 500
+
+    if not mail_configured():
+        return jsonify(
+            {
+                "error": "Email not configured. Set RESEND_API_KEY (or SMTP_*) on the server.",
+            }
+        ), 400
+
+    data = request.get_json(silent=True) or {}
+    to_email = (data.get("email") or "").strip()
+    if not to_email or "@" not in to_email:
+        settings = load_settings()
+        to_email = (settings.get("supportEmail") or "").strip()
+    if not to_email or "@" not in to_email:
+        return jsonify({"error": "Provide a valid email address to send the test to"}), 400
+
+    name = (data.get("name") or "Test Customer").strip() or "Test Customer"
+    deals = load_deals(include_inactive=True)
+    deal = None
+    product_id = (data.get("productId") or "").strip()
+    if product_id:
+        deal = next((d for d in deals if d.get("id") == product_id), None)
+    if deal is None and deals:
+        deal = deals[0]
+
+    if deal:
+        item = {
+            "id": deal.get("id"),
+            "name": deal.get("name") or "Sample product",
+            "brand": deal.get("brand"),
+            "category": deal.get("category"),
+            "qty": 1,
+            "price": deal.get("price") or 0,
+            "priceBase": deal.get("priceBase") or "PHP",
+            "duration": deal.get("duration") or deal.get("period") or "—",
+            "delivery": deal.get("delivery") or "Instant digital",
+            "description": (
+                "[TEST EMAIL — not a real purchase] "
+                + str(deal.get("description") or "Sample product description.")
+            ),
+            "accountType": deal.get("accountType") or "Demo shared login",
+            "validity": deal.get("validity") or "Demo only",
+            "howToRedeem": deal.get("howToRedeem")
+            or "This is a test email. Sign-in steps would appear here after a real order.",
+            "importantNotes": deal.get("importantNotes")
+            or "Do not change username, password, billing, or subscription on real accounts.",
+            "codes": [
+                "Username: demo.login@example.com  Password: DemoOnly-NotARealPassword"
+            ],
+            "credentials": [
+                {
+                    "username": "demo.login@example.com",
+                    "password": "DemoOnly-NotARealPassword",
+                    "raw": "demo.login@example.com|DemoOnly-NotARealPassword",
+                    "code": "",
+                }
+            ],
+        }
+        currency = str(deal.get("priceBase") or "PHP").upper()
+    else:
+        item = {
+            "id": "sample-product",
+            "name": "Sample SuperGrok 1 Month (test)",
+            "brand": "SuperGrok",
+            "category": "AI",
+            "qty": 1,
+            "price": 499,
+            "priceBase": "PHP",
+            "duration": "1 month",
+            "delivery": "Instant digital",
+            "description": "[TEST EMAIL — not a real purchase] Sample product details for email preview.",
+            "accountType": "Demo shared login",
+            "validity": "Demo only",
+            "howToRedeem": "Open the service → sign in with the username and password below.",
+            "importantNotes": "Do not change username, password, billing, or subscription.",
+            "codes": [
+                "Username: demo.login@example.com  Password: DemoOnly-NotARealPassword"
+            ],
+            "credentials": [
+                {
+                    "username": "demo.login@example.com",
+                    "password": "DemoOnly-NotARealPassword",
+                    "raw": "demo.login@example.com|DemoOnly-NotARealPassword",
+                    "code": "",
+                }
+            ],
+        }
+        currency = "PHP"
+
+    order_id = "TEST" + uuid.uuid4().hex[:8].upper()
+    order = {
+        "id": order_id,
+        "email": to_email,
+        "name": name,
+        "currency": currency,
+        "items": [item],
+        "status": "test",
+        "paymentMode": "test-invoice",
+        "method": "test (admin)",
+        "providerRef": "TEST-PAYMENT-NOT-REAL",
+        "createdAt": __import__("datetime").datetime.utcnow().isoformat() + "Z",
+        "delivery": "instant",
+        "message": "Admin test invoice — not a real order.",
+    }
+
+    result = send_order_invoice(order)
+    if not result.get("ok"):
+        return (
+            jsonify(
+                {
+                    "ok": False,
+                    "error": result.get("detail") or "Failed to send test invoice",
+                    "provider": result.get("provider"),
+                    "detail": result.get("detail"),
+                    "to": to_email,
+                    "orderId": order_id,
+                }
+            ),
+            502,
+        )
+
+    return jsonify(
+        {
+            "ok": True,
+            "to": to_email,
+            "orderId": order_id,
+            "provider": result.get("provider"),
+            "detail": result.get("detail"),
+            "productName": item.get("name"),
+            "note": (
+                "Sent sample invoice with demo username/password and product details. "
+                "No stock was used and no real order was saved."
+            ),
+        }
+    )
+
+
 def normalize_deal(data: dict, deal_id: str) -> dict:
     includes = data.get("includes") or []
     if isinstance(includes, str):

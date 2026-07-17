@@ -210,13 +210,39 @@ function settingsView() {
 }
 
 function accountView() {
+  const support = (state.settings && state.settings.supportEmail) || "";
+  const dealOpts = (state.deals || [])
+    .map(
+      (d) =>
+        `<option value="${escapeAttr(d.id)}">${escapeHtml(d.name || d.id)}</option>`
+    )
+    .join("");
   return `
     <div class="top"><h1>Account</h1></div>
-    <form class="panel" id="passwordForm" style="max-width:420px">
+    <form class="panel" id="passwordForm" style="max-width:480px">
       <p class="muted">Change the host login password.</p>
       <label>Current password<input type="password" name="current" required /></label>
       <label>New password<input type="password" name="newPassword" required minlength="6" /></label>
       <button class="btn" type="submit">Update password</button>
+    </form>
+
+    <form class="panel" id="testInvoiceForm" style="max-width:480px;margin-top:16px">
+      <h3 class="settings-h" style="margin-top:0">Send test invoice email</h3>
+      <p class="muted">Sends a sample payment email with <strong>demo username + password</strong> and product details (name, how to use, notes). Safe: no payment, no stock used, no real order saved.</p>
+      <label>Send test to (your inbox)
+        <input name="email" type="email" required placeholder="you@email.com" value="${escapeAttr(support)}" />
+      </label>
+      <label>Customer name (optional)
+        <input name="name" type="text" placeholder="Test Customer" value="Test Customer" />
+      </label>
+      <label>Product details to include
+        <select name="productId">
+          <option value="">First product / sample</option>
+          ${dealOpts}
+        </select>
+      </label>
+      <button class="btn" type="submit">Send test invoice</button>
+      <p class="muted" style="margin-top:12px;font-size:0.85rem">Check spam if it does not arrive in 1–2 minutes. Subject looks like: <em>SubSaverPH Payment TEST… — login details</em></p>
     </form>`;
 }
 
@@ -273,11 +299,17 @@ function ordersView() {
       const codes = (o.items || [])
         .map((i) => `${i.name}: ${(i.codes || []).join(", ")}`)
         .join(" · ");
+      const mail = o.emailSent
+        ? "emailed"
+        : o.emailDetail
+          ? "email fail"
+          : "—";
       return `
       <tr>
         <td><strong>${escapeHtml(o.id)}</strong><div class="muted">${escapeHtml(o.createdAt || "")}</div></td>
         <td>${escapeHtml(o.email)}<div class="muted">${escapeHtml(o.name || "")}</div></td>
-        <td><span class="badge">${escapeHtml(o.status || "")}</span></td>
+        <td><span class="badge">${escapeHtml(o.status || "")}</span>
+          <div class="muted">${escapeHtml(mail)}</div></td>
         <td class="muted" style="max-width:280px;word-break:break-all">${escapeHtml(codes)}</td>
       </tr>`;
     })
@@ -285,7 +317,7 @@ function ordersView() {
 
   return `
     <div class="top"><h1>Orders</h1></div>
-    <p class="muted">Paid orders with delivered codes.</p>
+    <p class="muted">Paid orders with delivered codes. To preview the buyer email (username, password, product details), open <strong>Account → Send test invoice email</strong>.</p>
     <div class="panel" style="overflow:auto">
       <table class="table">
         <thead><tr><th>Order</th><th>Customer</th><th>Status</th><th>Codes delivered</th></tr></thead>
@@ -622,6 +654,36 @@ function bindShell() {
       toast("Password updated");
     } catch (err) {
       toast(err.message, true);
+    }
+  });
+
+  $("#testInvoiceForm")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const btn = e.target.querySelector('button[type="submit"]');
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = "Sending…";
+    }
+    try {
+      const data = await api("/api/admin/test-invoice", {
+        method: "POST",
+        body: JSON.stringify({
+          email: fd.get("email"),
+          name: fd.get("name") || "Test Customer",
+          productId: fd.get("productId") || "",
+        }),
+      });
+      toast(
+        `Test invoice sent to ${data.to} (${data.productName || "sample"}). Check inbox / spam.`
+      );
+    } catch (err) {
+      toast(err.message, true);
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = "Send test invoice";
+      }
     }
   });
 }
