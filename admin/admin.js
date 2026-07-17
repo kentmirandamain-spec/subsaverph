@@ -61,6 +61,7 @@ function shell(content) {
         <button type="button" data-tab="deals" class="${state.tab === "deals" ? "active" : ""}">Products</button>
         <button type="button" data-tab="stock" class="${state.tab === "stock" ? "active" : ""}">Codes / Stock</button>
         <button type="button" data-tab="orders" class="${state.tab === "orders" ? "active" : ""}">Orders</button>
+        <button type="button" data-tab="emailtest" class="${state.tab === "emailtest" ? "active" : ""}">★ Test email</button>
         <button type="button" data-tab="settings" class="${state.tab === "settings" ? "active" : ""}">Site content</button>
         <button type="button" data-tab="account" class="${state.tab === "account" ? "active" : ""}">Account</button>
         <a href="/" target="_blank" rel="noopener">↗ View live site</a>
@@ -209,7 +210,7 @@ function settingsView() {
     </form>`;
 }
 
-function accountView() {
+function testInvoicePanel(opts = {}) {
   const support = (state.settings && state.settings.supportEmail) || "";
   const dealOpts = (state.deals || [])
     .map(
@@ -217,20 +218,13 @@ function accountView() {
         `<option value="${escapeAttr(d.id)}">${escapeHtml(d.name || d.id)}</option>`
     )
     .join("");
+  const title = opts.title || "Send test invoice email";
   return `
-    <div class="top"><h1>Account</h1></div>
-    <form class="panel" id="passwordForm" style="max-width:480px">
-      <p class="muted">Change the host login password.</p>
-      <label>Current password<input type="password" name="current" required /></label>
-      <label>New password<input type="password" name="newPassword" required minlength="6" /></label>
-      <button class="btn" type="submit">Update password</button>
-    </form>
-
-    <form class="panel" id="testInvoiceForm" style="max-width:480px;margin-top:16px">
-      <h3 class="settings-h" style="margin-top:0">Send test invoice email</h3>
-      <p class="muted">Sends a sample payment email with <strong>demo username + password</strong> and product details (name, how to use, notes). Safe: no payment, no stock used, no real order saved.</p>
+    <form class="panel" id="testInvoiceForm" style="max-width:560px;${opts.margin || ""}">
+      <h3 class="settings-h" style="margin-top:0">${title}</h3>
+      <p class="muted">Sends a sample payment email with <strong>demo username + password</strong> and product details. Safe: no payment, no stock used, no real order saved.</p>
       <label>Send test to (your inbox)
-        <input name="email" type="email" required placeholder="you@email.com" value="${escapeAttr(support)}" />
+        <input name="email" type="email" required placeholder="you@email.com" value="${escapeAttr(support)}" autocomplete="email" />
       </label>
       <label>Customer name (optional)
         <input name="name" type="text" placeholder="Test Customer" value="Test Customer" />
@@ -241,9 +235,28 @@ function accountView() {
           ${dealOpts}
         </select>
       </label>
-      <button class="btn" type="submit">Send test invoice</button>
-      <p class="muted" style="margin-top:12px;font-size:0.85rem">Check spam if it does not arrive in 1–2 minutes. Subject looks like: <em>SubSaverPH Payment TEST… — login details</em></p>
+      <button class="btn" type="submit" style="margin-top:4px">Send test invoice</button>
+      <p class="muted" style="margin-top:12px;font-size:0.85rem">Check spam if it does not arrive in 1–2 minutes. Subject: <em>SubSaverPH Payment TEST… — login details</em></p>
     </form>`;
+}
+
+function emailTestView() {
+  return `
+    <div class="top"><h1>Test order email</h1></div>
+    <p class="muted" style="margin-top:0">Use this to confirm buyers receive username, password, and product details after payment.</p>
+    ${testInvoicePanel()}`;
+}
+
+function accountView() {
+  return `
+    <div class="top"><h1>Account</h1></div>
+    <form class="panel" id="passwordForm" style="max-width:480px">
+      <p class="muted">Change the host login password.</p>
+      <label>Current password<input type="password" name="current" required /></label>
+      <label>New password<input type="password" name="newPassword" required minlength="6" /></label>
+      <button class="btn" type="submit">Update password</button>
+    </form>
+    ${testInvoicePanel({ margin: "margin-top:16px" })}`;
 }
 
 function stockView() {
@@ -317,7 +330,8 @@ function ordersView() {
 
   return `
     <div class="top"><h1>Orders</h1></div>
-    <p class="muted">Paid orders with delivered codes. To preview the buyer email (username, password, product details), open <strong>Account → Send test invoice email</strong>.</p>
+    ${testInvoicePanel({ title: "Send test invoice email", margin: "margin-bottom:16px" })}
+    <p class="muted">Paid orders with delivered codes.</p>
     <div class="panel" style="overflow:auto">
       <table class="table">
         <thead><tr><th>Order</th><th>Customer</th><th>Status</th><th>Codes delivered</th></tr></thead>
@@ -482,6 +496,7 @@ function render() {
   let content = "";
   if (state.tab === "settings") content = settingsView();
   else if (state.tab === "account") content = accountView();
+  else if (state.tab === "emailtest") content = emailTestView();
   else if (state.tab === "stock") content = stockView();
   else if (state.tab === "orders") content = ordersView();
   else content = dealsView();
