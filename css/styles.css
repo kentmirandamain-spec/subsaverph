@@ -120,6 +120,296 @@ body {
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  position: relative;
+}
+
+/* ========== GALAXY / STARFIELD ========== */
+.galaxy-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse 120% 80% at 50% 100%, #050510 0%, transparent 55%),
+    radial-gradient(ellipse 90% 60% at 10% 20%, rgba(40, 20, 80, 0.45) 0%, transparent 50%),
+    radial-gradient(ellipse 70% 50% at 90% 30%, rgba(20, 40, 90, 0.4) 0%, transparent 45%),
+    radial-gradient(ellipse 60% 40% at 50% 50%, rgba(15, 10, 40, 0.5) 0%, transparent 60%),
+    #000008;
+}
+
+.galaxy-nebula {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  opacity: 0.55;
+  animation: nebula-drift 40s ease-in-out infinite alternate;
+}
+
+.galaxy-nebula-a {
+  width: min(70vw, 720px);
+  height: min(50vw, 520px);
+  top: -8%;
+  right: -10%;
+  background: radial-gradient(circle, rgba(120, 80, 220, 0.55) 0%, rgba(40, 20, 100, 0.15) 45%, transparent 70%);
+  animation-duration: 48s;
+}
+
+.galaxy-nebula-b {
+  width: min(60vw, 600px);
+  height: min(45vw, 480px);
+  bottom: 5%;
+  left: -12%;
+  background: radial-gradient(circle, rgba(40, 100, 200, 0.45) 0%, rgba(20, 40, 90, 0.12) 50%, transparent 70%);
+  animation-duration: 56s;
+  animation-delay: -12s;
+}
+
+.galaxy-nebula-c {
+  width: min(50vw, 480px);
+  height: min(40vw, 400px);
+  top: 40%;
+  left: 40%;
+  background: radial-gradient(circle, rgba(180, 60, 140, 0.28) 0%, transparent 65%);
+  animation-duration: 64s;
+  animation-delay: -20s;
+}
+
+@keyframes nebula-drift {
+  from {
+    transform: translate(0, 0) scale(1);
+  }
+  to {
+    transform: translate(3%, -4%) scale(1.08);
+  }
+}
+
+/* Star layers: one pixel + huge box-shadow field */
+.galaxy-stars {
+  position: absolute;
+  inset: 0;
+  background: transparent;
+}
+
+.galaxy-stars-a,
+.galaxy-stars-b,
+.galaxy-stars-c {
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  background: #fff;
+  /* positions generated as scattered stars across viewport */
+  box-shadow:
+    12vw 8vh 0 0 rgba(255, 255, 255, 0.9),
+    22vw 18vh 0 0 rgba(255, 255, 255, 0.55),
+    5vw 42vh 0 0 rgba(255, 255, 255, 0.75),
+    35vw 6vh 0 0 rgba(200, 220, 255, 0.85),
+    48vw 22vh 0 0 rgba(255, 255, 255, 0.45),
+    62vw 12vh 0 0 rgba(255, 255, 255, 0.9),
+    78vw 28vh 0 0 rgba(180, 200, 255, 0.7),
+    88vw 9vh 0 0 rgba(255, 255, 255, 0.5),
+    95vw 45vh 0 0 rgba(255, 255, 255, 0.8),
+    8vw 65vh 0 0 rgba(255, 255, 255, 0.6),
+    18vw 78vh 0 0 rgba(255, 255, 255, 0.9),
+    28vw 55vh 0 0 rgba(200, 210, 255, 0.55),
+    40vw 88vh 0 0 rgba(255, 255, 255, 0.7),
+    52vw 70vh 0 0 rgba(255, 255, 255, 0.45),
+    66vw 82vh 0 0 rgba(220, 230, 255, 0.85),
+    74vw 58vh 0 0 rgba(255, 255, 255, 0.5),
+    84vw 92vh 0 0 rgba(255, 255, 255, 0.75),
+    92vw 68vh 0 0 rgba(180, 200, 255, 0.6),
+    3vw 25vh 0 0 rgba(255, 255, 255, 0.4),
+    15vw 35vh 0 0 rgba(255, 255, 255, 0.95),
+    30vw 48vh 0 0 rgba(255, 255, 255, 0.35),
+    45vw 38vh 0 0 rgba(200, 180, 255, 0.7),
+    58vw 48vh 0 0 rgba(255, 255, 255, 0.55),
+    70vw 35vh 0 0 rgba(255, 255, 255, 0.85),
+    82vw 50vh 0 0 rgba(255, 255, 255, 0.4),
+    98vw 20vh 0 0 rgba(220, 240, 255, 0.9),
+    25vw 95vh 0 0 rgba(255, 255, 255, 0.5),
+    55vw 5vh 0 0 rgba(255, 255, 255, 0.65),
+    90vw 80vh 0 0 rgba(255, 255, 255, 0.35),
+    42vw 60vh 0 0 rgba(180, 200, 255, 0.8),
+    10vw 90vh 0 0 rgba(255, 255, 255, 0.55),
+    33vw 15vh 0 0 rgba(255, 255, 255, 0.4),
+    67vw 95vh 0 0 rgba(255, 255, 255, 0.7),
+    77vw 5vh 0 0 rgba(200, 220, 255, 0.5),
+    50vw 50vh 0 0 rgba(255, 255, 255, 0.3);
+  animation: twinkle-a 4.5s ease-in-out infinite alternate;
+}
+
+.galaxy-stars-b {
+  width: 1px;
+  height: 1px;
+  opacity: 0.85;
+  box-shadow:
+    7vw 12vh 0 0 #fff,
+    14vw 28vh 0 0 #fff,
+    19vw 50vh 0 0 rgba(255, 255, 255, 0.7),
+    26vw 8vh 0 0 #fff,
+    31vw 72vh 0 0 rgba(255, 255, 255, 0.6),
+    38vw 33vh 0 0 #fff,
+    44vw 85vh 0 0 rgba(255, 255, 255, 0.5),
+    49vw 14vh 0 0 #fff,
+    54vw 42vh 0 0 rgba(255, 255, 255, 0.8),
+    59vw 66vh 0 0 #fff,
+    64vw 20vh 0 0 rgba(255, 255, 255, 0.55),
+    69vw 90vh 0 0 #fff,
+    73vw 44vh 0 0 rgba(255, 255, 255, 0.7),
+    79vw 16vh 0 0 #fff,
+    83vw 75vh 0 0 rgba(255, 255, 255, 0.45),
+    87vw 38vh 0 0 #fff,
+    91vw 55vh 0 0 rgba(255, 255, 255, 0.65),
+    96vw 88vh 0 0 #fff,
+    2vw 60vh 0 0 rgba(255, 255, 255, 0.5),
+    11vw 45vh 0 0 #fff,
+    21vw 88vh 0 0 rgba(255, 255, 255, 0.4),
+    36vw 52vh 0 0 #fff,
+    46vw 72vh 0 0 rgba(255, 255, 255, 0.6),
+    56vw 28vh 0 0 #fff,
+    61vw 8vh 0 0 rgba(255, 255, 255, 0.5),
+    71vw 62vh 0 0 #fff,
+    81vw 95vh 0 0 rgba(255, 255, 255, 0.55),
+    93vw 32vh 0 0 #fff,
+    17vw 5vh 0 0 rgba(255, 255, 255, 0.4),
+    29vw 40vh 0 0 #fff,
+    43vw 95vh 0 0 rgba(255, 255, 255, 0.5),
+    53vw 58vh 0 0 #fff,
+    63vw 78vh 0 0 rgba(255, 255, 255, 0.45),
+    76vw 48vh 0 0 #fff,
+    86vw 12vh 0 0 rgba(255, 255, 255, 0.6),
+    4vw 80vh 0 0 #fff,
+    24vw 22vh 0 0 rgba(255, 255, 255, 0.5),
+    34vw 68vh 0 0 #fff,
+    47vw 3vh 0 0 rgba(255, 255, 255, 0.55),
+    57vw 92vh 0 0 #fff,
+    68vw 55vh 0 0 rgba(255, 255, 255, 0.4),
+    85vw 70vh 0 0 #fff,
+    97vw 48vh 0 0 rgba(255, 255, 255, 0.65);
+  animation: twinkle-b 3.2s ease-in-out infinite alternate;
+  animation-delay: -1s;
+}
+
+.galaxy-stars-c {
+  width: 3px;
+  height: 3px;
+  opacity: 0.9;
+  box-shadow:
+    9vw 30vh 1px 0 rgba(255, 255, 255, 0.95),
+    27vw 12vh 0 0 rgba(200, 220, 255, 0.9),
+    41vw 75vh 1px 0 rgba(255, 255, 255, 0.85),
+    60vw 40vh 0 0 rgba(255, 240, 220, 0.9),
+    75vw 18vh 1px 0 rgba(255, 255, 255, 0.8),
+    88vw 62vh 0 0 rgba(180, 200, 255, 0.95),
+    16vw 70vh 1px 0 rgba(255, 255, 255, 0.75),
+    51vw 90vh 0 0 rgba(255, 255, 255, 0.85),
+    33vw 45vh 1px 0 rgba(220, 200, 255, 0.9),
+    94vw 25vh 0 0 rgba(255, 255, 255, 0.7);
+  animation: twinkle-c 5.5s ease-in-out infinite alternate;
+  animation-delay: -2s;
+}
+
+@keyframes twinkle-a {
+  from {
+    opacity: 0.55;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes twinkle-b {
+  from {
+    opacity: 0.35;
+  }
+  to {
+    opacity: 0.95;
+  }
+}
+
+@keyframes twinkle-c {
+  from {
+    opacity: 0.5;
+    filter: brightness(0.85);
+  }
+  to {
+    opacity: 1;
+    filter: brightness(1.25);
+  }
+}
+
+.galaxy-dust {
+  position: absolute;
+  inset: -20%;
+  background-image:
+    radial-gradient(1px 1px at 20% 30%, rgba(255, 255, 255, 0.35), transparent),
+    radial-gradient(1px 1px at 40% 70%, rgba(255, 255, 255, 0.25), transparent),
+    radial-gradient(1px 1px at 60% 40%, rgba(255, 255, 255, 0.3), transparent),
+    radial-gradient(1px 1px at 80% 60%, rgba(255, 255, 255, 0.2), transparent),
+    radial-gradient(1.5px 1.5px at 10% 80%, rgba(200, 220, 255, 0.4), transparent),
+    radial-gradient(1.5px 1.5px at 70% 15%, rgba(255, 255, 255, 0.35), transparent);
+  background-size: 200px 200px, 180px 180px, 220px 220px, 160px 160px, 240px 240px, 190px 190px;
+  animation: dust-drift 120s linear infinite;
+  opacity: 0.55;
+}
+
+@keyframes dust-drift {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-8%);
+  }
+}
+
+/* Content sits above galaxy */
+body.galaxy > *:not(.galaxy-bg) {
+  position: relative;
+  z-index: 1;
+}
+
+body.galaxy main,
+body.galaxy .footer,
+body.galaxy .page,
+body.galaxy .section,
+body.galaxy .hero,
+body.galaxy .mission {
+  background-color: transparent;
+}
+
+/* Light theme: soft sky dust, not a dark galaxy */
+html[data-theme="light"] .galaxy-bg {
+  background:
+    radial-gradient(ellipse 100% 60% at 50% 0%, rgba(180, 200, 255, 0.35) 0%, transparent 50%),
+    radial-gradient(ellipse 80% 50% at 100% 80%, rgba(220, 200, 255, 0.2) 0%, transparent 45%),
+    #eef0f6;
+  opacity: 1;
+}
+html[data-theme="light"] .galaxy-nebula {
+  opacity: 0.2;
+  filter: blur(80px);
+}
+html[data-theme="light"] .galaxy-stars,
+html[data-theme="light"] .galaxy-dust {
+  opacity: 0.25;
+  filter: none;
+  animation: none;
+}
+html[data-theme="light"] .galaxy-stars-a,
+html[data-theme="light"] .galaxy-stars-b,
+html[data-theme="light"] .galaxy-stars-c {
+  box-shadow: none;
+  background: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .galaxy-stars-a,
+  .galaxy-stars-b,
+  .galaxy-stars-c,
+  .galaxy-nebula,
+  .galaxy-dust {
+    animation: none !important;
+  }
 }
 
 a {
@@ -181,8 +471,12 @@ img.brand-logo {
 
 .nav.scrolled {
   background: var(--nav-scrolled);
-  backdrop-filter: blur(12px);
+  backdrop-filter: blur(14px) saturate(1.2);
   border-bottom-color: var(--line);
+}
+
+html[data-theme="dark"] .nav.scrolled {
+  background: rgba(0, 0, 8, 0.72);
 }
 
 .nav-inner {
@@ -830,7 +1124,7 @@ html[data-theme="light"] .prefs-panel {
   transform: none;
 }
 
-/* HERO â€” full viewport, text only */
+/* HERO — full viewport over galaxy */
 .hero {
   position: relative;
   min-height: 100vh;
@@ -838,21 +1132,21 @@ html[data-theme="light"] .prefs-panel {
   align-items: flex-end;
   padding: calc(var(--nav-h) + 48px) 0 72px;
   border-bottom: 1px solid var(--line);
-  background:
-    radial-gradient(ellipse 70% 45% at 70% 0%, rgba(255, 255, 255, 0.07), transparent 55%),
-    radial-gradient(ellipse 50% 40% at 10% 90%, rgba(255, 255, 255, 0.04), transparent 50%),
-    #000;
+  background: transparent;
   overflow: hidden;
 }
 
 .hero-glow {
   position: absolute;
   inset: auto -20% 20% auto;
-  width: 420px;
-  height: 420px;
+  width: 480px;
+  height: 480px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.07), transparent 65%);
+  background:
+    radial-gradient(circle, rgba(160, 120, 255, 0.2) 0%, transparent 55%),
+    radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, transparent 70%);
   pointer-events: none;
+  filter: blur(4px);
 }
 
 .hero-inner {
