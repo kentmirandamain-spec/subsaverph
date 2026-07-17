@@ -3,7 +3,7 @@
   <!-- Only real public URLs (hash routes like #/deals are not indexed by Google) -->
   <url>
     <loc>https://subsaverph.com/</loc>
-    <lastmod>2026-07-17</lastmod>
+    <lastmod>2026-07-18</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>

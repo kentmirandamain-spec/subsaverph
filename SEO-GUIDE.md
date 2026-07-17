@@ -1,155 +1,101 @@
 # Make SubSaverPH searchable online (Google)
 
-Your site is public at **https://subsaverph.onrender.com** — but Google will not rank it until it **discovers and indexes** the pages.
+**Preferred public URL:** https://subsaverph.com  
+
+(The old Render URL `https://subsaverph.onrender.com` should **301 redirect** to the custom domain.)
 
 ---
 
-## Step 1 — Technical SEO (already in the project)
+## Why Google still shows “onrender”
 
-| File / tag | Purpose |
-|------------|---------|
-| `robots.txt` | Tells bots what to crawl; points to sitemap |
-| `sitemap.xml` | List of important URLs for Google |
-| Meta title + description | Snippet shown in search results |
-| Open Graph tags | Nice previews when shared on social apps |
-| `canonical` | Main preferred URL |
+Google remembers the first URL it indexed. Changing domain does **not** update search results overnight.
 
-After deploy, check:
-
-- https://subsaverph.onrender.com/robots.txt  
-- https://subsaverph.onrender.com/sitemap.xml  
+| Fact | Detail |
+|------|--------|
+| Site SEO tags | Already point to `https://subsaverph.com/` (canonical, Open Graph, sitemap) |
+| Old URL | May still appear for days–weeks until Google recrawls |
+| Fix | Redirect + Search Console for **both** URLs + request indexing |
 
 ---
 
-## Fix: “Indexing request rejected — During live testing, indexing issues were detected”
+## Step 1 — Confirm technical setup (usually already done)
 
-This message means Googlebot tried the URL **right now** and found a problem. Common causes for SubSaverPH:
+| Check | URL |
+|-------|-----|
+| Canonical | View source on https://subsaverph.com/ → `rel="canonical"` = `https://subsaverph.com/` |
+| Sitemap | https://subsaverph.com/sitemap.xml |
+| Robots | https://subsaverph.com/robots.txt → Sitemap line uses **subsaverph.com** |
+| Redirect | https://subsaverph.onrender.com/ should **301** to https://subsaverph.com/ |
 
-| Cause | What we fixed / what you do |
-|--------|-----------------------------|
-| Homepage served with `Content-Disposition: filename=index.html` | Fixed in server — page is served as normal HTML |
-| Thin / empty-looking page for bots | Expanded static SEO text in `index.html` |
-| Invalid structured data (hash SearchAction) | Removed hash-based SearchAction from JSON-LD |
-| Site asleep on free Render (timeout / 5xx) | Keep site awake — see `KEEP-ONLINE-24-7.md` |
-| Wrong URL typed in Inspection | Use exactly `https://subsaverph.onrender.com/` (with `https` and trailing `/` optional) |
+Render env:
 
-**After deploy:**
-
-1. Open the site yourself — confirm it loads in under ~10 seconds.
-2. Search Console → **URL Inspection** → paste `https://subsaverph.onrender.com/`
-3. Click **Test live URL** (not only “View crawled page”).
-4. Confirm: **URL is available to Google** / no soft 404 / no robots block.
-5. Then **Request indexing** again.
-
-If live test still fails, open the “Page fetch” / “Screenshot” section in GSC and note the exact error (404, 5xx, soft 404, redirected). Free Render cold starts often show **server error** until keep-alive is running.
+| Key | Value |
+|-----|--------|
+| `PUBLIC_URL` | `https://subsaverph.com` (no trailing slash) |
 
 ---
 
 ## Step 2 — Google Search Console (required)
 
+### A) Add the **new** domain
+
 1. Open **https://search.google.com/search-console**  
-2. Sign in with Google  
-3. Click **Add property**  
-4. Choose **URL prefix**  
-5. Enter: `https://subsaverph.onrender.com`  
-6. Verify ownership — easiest: **HTML tag**  
-   - Copy the meta tag Google shows  
-   - Add it to `index.html` `<head>` (or ask me to add it)  
-   - Redeploy, then click **Verify**  
-7. Left menu → **Sitemaps**  
-8. Submit: `sitemap.xml`  
-9. Left menu → **URL inspection**  
-10. Paste `https://subsaverph.onrender.com/` → **Request indexing**
+2. **Add property** → **URL prefix** → `https://subsaverph.com`  
+3. Verify (HTML tag or DNS)  
+4. **Sitemaps** → submit: `sitemap.xml`  
+5. **URL inspection** → `https://subsaverph.com/` → **Request indexing**
 
-Indexing can take **days to a few weeks**.
+### B) Keep the **old** property (if you already verified onrender)
 
----
+1. Open property `https://subsaverph.onrender.com`  
+2. **Settings** → **Change of address** (if offered) → new site `https://subsaverph.com`  
+3. Or: **URL inspection** on the old homepage → confirm it **redirects** to the new domain  
+4. After redirect works, Google gradually replaces the old URL in results  
 
-## Step 3 — Bing (optional but free)
+### C) Optional: Domain property
 
-1. **https://www.bing.com/webmasters**  
-2. Add site → same URL  
-3. Submit the same sitemap  
+Add a **Domain** property for `subsaverph.com` (DNS TXT verify) so `www` + apex are covered.
 
 ---
 
-## Step 4 — Help Google find you (content + links)
-
-Search engines rank sites people use and link to.
-
-| Action | Example |
-|--------|---------|
-| Share the link | Facebook, TikTok, X, groups, bio links |
-| Use clear words on the site | “discounted SuperGrok Philippines”, “GCash” |
-| Keep the site online | Free keep-alive or paid Render (see KEEP-ONLINE-24-7.md) |
-| Custom domain later | e.g. `subsaverph.com` looks more trusted |
-| Don’t buy fake “instant rank” spam | Can get the site banned |
-
-Search for your brand:
+## Step 3 — Searches you can use
 
 ```text
+site:subsaverph.com
 site:subsaverph.onrender.com
 ```
 
-When Google has indexed you, that shows results.
+- New domain may show **0 results** for a while — normal  
+- Old domain may still list until Google updates  
+
+Brand search: `SubSaverPH` or `subsaverph`
 
 ---
 
-## Step 5 — Favicon / logo next to your Google result
+## Step 4 — Help Google switch faster
 
-Google shows a small **favicon** beside your URL. SubSaverPH ships:
-
-| File | Purpose |
-|------|---------|
-| `/assets/favicon-48.png` | Primary Google favicon (48×48) |
-| `/assets/favicon-96.png` | High-DPI favicon (96×96) |
-| `/assets/logo-512.png` | Brand / Organization logo (schema) |
-| `/favicon.ico` | Browser tab fallback |
-
-**Checklist if the logo is missing in Google:**
-
-1. Confirm icons load in a browser (open each URL above).
-2. In **Search Console** → URL Inspection → request indexing of the homepage.
-3. Wait **a few days to a few weeks** — Google caches favicons slowly.
-4. Keep the free Render site awake (see `KEEP-ONLINE-24-7.md`) so Googlebot can fetch icons.
-5. Search `site:subsaverph.onrender.com` — if the site isn’t indexed yet, no favicon will show.
-
-Google’s rules: square icon, **multiple of 48px**, crawlable (not blocked in `robots.txt`), stable URL.
+| Action | Why |
+|--------|-----|
+| Share **https://subsaverph.com** only | New links teach Google the preferred URL |
+| Keep site awake (keep-alive) | Free Render sleep = crawl failures |
+| Don’t buy fake SEO links | Risk of penalty |
+| Wait 3–14+ days | Typical recrawl window after redirect |
 
 ---
 
-## Step 6 — What you can expect
+## Step 5 — Favicon next to Google results
 
-| Search | Likelihood |
-|--------|------------|
-| `SubSaverPH` (brand) | Good after indexing + a few links |
-| `cheap Netflix Philippines` | Hard — big brands dominate; may take time |
-| Social share clicks | Immediate traffic without Google |
-
-`.onrender.com` free URLs often rank **weaker** than a real domain. A custom domain + Search Console is the upgrade path.
-
----
-
-## Limits of this site type
-
-SubSaverPH uses **hash routes** (`#/deals`). Google mainly indexes the **homepage shell**.  
-That’s fine for brand search; for richer SEO later, switch to path routes (`/deals`) or server-rendered pages.
+Icons live under `/assets/`. After domain change, re-request indexing; favicon can lag behind the URL update.
 
 ---
 
 ## Checklist
 
-- [x] Site Live on Render  
-- [x] `/robots.txt` and `/sitemap.xml` open in browser  
-- [x] On-page SEO (title, description, JSON-LD, crawlable homepage text)  
-- [ ] Google Search Console property verified  
-- [ ] Sitemap submitted (`sitemap.xml`)  
-- [ ] Homepage “Request indexing”  
-- [ ] Share link on socials (helps rankings later)  
-- [ ] (Optional) Custom domain  
+- [ ] `PUBLIC_URL=https://subsaverph.com` on Render  
+- [ ] https://subsaverph.onrender.com → 301 → subsaverph.com  
+- [ ] GSC property for **https://subsaverph.com**  
+- [ ] Sitemap submitted  
+- [ ] Homepage **Request indexing**  
+- [ ] Share only the custom domain going forward  
 
----
-
-## Legal / policy note
-
-If you sell third-party brand subscriptions, Google Ads and some directories may restrict ads. Organic search still works, but use accurate, honest product copy.
+Indexing is not instant. Redirect + GSC is the correct path; there is no legitimate “instant replace” switch.

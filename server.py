@@ -55,6 +55,31 @@ if os.environ.get("RENDER") or os.environ.get("FORCE_HTTPS"):
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 
 
+@app.before_request
+def redirect_onrender_hostname_to_custom_domain():
+    """
+    Permanent redirect from *.onrender.com → PUBLIC_URL (subsaverph.com).
+    Helps Google replace the old Render URL with the custom domain.
+    """
+    public = (os.environ.get("PUBLIC_URL") or "").strip().rstrip("/")
+    if not public.startswith("http"):
+        return None
+    host = (request.host or "").split(":")[0].lower()
+    if not host.endswith(".onrender.com"):
+        return None
+    # Don't redirect if PUBLIC_URL itself is still onrender
+    if "onrender.com" in public.lower():
+        return None
+    # Keep health/ping usable on the Render hostname (monitors / keep-alive)
+    if request.path in ("/api/health", "/api/health/"):
+        return None
+    target = public + request.path
+    qs = request.query_string.decode("utf-8", errors="ignore") if request.query_string else ""
+    if qs:
+        target = f"{target}?{qs}"
+    return redirect(target, code=301)
+
+
 @app.after_request
 def seo_friendly_headers(resp):
     """Googlebot rejects / misreads pages served like file downloads.
@@ -3283,17 +3308,40 @@ def admin_static(path: str):
 
 @app.get("/robots.txt")
 def robots_txt():
-    resp = make_response((ROOT / "robots.txt").read_text(encoding="utf-8"))
+    """Always advertise sitemap on the preferred public domain."""
+    base = public_base_url()
+    body = (ROOT / "robots.txt").read_text(encoding="utf-8")
+    # Force correct sitemap URL (file may still have an old host)
+    if re.search(r"(?im)^Sitemap:\s*", body):
+        body = re.sub(r"(?im)^Sitemap:\s*.+$", f"Sitemap: {base}/sitemap.xml", body)
+    else:
+        body = body.rstrip() + f"\n\nSitemap: {base}/sitemap.xml\n"
+    # Drop any leftover onrender references
+    body = body.replace("https://subsaverph.onrender.com", base)
+    resp = make_response(body)
     resp.headers["Content-Type"] = "text/plain; charset=utf-8"
-    resp.headers["Cache-Control"] = "public, max-age=3600"
+    resp.headers["Cache-Control"] = "public, max-age=300"
     return resp
 
 
 @app.get("/sitemap.xml")
 def sitemap_xml():
-    resp = make_response((ROOT / "sitemap.xml").read_text(encoding="utf-8"))
+    """Serve sitemap with current PUBLIC_URL / request host as <loc>."""
+    base = public_base_url()
+    body = (ROOT / "sitemap.xml").read_text(encoding="utf-8")
+    body = re.sub(
+        r"<loc>\s*https?://[^<]+/</loc>",
+        f"<loc>{base}/</loc>",
+        body,
+        count=1,
+    )
+    body = body.replace("https://subsaverph.onrender.com", base)
+    # Bump lastmod so Google notices the domain change
+    today = __import__("datetime").date.today().isoformat()
+    body = re.sub(r"<lastmod>[^<]+</lastmod>", f"<lastmod>{today}</lastmod>", body)
+    resp = make_response(body)
     resp.headers["Content-Type"] = "application/xml; charset=utf-8"
-    resp.headers["Cache-Control"] = "public, max-age=3600"
+    resp.headers["Cache-Control"] = "public, max-age=300"
     return resp
 
 
