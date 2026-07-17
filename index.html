@@ -83,15 +83,7 @@
         "alternateName": ["Sub Saver PH", "SubSaver Philippines"],
         "description": "Discounted prepaid digital subscriptions in the Philippines — SuperGrok, Canva, CapCut, Netflix, YouTube. Pay with card, GCash, or Maya.",
         "inLanguage": "en-PH",
-        "publisher": { "@id": "https://subsaverph.onrender.com/#org" },
-        "potentialAction": {
-          "@type": "SearchAction",
-          "target": {
-            "@type": "EntryPoint",
-            "urlTemplate": "https://subsaverph.onrender.com/#/search?q={search_term_string}"
-          },
-          "query-input": "required name=search_term_string"
-        }
+        "publisher": { "@id": "https://subsaverph.onrender.com/#org" }
       },
       {
         "@type": "Organization",
@@ -129,7 +121,7 @@
         "description": "Buy discounted SuperGrok, Canva Pro, CapCut, Netflix, and YouTube Premium prepaid plans online in the Philippines.",
         "currenciesAccepted": "PHP, USD",
         "paymentAccepted": "Credit Card, Debit Card, GCash, Maya",
-        "priceRange": "₱₱",
+        "priceRange": "PHP",
         "areaServed": "PH"
       }
     ]
@@ -230,27 +222,51 @@
     </div>
   </header>
 
-  <!-- Static HTML for search engines before JS loads (Google indexes this) -->
+  <!--
+    Static HTML for Googlebot (visible before JS). Must be substantial so live
+    testing does not treat the URL as a soft 404 / empty page.
+  -->
   <main id="app">
     <article class="page seo-bootstrap">
       <div class="page-inner">
         <h1>SubSaverPH — Discounted Subscriptions in the Philippines</h1>
         <p>
-          Buy prepaid SuperGrok, Canva Pro, CapCut, Netflix, and YouTube Premium at outlet prices.
-          Pay with card, GCash, or Maya. Instant digital delivery for shoppers in the Philippines.
+          SubSaverPH is an online store for discounted prepaid digital subscriptions
+          in the Philippines. Shop SuperGrok, Canva Pro, CapCut, Netflix, and YouTube Premium
+          at outlet prices. Pay with card, GCash, Maya, GrabPay, or ShopeePay.
+          Codes deliver digitally after payment.
         </p>
+        <h2>Why shop SubSaverPH</h2>
+        <ul>
+          <li>PHP-friendly prepaid plans for popular AI, design, video, and streaming tools</li>
+          <li>Multi-currency price display with checkout for Filipino shoppers</li>
+          <li>Instant digital delivery of access codes after successful payment</li>
+          <li>Clear product pages with duration, stock, and fine print</li>
+        </ul>
         <h2>Popular deals</h2>
         <ul>
-          <li>SuperGrok 7 Days — discounted SuperGrok Philippines</li>
-          <li>SuperGrok 1 Month — full SuperGrok access prepaid</li>
-          <li>Canva Pro — design tools at outlet rates</li>
-          <li>CapCut Pro — video editing subscription</li>
-          <li>Netflix prepaid plans</li>
-          <li>YouTube Premium discount PH</li>
+          <li><strong>SuperGrok 7 Days</strong> — discounted SuperGrok access in the Philippines</li>
+          <li><strong>SuperGrok 1 Month</strong> — full SuperGrok prepaid monthly plan</li>
+          <li><strong>Canva Pro</strong> — design tools at outlet rates</li>
+          <li><strong>CapCut Pro</strong> — video editing subscription</li>
+          <li><strong>Netflix</strong> — prepaid streaming plans</li>
+          <li><strong>YouTube Premium</strong> — ad-free video and Music discount PH</li>
         </ul>
+        <h2>How it works</h2>
+        <ol>
+          <li>Browse deals for SuperGrok, Canva, CapCut, Netflix, or YouTube.</li>
+          <li>Add a plan to your cart and choose your payment method.</li>
+          <li>Complete checkout and receive your digital code on the success page (and by email when configured).</li>
+        </ol>
+        <h2>Contact</h2>
         <p>
-          Search SuperGrok PH, cheap Canva Pro Philippines, or Netflix GCash on
-          <strong>SubSaverPH</strong> at subsaverph.onrender.com.
+          Support: <a href="mailto:support@subsaverph.com">support@subsaverph.com</a>.
+          Website: <a href="https://subsaverph.onrender.com/">https://subsaverph.onrender.com/</a>.
+          Service area: Philippines (online).
+        </p>
+        <p>
+          SubSaverPH is not affiliated with xAI, Canva, CapCut, Netflix, YouTube, or Google.
+          Product names are trademarks of their respective owners.
         </p>
       </div>
     </article>

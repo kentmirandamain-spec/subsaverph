@@ -21,6 +21,30 @@ After deploy, check:
 
 ---
 
+## Fix: “Indexing request rejected — During live testing, indexing issues were detected”
+
+This message means Googlebot tried the URL **right now** and found a problem. Common causes for SubSaverPH:
+
+| Cause | What we fixed / what you do |
+|--------|-----------------------------|
+| Homepage served with `Content-Disposition: filename=index.html` | Fixed in server — page is served as normal HTML |
+| Thin / empty-looking page for bots | Expanded static SEO text in `index.html` |
+| Invalid structured data (hash SearchAction) | Removed hash-based SearchAction from JSON-LD |
+| Site asleep on free Render (timeout / 5xx) | Keep site awake — see `KEEP-ONLINE-24-7.md` |
+| Wrong URL typed in Inspection | Use exactly `https://subsaverph.onrender.com/` (with `https` and trailing `/` optional) |
+
+**After deploy:**
+
+1. Open the site yourself — confirm it loads in under ~10 seconds.
+2. Search Console → **URL Inspection** → paste `https://subsaverph.onrender.com/`
+3. Click **Test live URL** (not only “View crawled page”).
+4. Confirm: **URL is available to Google** / no soft 404 / no robots block.
+5. Then **Request indexing** again.
+
+If live test still fails, open the “Page fetch” / “Screenshot” section in GSC and note the exact error (404, 5xx, soft 404, redirected). Free Render cold starts often show **server error** until keep-alive is running.
+
+---
+
 ## Step 2 — Google Search Console (required)
 
 1. Open **https://search.google.com/search-console**  

@@ -17,6 +17,7 @@ from pathlib import Path
 from flask import (
     Flask,
     jsonify,
+    make_response,
     request,
     send_from_directory,
     session,
@@ -51,6 +52,40 @@ if os.environ.get("RENDER") or os.environ.get("FORCE_HTTPS"):
     app.config["PREFERRED_URL_SCHEME"] = "https"
 # Trust Render / Cloudflare proxy headers
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
+
+
+@app.after_request
+def seo_friendly_headers(resp):
+    """Googlebot rejects / misreads pages served like file downloads.
+
+    Flask's send_from_directory adds Content-Disposition: inline; filename=...
+    which can trigger live-test indexing failures. Strip it for HTML and mark
+    public pages as indexable.
+    """
+    ctype = (resp.headers.get("Content-Type") or "").lower()
+    if "text/html" in ctype:
+        # Do not present homepage as a downloadable file
+        if "Content-Disposition" in resp.headers:
+            del resp.headers["Content-Disposition"]
+        resp.headers.setdefault(
+            "X-Robots-Tag", "index, follow, max-image-preview:large, max-snippet:-1"
+        )
+        # Short cache so deploys show quickly; still crawlable
+        resp.headers.setdefault("Cache-Control", "public, max-age=300")
+    return resp
+
+
+def _serve_html(filename: str, folder: Path | None = None):
+    """Serve HTML as a real webpage (no Content-Disposition filename)."""
+    base = folder or ROOT
+    path = base / filename
+    html = path.read_text(encoding="utf-8")
+    resp = make_response(html)
+    resp.headers["Content-Type"] = "text/html; charset=utf-8"
+    resp.headers["X-Robots-Tag"] = "index, follow, max-image-preview:large, max-snippet:-1"
+    resp.headers["Cache-Control"] = "public, max-age=300"
+    return resp
+
 
 # ---------- storage ----------
 
@@ -2213,13 +2248,13 @@ def normalize_deal(data: dict, deal_id: str) -> dict:
 
 @app.get("/")
 def public_index():
-    return send_from_directory(ROOT, "index.html")
+    return _serve_html("index.html")
 
 
 @app.get("/admin")
 @app.get("/admin/")
 def admin_page():
-    return send_from_directory(ROOT / "admin", "index.html")
+    return _serve_html("index.html", ROOT / "admin")
 
 
 @app.get("/admin/<path:path>")
@@ -2229,12 +2264,18 @@ def admin_static(path: str):
 
 @app.get("/robots.txt")
 def robots_txt():
-    return send_from_directory(ROOT, "robots.txt", mimetype="text/plain")
+    resp = make_response((ROOT / "robots.txt").read_text(encoding="utf-8"))
+    resp.headers["Content-Type"] = "text/plain; charset=utf-8"
+    resp.headers["Cache-Control"] = "public, max-age=3600"
+    return resp
 
 
 @app.get("/sitemap.xml")
 def sitemap_xml():
-    return send_from_directory(ROOT, "sitemap.xml", mimetype="application/xml")
+    resp = make_response((ROOT / "sitemap.xml").read_text(encoding="utf-8"))
+    resp.headers["Content-Type"] = "application/xml; charset=utf-8"
+    resp.headers["Cache-Control"] = "public, max-age=3600"
+    return resp
 
 
 @app.get("/<path:path>")
