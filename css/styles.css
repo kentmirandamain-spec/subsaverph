@@ -475,17 +475,17 @@ body {
 }
 
 /*
-  1–2 meteors every 30s total:
-  - m-1 fires near the start of each 30s window
-  - m-2 fires ~12s later (still within the same window)
-  Distinct launch points + angles so they never look the same.
+  1–2 meteors every 2–3 minutes:
+  - m-1: every 2.5 min (150s)
+  - m-2: every 3 min (180s), offset so they rarely overlap
+  Streak keyframes stay tiny % of cycle so flight is still ~1s.
 */
 .m-1 {
   top: 6%;
   left: -8%;
   width: 150px;
-  animation: meteor-shallow 30s linear infinite;
-  animation-delay: 2s;
+  animation: meteor-shallow 150s linear infinite;
+  animation-delay: 12s;
 }
 
 .m-2 {
@@ -493,13 +493,13 @@ body {
   left: 55%;
   width: 115px;
   height: 1.5px;
-  animation: meteor-steep 30s linear infinite;
-  animation-delay: 14s; /* second streak later in the 30s window */
+  animation: meteor-steep 180s linear infinite;
+  animation-delay: 80s; /* second style appears later */
 }
 
 /*
-  Visible ~0–3% of 30s ≈ 0.9s streak, then idle rest of cycle.
-  Angles differ strongly: shallow ~18° vs steep ~52°.
+  Visible window ~0–0.7% of cycle ≈ 1s, then long idle.
+  Angles: shallow ~18° vs steep ~52°.
 */
 @keyframes meteor-shallow {
   /* Wide, shallow diagonal — left → lower-right */
@@ -507,19 +507,19 @@ body {
     opacity: 0;
     transform: translate3d(0, 0, 0) rotate(18deg) scaleX(0.2);
   }
-  0.4% {
+  0.08% {
     opacity: 1;
     transform: translate3d(4vw, 1.5vh, 0) rotate(18deg) scaleX(0.55);
   }
-  2.2% {
+  0.5% {
     opacity: 1;
     transform: translate3d(58vw, 22vh, 0) rotate(18deg) scaleX(1);
   }
-  3% {
+  0.7% {
     opacity: 0;
     transform: translate3d(72vw, 28vh, 0) rotate(18deg) scaleX(0.4);
   }
-  3.05%,
+  0.71%,
   100% {
     opacity: 0;
     transform: translate3d(72vw, 28vh, 0) rotate(18deg) scaleX(0.2);
@@ -532,19 +532,19 @@ body {
     opacity: 0;
     transform: translate3d(0, 0, 0) rotate(52deg) scaleX(0.2);
   }
-  0.4% {
+  0.07% {
     opacity: 1;
     transform: translate3d(2vw, 3vh, 0) rotate(52deg) scaleX(0.5);
   }
-  2% {
+  0.45% {
     opacity: 1;
     transform: translate3d(28vw, 48vh, 0) rotate(52deg) scaleX(1);
   }
-  2.8% {
+  0.65% {
     opacity: 0;
     transform: translate3d(38vw, 62vh, 0) rotate(52deg) scaleX(0.4);
   }
-  2.85%,
+  0.66%,
   100% {
     opacity: 0;
     transform: translate3d(38vw, 62vh, 0) rotate(52deg) scaleX(0.2);
