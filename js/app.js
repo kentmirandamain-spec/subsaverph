@@ -1138,11 +1138,12 @@ function checkoutTermsModalHtml(cart, totals) {
     "SubSaverPH is an **independent reseller / storefront**. We are **not** affiliated with, endorsed by, or sponsored by xAI, Canva, CapCut, Netflix, YouTube, Google, or any listed brand.",
   ]);
   const ruleLines = settingsLines(s.checkoutRules, [
-    "**Digital goods are non-refundable** once login details or codes are delivered, except where the credentials are defective or not delivered — contact support with your order ID.",
+    "**Digital goods are non-refundable** once login details or codes are delivered, **except** when the product is **defective** or **not delivered** — contact support with your order ID for those cases.",
+    "If you **break these rules** (including changing username, password, billing address, or subscription), you **cannot get a refund** and support may be refused.",
     "You must be at least **18 years old** and able to form a binding contract.",
     "Use the product only for **personal, lawful use** and follow the official service’s terms of use.",
     "**Do not** resell, share publicly, or abuse accounts in a way that violates the brand’s policies.",
-    "**Do not change the username/email, password, billing address, or subscription plan** on the shared/prepaid account — doing so may lock you out and voids support or refunds.",
+    "**Do not change the username/email, password, billing address, or subscription plan** on the shared/prepaid account — doing so may lock you out and **voids refunds and support**.",
     "**Do not** add your own payment method, cancel the plan, or transfer ownership of the account.",
     "Keep the login details private; use only as provided.",
     "Prices may be shown in other currencies; the amount charged is confirmed at payment (PH e-wallets bill in PHP when applicable).",
