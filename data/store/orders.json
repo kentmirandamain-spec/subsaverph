@@ -1,5 +1,319 @@
 [
   {
+    "id": "PH2888637213",
+    "email": "buyer@test.com",
+    "name": "Test Buyer",
+    "currency": "USD",
+    "items": [
+      {
+        "id": "supergrok-1m",
+        "name": "SuperGrok 1 Month",
+        "monogram": "S1",
+        "qty": 1,
+        "price": 399.0,
+        "priceBase": "PHP",
+        "duration": "1 month access",
+        "codes": [
+          "SG1M-TEST-0001"
+        ]
+      }
+    ],
+    "status": "paid",
+    "paymentMode": "instant_demo",
+    "method": "gcash",
+    "stripeSessionId": null,
+    "stripePaymentIntent": null,
+    "providerRef": "demo-dd56e4689c3c4a8ab7dd634c8b0c1aec",
+    "createdAt": "2026-07-17T00:34:51.179867Z",
+    "delivery": "instant",
+    "message": "Payment confirmed. Codes delivered on-site (email not configured on server).",
+    "emailSent": false,
+    "emailProvider": null,
+    "emailDetail": "Email not configured (set RESEND_API_KEY or SMTP_*)",
+    "emailNotified": false,
+    "emailNotifyTo": [],
+    "emailSentAt": null
+  },
+  {
+    "id": "PH7863616088",
+    "email": "buyer@test.com",
+    "name": "Test Buyer",
+    "currency": "PHP",
+    "items": [
+      {
+        "id": "supergrok-7d",
+        "name": "SuperGrok 7 Days",
+        "monogram": "SG",
+        "qty": 1,
+        "price": 99.0,
+        "priceBase": "PHP",
+        "duration": "7 days access",
+        "codes": [
+          "SG7D-TEST-0002"
+        ]
+      }
+    ],
+    "status": "paid",
+    "paymentMode": "instant_demo",
+    "method": "demo",
+    "stripeSessionId": null,
+    "stripePaymentIntent": null,
+    "providerRef": "demo-59634641ff1944718ce6ef392aa42cdc",
+    "createdAt": "2026-07-17T00:34:51.122459Z",
+    "delivery": "instant",
+    "message": "Payment confirmed. Codes delivered on-site (email not configured on server).",
+    "emailSent": false,
+    "emailProvider": null,
+    "emailDetail": "Email not configured (set RESEND_API_KEY or SMTP_*)",
+    "emailNotified": false,
+    "emailNotifyTo": [],
+    "emailSentAt": null
+  },
+  {
+    "id": "PH451A6E7F08",
+    "email": "buyer@test.com",
+    "name": "Buyer",
+    "currency": "PHP",
+    "items": [
+      {
+        "id": "supergrok-7d",
+        "name": "SuperGrok 7 Days",
+        "monogram": "SG",
+        "qty": 1,
+        "price": 99.0,
+        "priceBase": "PHP",
+        "duration": "7 days access",
+        "codes": [
+          "SG7D-TEST-0001"
+        ]
+      }
+    ],
+    "status": "paid",
+    "paymentMode": "instant_demo",
+    "method": "demo",
+    "stripeSessionId": null,
+    "stripePaymentIntent": null,
+    "providerRef": "demo-d53562c4c1144966a85dba4d485f7bf8",
+    "createdAt": "2026-07-17T00:31:41.891845Z",
+    "delivery": "instant",
+    "message": "Payment confirmed. Codes delivered on-site (email not configured on server).",
+    "emailSent": false,
+    "emailProvider": null,
+    "emailDetail": "Email not configured (set RESEND_API_KEY or SMTP_*)",
+    "emailNotified": false,
+    "emailNotifyTo": [],
+    "emailSentAt": null
+  },
+  {
+    "id": "PHB8E7CFC5DC",
+    "email": "kentmirandamain@gmail.com",
+    "name": "vwevw",
+    "currency": "PHP",
+    "items": [
+      {
+        "id": "supergrok-7d",
+        "name": "SuperGrok 7 Days",
+        "monogram": "SG",
+        "qty": 1,
+        "price": 99.0,
+        "priceBase": "PHP",
+        "duration": "7 days access",
+        "codes": [
+          "dawdawccacaca"
+        ]
+      }
+    ],
+    "status": "paid",
+    "paymentMode": "instant_demo",
+    "method": "card",
+    "stripeSessionId": null,
+    "stripePaymentIntent": null,
+    "providerRef": "demo-cf54851f94bc4db28327ac7c49418186",
+    "createdAt": "2026-07-16T14:13:25.072640Z",
+    "delivery": "instant",
+    "message": "Payment confirmed. Codes delivered on-site (email not configured on server).",
+    "emailSent": false,
+    "emailProvider": null,
+    "emailDetail": "Email not configured (set RESEND_API_KEY or SMTP_*)",
+    "emailSentAt": null
+  },
+  {
+    "id": "PH704335F73C",
+    "email": "kentmirandamain@gmail.com",
+    "name": "fewf",
+    "currency": "PHP",
+    "items": [
+      {
+        "id": "supergrok-7d",
+        "name": "SuperGrok 7 Days",
+        "monogram": "SG",
+        "qty": 2,
+        "price": 99.0,
+        "priceBase": "PHP",
+        "duration": "7 days access",
+        "codes": [
+          "hzedrbzrs",
+          "dawcfac"
+        ]
+      }
+    ],
+    "status": "paid",
+    "paymentMode": "instant_demo",
+    "method": "gcash",
+    "stripeSessionId": null,
+    "stripePaymentIntent": null,
+    "providerRef": "demo-d25dbbf5a0b94565a869b33f1fcc9888",
+    "createdAt": "2026-07-15T07:49:15.299199Z",
+    "delivery": "instant",
+    "message": "Payment confirmed. Codes delivered instantly."
+  },
+  {
+    "id": "PHA4CEDF73A5",
+    "email": "kentmirandamain@gmail.com",
+    "name": "nfnf",
+    "currency": "PHP",
+    "items": [
+      {
+        "id": "supergrok-7d",
+        "name": "SuperGrok 7 Days",
+        "monogram": "SG",
+        "qty": 2,
+        "price": 99.0,
+        "priceBase": "PHP",
+        "duration": "7 days access",
+        "codes": [
+          "herhneh",
+          "brebeber"
+        ]
+      }
+    ],
+    "status": "paid",
+    "paymentMode": "instant_demo",
+    "method": "card",
+    "stripeSessionId": null,
+    "stripePaymentIntent": null,
+    "providerRef": "demo-318718e6f2d140e5ac8cbd81c39d2a66",
+    "createdAt": "2026-07-15T07:21:14.173937Z",
+    "delivery": "instant",
+    "message": "Payment confirmed. Codes delivered instantly."
+  },
+  {
+    "id": "PHF60359F64B",
+    "email": "kentmirandamain@gmail.com",
+    "name": "kyukyu",
+    "currency": "PHP",
+    "items": [
+      {
+        "id": "supergrok-7d",
+        "name": "SuperGrok 7 Days",
+        "monogram": "SG",
+        "qty": 1,
+        "price": 99.0,
+        "priceBase": "PHP",
+        "duration": "7 days access",
+        "codes": [
+          "gmgtymtyj"
+        ]
+      }
+    ],
+    "status": "paid",
+    "paymentMode": "instant_demo",
+    "method": "card",
+    "stripeSessionId": null,
+    "stripePaymentIntent": null,
+    "providerRef": "demo-7fdd13e55a9b40b3a05d58558d17be44",
+    "createdAt": "2026-07-15T05:28:19.842632Z",
+    "delivery": "instant",
+    "message": "Payment confirmed. Codes delivered instantly."
+  },
+  {
+    "id": "PH3DC70064C4",
+    "email": "kentmirandamain@gmail.comg",
+    "name": "ergredrdeg",
+    "currency": "PHP",
+    "items": [
+      {
+        "id": "supergrok-7d",
+        "name": "SuperGrok 7 Days",
+        "monogram": "SG",
+        "qty": 1,
+        "price": 99.0,
+        "priceBase": "PHP",
+        "duration": "7 days access",
+        "codes": [
+          "Username: HuyhxBria@hotmail.com Password:GROKsuper123#"
+        ]
+      }
+    ],
+    "status": "paid",
+    "paymentMode": "instant_demo",
+    "method": "demo",
+    "stripeSessionId": null,
+    "stripePaymentIntent": null,
+    "providerRef": "demo-e00b4df945864355b43c9f357611f9d8",
+    "createdAt": "2026-07-14T12:48:08.677192Z",
+    "delivery": "instant",
+    "message": "Payment confirmed. Codes delivered instantly."
+  },
+  {
+    "id": "PHBB075FBFFB",
+    "email": "kentmirandamain@gmail.com",
+    "name": "gergreg",
+    "currency": "PHP",
+    "items": [
+      {
+        "id": "supergrok-7d",
+        "name": "SuperGrok 7 Days",
+        "monogram": "SG",
+        "qty": 1,
+        "price": 99.0,
+        "priceBase": "PHP",
+        "duration": "7 days access",
+        "codes": [
+          "GROKsuper123#"
+        ]
+      }
+    ],
+    "status": "paid",
+    "paymentMode": "instant_demo",
+    "method": "demo",
+    "stripeSessionId": null,
+    "stripePaymentIntent": null,
+    "providerRef": "demo-89a104d5a7fe4a45a5cff79f71bdf7fa",
+    "createdAt": "2026-07-14T12:47:51.646551Z",
+    "delivery": "instant",
+    "message": "Payment confirmed. Codes delivered instantly."
+  },
+  {
+    "id": "PHA9588373E4",
+    "email": "kentmirandamain@gmail.comn",
+    "name": "fdtn",
+    "currency": "PHP",
+    "items": [
+      {
+        "id": "supergrok-7d",
+        "name": "SuperGrok 7 Days",
+        "monogram": "SG",
+        "qty": 1,
+        "price": 99.0,
+        "priceBase": "PHP",
+        "duration": "7 days access",
+        "codes": [
+          "HuyhxBria@hotmail.com"
+        ]
+      }
+    ],
+    "status": "paid",
+    "paymentMode": "instant_demo",
+    "method": "demo",
+    "stripeSessionId": null,
+    "stripePaymentIntent": null,
+    "providerRef": "demo-036d1687bbab45f7b0a69cabc882ed19",
+    "createdAt": "2026-07-14T12:45:48.828693Z",
+    "delivery": "instant",
+    "message": "Payment confirmed. Codes delivered instantly."
+  },
+  {
     "id": "PH47D36C3D99",
     "email": "kentmirandamain@gmail.com",
     "name": "eyheawh",

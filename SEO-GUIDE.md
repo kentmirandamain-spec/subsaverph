@@ -71,7 +71,30 @@ When Google has indexed you, that shows results.
 
 ---
 
-## Step 5 — What you can expect
+## Step 5 — Favicon / logo next to your Google result
+
+Google shows a small **favicon** beside your URL. SubSaverPH ships:
+
+| File | Purpose |
+|------|---------|
+| `/assets/favicon-48.png` | Primary Google favicon (48×48) |
+| `/assets/favicon-96.png` | High-DPI favicon (96×96) |
+| `/assets/logo-512.png` | Brand / Organization logo (schema) |
+| `/favicon.ico` | Browser tab fallback |
+
+**Checklist if the logo is missing in Google:**
+
+1. Confirm icons load in a browser (open each URL above).
+2. In **Search Console** → URL Inspection → request indexing of the homepage.
+3. Wait **a few days to a few weeks** — Google caches favicons slowly.
+4. Keep the free Render site awake (see `KEEP-ONLINE-24-7.md`) so Googlebot can fetch icons.
+5. Search `site:subsaverph.onrender.com` — if the site isn’t indexed yet, no favicon will show.
+
+Google’s rules: square icon, **multiple of 48px**, crawlable (not blocked in `robots.txt`), stable URL.
+
+---
+
+## Step 6 — What you can expect
 
 | Search | Likelihood |
 |--------|------------|

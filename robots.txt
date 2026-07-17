@@ -1,14 +1,33 @@
 # SubSaverPH — allow search engines (Google, Bing, etc.)
 User-agent: *
 Allow: /
+Allow: /favicon.ico
+Allow: /favicon.png
+Allow: /logo.png
+Allow: /logo.svg
+Allow: /og-image.png
+Allow: /assets/
+Allow: /site.webmanifest
 Disallow: /admin
 Disallow: /admin/
 Disallow: /api/
 
-# Googlebot
+# Googlebot — favicons + logos must stay crawlable for SERP icon
 User-agent: Googlebot
 Allow: /
+Allow: /favicon.ico
+Allow: /favicon.png
+Allow: /logo.png
+Allow: /assets/
+Allow: /site.webmanifest
 Disallow: /admin
 Disallow: /api/
+
+User-agent: Googlebot-Image
+Allow: /
+Allow: /assets/
+Allow: /logo.png
+Allow: /favicon.ico
+Allow: /og-image.png
 
 Sitemap: https://subsaverph.onrender.com/sitemap.xml

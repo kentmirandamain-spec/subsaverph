@@ -2243,9 +2243,29 @@ def public_static(path: str):
     if path.startswith("api/"):
         return jsonify({"error": "Not found"}), 404
     target = ROOT / path
-    if target.is_file():
-        return send_from_directory(ROOT, path)
-    return jsonify({"error": "Not found"}), 404
+    if not target.is_file():
+        return jsonify({"error": "Not found"}), 404
+
+    # Correct MIME + long cache for brand icons (helps Google/browser pick them up)
+    mime = None
+    lower = path.lower()
+    if lower.endswith(".ico"):
+        mime = "image/x-icon"
+    elif lower.endswith(".png"):
+        mime = "image/png"
+    elif lower.endswith(".svg"):
+        mime = "image/svg+xml"
+    elif lower.endswith(".webmanifest") or lower.endswith("manifest.json"):
+        mime = "application/manifest+json"
+
+    resp = send_from_directory(ROOT, path, mimetype=mime)
+    if any(
+        lower.endswith(ext)
+        for ext in (".ico", ".png", ".svg", ".webmanifest")
+    ) or lower in ("favicon.ico", "logo.png", "og-image.png"):
+        resp.headers["Cache-Control"] = "public, max-age=86400"
+        resp.headers["Access-Control-Allow-Origin"] = "*"
+    return resp
 
 
 def main():

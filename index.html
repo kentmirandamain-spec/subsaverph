@@ -15,13 +15,21 @@
   <link rel="alternate" hreflang="en-PH" href="https://subsaverph.onrender.com/" />
   <link rel="alternate" hreflang="x-default" href="https://subsaverph.onrender.com/" />
 
-  <!-- Favicon / app icons — Google Search shows the site favicon next to your URL -->
-  <link rel="icon" href="/favicon.ico" sizes="any" />
-  <link rel="icon" type="image/png" href="/assets/favicon-48.png" sizes="48x48" />
-  <link rel="icon" type="image/png" href="/assets/favicon-32.png" sizes="32x32" />
-  <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png" sizes="180x180" />
-  <link rel="manifest" href="/site.webmanifest" />
+  <!--
+    Favicons for Google Search (shows next to your URL in results).
+    Google wants a crawlable square PNG that is a multiple of 48px.
+    Use absolute URLs so crawlers always resolve the same stable files.
+  -->
+  <link rel="icon" href="https://subsaverph.onrender.com/assets/favicon-48.png" type="image/png" sizes="48x48" />
+  <link rel="icon" href="https://subsaverph.onrender.com/assets/favicon-96.png" type="image/png" sizes="96x96" />
+  <link rel="icon" href="https://subsaverph.onrender.com/assets/logo-192.png" type="image/png" sizes="192x192" />
+  <link rel="shortcut icon" href="https://subsaverph.onrender.com/favicon.ico" />
+  <link rel="icon" href="https://subsaverph.onrender.com/favicon.ico" sizes="48x48" />
+  <link rel="apple-touch-icon" href="https://subsaverph.onrender.com/assets/apple-touch-icon.png" sizes="180x180" />
+  <link rel="manifest" href="https://subsaverph.onrender.com/site.webmanifest" />
   <meta name="theme-color" content="#000000" />
+  <meta name="msapplication-TileImage" content="https://subsaverph.onrender.com/assets/logo-192.png" />
+  <meta name="msapplication-TileColor" content="#000000" />
   <!-- Apply saved theme/language before paint (no flash) -->
   <script>
     (function () {
@@ -92,12 +100,17 @@
         "url": "https://subsaverph.onrender.com/",
         "logo": {
           "@type": "ImageObject",
-          "url": "https://subsaverph.onrender.com/logo.png",
+          "@id": "https://subsaverph.onrender.com/#logo",
+          "url": "https://subsaverph.onrender.com/assets/logo-512.png",
+          "contentUrl": "https://subsaverph.onrender.com/assets/logo-512.png",
           "width": 512,
           "height": 512,
-          "contentUrl": "https://subsaverph.onrender.com/logo.png"
+          "caption": "SubSaverPH"
         },
-        "image": "https://subsaverph.onrender.com/logo.png",
+        "image": [
+          "https://subsaverph.onrender.com/assets/logo-512.png",
+          "https://subsaverph.onrender.com/og-image.png"
+        ],
         "description": "Philippines-based shop for discounted prepaid software and streaming subscriptions.",
         "areaServed": { "@type": "Country", "name": "Philippines" }
       },
@@ -106,7 +119,12 @@
         "@id": "https://subsaverph.onrender.com/#store",
         "name": "SubSaverPH",
         "url": "https://subsaverph.onrender.com/",
-        "logo": "https://subsaverph.onrender.com/logo.png",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://subsaverph.onrender.com/assets/logo-512.png",
+          "width": 512,
+          "height": 512
+        },
         "image": "https://subsaverph.onrender.com/og-image.png",
         "description": "Buy discounted SuperGrok, Canva Pro, CapCut, Netflix, and YouTube Premium prepaid plans online in the Philippines.",
         "currenciesAccepted": "PHP, USD",
@@ -138,7 +156,7 @@
   <header class="nav" id="siteNav">
     <div class="nav-inner">
       <a class="logo" href="#/home" id="siteLogo" title="SubSaverPH home" aria-label="SubSaverPH home">
-        <img class="logo-mark" src="/favicon.png" width="36" height="36" alt="SubSaverPH" />
+        <img class="logo-mark" src="/assets/logo-192.png" width="36" height="36" alt="SubSaverPH" />
       </a>
       <nav class="links" id="navLinks">
         <a href="#/home" data-nav-home data-i18n="nav_home">Home</a>
@@ -249,7 +267,7 @@
     <div class="footer-inner">
       <div>
         <a class="logo" href="#/home" title="SubSaverPH home" aria-label="SubSaverPH home">
-          <img class="logo-mark" src="/favicon.png" width="36" height="36" alt="SubSaverPH" />
+          <img class="logo-mark" src="/assets/logo-192.png" width="36" height="36" alt="SubSaverPH" />
         </a>
         <p id="footerBlurb">Discounted prepaid subscriptions for SuperGrok, Canva, CapCut, Netflix, and YouTube. Searchable multi-currency payment.</p>
       </div>
