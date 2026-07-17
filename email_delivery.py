@@ -70,57 +70,173 @@ def _line_amount(item: dict) -> float:
         return 0.0
 
 
+def _parse_cred_from_string(raw: str) -> dict[str, str]:
+    """Best-effort parse of username/password from a stock string."""
+    import re
+
+    text = str(raw or "").strip()
+    if not text:
+        return {"username": "", "password": "", "raw": "", "code": ""}
+    m = re.search(
+        r"user(?:name)?\s*[:\-]\s*(.+?)\s+(?:pass(?:word)?|pwd)\s*[:\-]\s*(.+)$",
+        text,
+        re.I | re.S,
+    )
+    if m:
+        return {
+            "username": m.group(1).strip(),
+            "password": m.group(2).strip(),
+            "raw": text,
+            "code": "",
+        }
+    if "|" in text:
+        a, b = [x.strip() for x in text.split("|", 1)]
+        if a and b:
+            return {"username": a, "password": b, "raw": text, "code": ""}
+    if " / " in text:
+        a, b = [x.strip() for x in text.split(" / ", 1)]
+        if a and b:
+            return {"username": a, "password": b, "raw": text, "code": ""}
+    if text.count(":") == 1:
+        a, b = [x.strip() for x in text.split(":", 1)]
+        if a and b and " " not in a:
+            return {"username": a, "password": b, "raw": text, "code": ""}
+    return {"username": "", "password": "", "raw": text, "code": text}
+
+
+def _item_credentials(item: dict) -> list[dict[str, str]]:
+    """Normalize credentials list for an order line item."""
+    creds = item.get("credentials")
+    out: list[dict[str, str]] = []
+    if isinstance(creds, list) and creds:
+        for c in creds:
+            if isinstance(c, dict):
+                out.append(
+                    {
+                        "username": str(c.get("username") or c.get("user") or "").strip(),
+                        "password": str(c.get("password") or c.get("pass") or "").strip(),
+                        "raw": str(c.get("raw") or c.get("code") or "").strip(),
+                        "code": str(c.get("code") or "").strip(),
+                    }
+                )
+            else:
+                out.append(_parse_cred_from_string(str(c)))
+        return out
+    for c in item.get("codes") or []:
+        if isinstance(c, dict):
+            out.append(
+                {
+                    "username": str(c.get("username") or "").strip(),
+                    "password": str(c.get("password") or "").strip(),
+                    "raw": str(c.get("raw") or c.get("code") or "").strip(),
+                    "code": str(c.get("code") or "").strip(),
+                }
+            )
+        else:
+            out.append(_parse_cred_from_string(str(c)))
+    return out
+
+
+def _cred_box_html(label: str, value: str) -> str:
+    v = escape(value or "—")
+    return (
+        f'<div style="margin:8px 0 0">'
+        f'<div style="font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:#888;margin-bottom:4px">{escape(label)}</div>'
+        f'<div style="font-family:ui-monospace,Consolas,monospace;background:#111;color:#fff;'
+        f'padding:12px 14px;border:1px solid #333;letter-spacing:0.02em;word-break:break-all">{v}</div>'
+        f"</div>"
+    )
+
+
 def build_invoice_content(order: dict[str, Any]) -> tuple[str, str, str]:
-    """Return (subject, plain_text, html)."""
-    order_id = escape(str(order.get("id") or ""))
+    """Return (subject, plain_text, html) with payment ID + username/password + product details."""
+    order_id_raw = str(order.get("id") or "")
+    payment_id_raw = str(
+        order.get("providerRef")
+        or order.get("stripeSessionId")
+        or order.get("stripePaymentIntent")
+        or order_id_raw
+        or ""
+    )
+    order_id = escape(order_id_raw)
+    payment_id = escape(payment_id_raw)
     email = escape(str(order.get("email") or ""))
     name = escape(str(order.get("name") or "Customer"))
     currency = str(order.get("currency") or "USD").upper()
     created = escape(str(order.get("createdAt") or "")[:19].replace("T", " "))
     method = escape(str(order.get("method") or order.get("paymentMode") or "card"))
+    provider = escape(str(order.get("paymentMode") or order.get("method") or "—"))
     items = order.get("items") or []
 
-    subject = f"SubSaverPH Invoice {order.get('id') or ''} — your access codes"
+    subject = f"SubSaverPH Payment {order_id_raw or payment_id_raw} — login details"
 
     # Plain text
     lines = [
-        "SubSaverPH — Order invoice",
-        "=" * 40,
-        f"Order ID: {order.get('id')}",
-        f"Date: {order.get('createdAt')}",
-        f"Customer: {order.get('name') or '—'}",
-        f"Email: {order.get('email')}",
-        f"Payment: {order.get('method') or order.get('paymentMode')}",
-        f"Currency: {currency}",
+        "SubSaverPH — Payment confirmed",
+        "=" * 44,
+        f"Order ID:     {order_id_raw or '—'}",
+        f"Payment ID:   {payment_id_raw or '—'}",
+        f"Date (UTC):   {order.get('createdAt') or '—'}",
+        f"Customer:     {order.get('name') or '—'}",
+        f"Email:        {order.get('email') or '—'}",
+        f"Payment:      {order.get('method') or order.get('paymentMode') or '—'}",
+        f"Currency:     {currency}",
         "",
-        "ITEMS & ACCESS CODES",
-        "-" * 40,
+        "PRODUCTS & LOGIN DETAILS",
+        "-" * 44,
     ]
-    total = 0.0
     for it in items:
         qty = int(it.get("qty") or 1)
         price = float(it.get("price") or 0)
         base = (it.get("priceBase") or currency).upper()
-        line_total = price * qty
-        total += line_total if base == currency else line_total
-        lines.append(f"{it.get('name')}  x{qty}")
-        lines.append(f"  Duration: {it.get('duration') or '—'}")
-        lines.append(f"  Price: {_format_money(price, base)} each")
-        codes = it.get("codes") or []
-        if codes:
-            for c in codes:
-                lines.append(f"  CODE: {c}")
+        lines.append(f"Product:  {it.get('name') or 'Plan'}")
+        if it.get("brand"):
+            lines.append(f"Brand:    {it.get('brand')}")
+        if it.get("category"):
+            lines.append(f"Category: {it.get('category')}")
+        lines.append(f"Duration: {it.get('duration') or '—'}")
+        lines.append(f"Delivery: {it.get('delivery') or 'Instant digital'}")
+        if it.get("accountType"):
+            lines.append(f"Account:  {it.get('accountType')}")
+        if it.get("validity"):
+            lines.append(f"Validity: {it.get('validity')}")
+        lines.append(f"Qty:      {qty}")
+        lines.append(f"Price:    {_format_money(price, base)} each")
+        if it.get("description"):
+            lines.append(f"Details:  {it.get('description')}")
+        if it.get("howToRedeem"):
+            lines.append("How to use:")
+            for hl in str(it.get("howToRedeem")).splitlines():
+                if hl.strip():
+                    lines.append(f"  - {hl.strip()}")
+        if it.get("importantNotes"):
+            lines.append("Important:")
+            for hl in str(it.get("importantNotes")).splitlines():
+                if hl.strip():
+                    lines.append(f"  - {hl.strip()}")
+        creds = _item_credentials(it)
+        if creds:
+            for i, cr in enumerate(creds, 1):
+                label = f"Login #{i}" if len(creds) > 1 else "Login"
+                lines.append(f"  --- {label} ---")
+                if cr.get("username") or cr.get("password"):
+                    lines.append(f"  Username: {cr.get('username') or '—'}")
+                    lines.append(f"  Password: {cr.get('password') or '—'}")
+                elif cr.get("code") or cr.get("raw"):
+                    lines.append(f"  Access code: {cr.get('code') or cr.get('raw')}")
         else:
-            lines.append("  CODE: (contact support — no stock assigned)")
+            lines.append("  Login: (contact support — nothing assigned)")
         lines.append("")
     lines.extend(
         [
-            "-" * 40,
-            "Redeem each code on the official service website/app.",
-            "Keep this email — codes are shown once for your records.",
+            "-" * 44,
+            "IMPORTANT",
+            "- Do not change username, password, billing address, or subscription.",
+            "- Breaking these rules voids refunds (except defective / not delivered product).",
+            "- Save this email. Use logins only as provided.",
             "",
-            "Not affiliated with xAI, Canva, CapCut, Netflix, or YouTube.",
-            "SubSaverPH support: reply to this email if configured.",
+            f"Support: reply to this email and include Order ID {order_id_raw or payment_id_raw}.",
+            "SubSaverPH is not affiliated with xAI, Canva, CapCut, Netflix, or YouTube.",
             "",
             "Thank you for your purchase.",
         ]
@@ -133,28 +249,76 @@ def build_invoice_content(order: dict[str, Any]) -> tuple[str, str, str]:
         qty = int(it.get("qty") or 1)
         price = float(it.get("price") or 0)
         base = (it.get("priceBase") or currency).upper()
-        codes = it.get("codes") or []
-        code_html = (
-            "".join(
-                f'<div style="font-family:ui-monospace,Consolas,monospace;background:#111;color:#fff;'
-                f'padding:10px 12px;margin:6px 0;border:1px solid #333;letter-spacing:0.04em;'
-                f'word-break:break-all">{escape(str(c))}</div>'
-                for c in codes
+        creds = _item_credentials(it)
+        login_blocks = []
+        if creds:
+            for i, cr in enumerate(creds, 1):
+                head = f"Login #{i}" if len(creds) > 1 else "Your login"
+                if cr.get("username") or cr.get("password"):
+                    login_blocks.append(
+                        f'<div style="margin-top:12px;padding:12px;border:1px solid #333;background:#0d0d0d">'
+                        f'<div style="font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:#888;margin-bottom:4px">{escape(head)}</div>'
+                        f'{_cred_box_html("Username / Email", cr.get("username") or "—")}'
+                        f'{_cred_box_html("Password", cr.get("password") or "—")}'
+                        f"</div>"
+                    )
+                else:
+                    login_blocks.append(
+                        f'<div style="margin-top:12px;padding:12px;border:1px solid #333;background:#0d0d0d">'
+                        f'<div style="font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:#888;margin-bottom:4px">{escape(head)}</div>'
+                        f'{_cred_box_html("Access code", cr.get("code") or cr.get("raw") or "—")}'
+                        f"</div>"
+                    )
+        else:
+            login_blocks.append(
+                '<div style="color:#c44;margin-top:10px">No login assigned — contact support with your Order ID / Payment ID.</div>'
             )
-            if codes
-            else '<div style="color:#c00">No code assigned — contact support with your order ID.</div>'
-        )
+
+        detail_bits = []
+        if it.get("brand"):
+            detail_bits.append(escape(str(it.get("brand"))))
+        if it.get("category"):
+            detail_bits.append(escape(str(it.get("category"))))
+        if it.get("duration"):
+            detail_bits.append(escape(str(it.get("duration"))))
+        detail_bits.append(f"Qty {qty}")
+        detail_bits.append(f"{_format_money(price, base)} each")
+        meta_line = " · ".join(detail_bits)
+
+        extra_html = ""
+        if it.get("accountType"):
+            extra_html += f'<div style="color:#999;font-size:13px;margin-top:6px">Account type: {escape(str(it.get("accountType")))}</div>'
+        if it.get("validity"):
+            extra_html += f'<div style="color:#999;font-size:13px;margin-top:4px">Validity: {escape(str(it.get("validity")))}</div>'
+        if it.get("description"):
+            extra_html += f'<div style="color:#aaa;font-size:13px;margin-top:8px;line-height:1.5">{escape(str(it.get("description")))}</div>'
+        if it.get("howToRedeem"):
+            extra_html += (
+                '<div style="margin-top:10px">'
+                '<div style="font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:#888">How to use</div>'
+                f'<div style="color:#ccc;font-size:13px;margin-top:4px;white-space:pre-wrap;line-height:1.5">{escape(str(it.get("howToRedeem")))}</div>'
+                "</div>"
+            )
+        if it.get("importantNotes"):
+            extra_html += (
+                '<div style="margin-top:10px">'
+                '<div style="font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:#888">Important notes</div>'
+                f'<div style="color:#ccc;font-size:13px;margin-top:4px;white-space:pre-wrap;line-height:1.5">{escape(str(it.get("importantNotes")))}</div>'
+                "</div>"
+            )
+        if it.get("delivery"):
+            extra_html += f'<div style="color:#999;font-size:12px;margin-top:8px">Delivery: {escape(str(it.get("delivery")))}</div>'
+
         item_rows.append(
             f"""
             <tr>
-              <td style="padding:16px 0;border-bottom:1px solid #222;vertical-align:top">
-                <div style="font-weight:700;color:#fff;font-size:15px">{escape(str(it.get("name") or "Plan"))}</div>
-                <div style="color:#999;font-size:13px;margin-top:4px">
-                  {escape(str(it.get("duration") or ""))} · Qty {qty} · {_format_money(price, base)} each
-                </div>
-                <div style="margin-top:10px">
-                  <div style="font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:#888;margin-bottom:4px">Access code(s)</div>
-                  {code_html}
+              <td style="padding:18px 0;border-bottom:1px solid #222;vertical-align:top">
+                <div style="font-weight:700;color:#fff;font-size:16px">{escape(str(it.get("name") or "Plan"))}</div>
+                <div style="color:#999;font-size:13px;margin-top:4px">{meta_line}</div>
+                {extra_html}
+                <div style="margin-top:14px">
+                  <div style="font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:#fff;font-weight:600;margin-bottom:2px">Login details</div>
+                  {"".join(login_blocks)}
                 </div>
               </td>
             </tr>"""
@@ -169,17 +333,34 @@ def build_invoice_content(order: dict[str, Any]) -> tuple[str, str, str]:
       <table role="presentation" width="100%" style="max-width:560px;background:#0a0a0a;border:1px solid #2a2a2a">
         <tr><td style="padding:28px 28px 12px">
           <div style="font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:#888">SubSaverPH</div>
-          <h1 style="margin:10px 0 0;font-size:22px;letter-spacing:0.06em;text-transform:uppercase">Invoice &amp; codes</h1>
+          <h1 style="margin:10px 0 0;font-size:22px;letter-spacing:0.06em;text-transform:uppercase">Payment confirmed</h1>
           <p style="margin:12px 0 0;color:#aaa;font-size:14px;line-height:1.5">
-            Hi {name or "there"}, payment is confirmed. Your digital access codes are below.
+            Hi {name or "there"}, your payment is confirmed. Below are your <strong style="color:#fff">Payment ID</strong>,
+            product details, and <strong style="color:#fff">username &amp; password</strong>.
           </p>
         </td></tr>
         <tr><td style="padding:8px 28px 16px">
-          <table width="100%" style="font-size:13px;color:#aaa">
-            <tr><td style="padding:4px 0">Order</td><td align="right" style="color:#fff;font-weight:600">{order_id}</td></tr>
-            <tr><td style="padding:4px 0">Date (UTC)</td><td align="right" style="color:#fff">{created or "—"}</td></tr>
-            <tr><td style="padding:4px 0">Email</td><td align="right" style="color:#fff">{email}</td></tr>
-            <tr><td style="padding:4px 0">Payment</td><td align="right" style="color:#fff">{method} · {escape(currency)}</td></tr>
+          <table width="100%" style="font-size:13px;color:#aaa;border:1px solid #333;background:#111">
+            <tr>
+              <td style="padding:12px 14px;border-bottom:1px solid #222">Order ID</td>
+              <td align="right" style="padding:12px 14px;border-bottom:1px solid #222;color:#fff;font-weight:700;font-family:ui-monospace,Consolas,monospace">{order_id or "—"}</td>
+            </tr>
+            <tr>
+              <td style="padding:12px 14px;border-bottom:1px solid #222">Payment ID</td>
+              <td align="right" style="padding:12px 14px;border-bottom:1px solid #222;color:#fff;font-weight:700;font-family:ui-monospace,Consolas,monospace;word-break:break-all">{payment_id or "—"}</td>
+            </tr>
+            <tr>
+              <td style="padding:12px 14px;border-bottom:1px solid #222">Date (UTC)</td>
+              <td align="right" style="padding:12px 14px;border-bottom:1px solid #222;color:#fff">{created or "—"}</td>
+            </tr>
+            <tr>
+              <td style="padding:12px 14px;border-bottom:1px solid #222">Customer email</td>
+              <td align="right" style="padding:12px 14px;border-bottom:1px solid #222;color:#fff">{email}</td>
+            </tr>
+            <tr>
+              <td style="padding:12px 14px">Payment method</td>
+              <td align="right" style="padding:12px 14px;color:#fff">{method} · {escape(currency)} · {provider}</td>
+            </tr>
           </table>
         </td></tr>
         <tr><td style="padding:0 28px">
@@ -191,9 +372,14 @@ def build_invoice_content(order: dict[str, Any]) -> tuple[str, str, str]:
           </table>
         </td></tr>
         <tr><td style="padding:8px 28px 28px">
+          <p style="margin:0 0 10px;color:#888;font-size:12px;line-height:1.55">
+            <strong style="color:#ccc">Rules:</strong> Do not change username, password, billing address, or subscription.
+            Breaking rules voids refunds. Refunds only if the product is defective or not delivered.
+          </p>
           <p style="margin:0;color:#888;font-size:12px;line-height:1.55">
-            Redeem codes on the official service. Save this email. Not affiliated with listed brands.
-            If something is wrong, reply with order <strong style="color:#fff">{order_id}</strong>.
+            Save this email. Not affiliated with listed brands.
+            Support: reply with <strong style="color:#fff">Order ID {order_id or "—"}</strong>
+            / <strong style="color:#fff">Payment ID {payment_id or "—"}</strong>.
           </p>
         </td></tr>
       </table>

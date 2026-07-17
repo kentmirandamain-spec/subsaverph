@@ -580,7 +580,8 @@ def _email_invoice_for_order(order: dict) -> dict:
     )
     if result.get("ok"):
         order["message"] = (
-            "Payment confirmed. Codes delivered on-site and emailed to you."
+            "Payment confirmed. Login details delivered on-site and emailed "
+            f"to {order.get('email') or 'you'} (Order ID + Payment ID included)."
         )
     elif result.get("skipped"):
         order["message"] = (
@@ -644,10 +645,19 @@ def fulfill_order(
                 "id": pid,
                 "name": deal.get("name"),
                 "monogram": deal.get("monogram"),
+                "brand": deal.get("brand"),
+                "category": deal.get("category"),
                 "qty": qty,
                 "price": deal.get("price"),
                 "priceBase": deal.get("priceBase", "USD"),
                 "duration": deal.get("duration"),
+                "delivery": deal.get("delivery"),
+                "description": deal.get("description"),
+                "accountType": deal.get("accountType"),
+                "validity": deal.get("validity"),
+                "howToRedeem": deal.get("howToRedeem"),
+                "importantNotes": deal.get("importantNotes"),
+                "finePrint": deal.get("finePrint"),
                 "codes": code_strings,
                 "credentials": creds,
             }
