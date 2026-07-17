@@ -504,7 +504,7 @@ function applySiteChrome() {
   setText("#footerBrand", s.footerBrand || s.siteName || "SubSaverPH");
   setText("#footerServiceArea", c("footer_service_area", "footerServiceArea"));
   setText("#footerWebsiteLabel", s.footerWebsite || "subsaverph.com");
-  setText("#footerSupportLabel", s.footerSupport || s.supportEmail || "support@subsaverph.com");
+  const support = s.footerSupport || s.supportEmail || "support@subsaverph.com";
   setText("#footerBusinessType", c("footer_business_type", "footerBusinessType"));
   setText("#footerDisclaimer", c("footer_disclaimer", "footerDisclaimer"));
   const year = new Date().getFullYear();
@@ -512,11 +512,14 @@ function applySiteChrome() {
   document.querySelectorAll(".footer-meta li span[data-i18n-meta]").forEach((span) => {
     span.textContent = t(span.getAttribute("data-i18n-meta"));
   });
-  if (s.supportEmail) {
-    document.querySelectorAll("a[data-support-email]").forEach((a) => {
-      a.href = `mailto:${s.supportEmail}`;
-    });
+  // Footer support: clickable mailto + visible address
+  const supportLabel = document.querySelector("#footerSupportLabel");
+  if (supportLabel) {
+    supportLabel.innerHTML = `<a href="mailto:${escapeAttr(support)}" data-support-email>${escapeHtml(support)}</a>`;
   }
+  document.querySelectorAll("a[data-support-email]").forEach((a) => {
+    a.href = `mailto:${support}`;
+  });
 }
 
 function heroTitleHtml() {
@@ -852,6 +855,7 @@ function viewLegalShell(eyebrow, title, updated, bodyHtml) {
         </div>
         <div class="legal-nav">
           <a href="#/about">${escapeHtml(t("footer_about"))}</a>
+          <a href="#/support">Support</a>
           <a href="#/terms">${escapeHtml(t("footer_terms"))}</a>
           <a href="#/privacy">${escapeHtml(t("footer_privacy"))}</a>
           <a href="#/home">${escapeHtml(t("back_to_home"))}</a>
@@ -888,6 +892,51 @@ function viewPrivacy() {
     escapeHtml(c("privacy_updated", "privacyUpdated")),
     body
   );
+}
+
+function supportEmailAddress() {
+  const s = siteSettings();
+  return (s.supportEmail || s.footerSupport || "support@subsaverph.com").trim();
+}
+
+function viewSupport() {
+  const email = supportEmailAddress();
+  const subject = encodeURIComponent("SubSaverPH support request");
+  const body = encodeURIComponent(
+    "Hi SubSaverPH Support,\n\nOrder ID (if any):\nProblem:\n\nThank you."
+  );
+  const mailto = `mailto:${email}?subject=${subject}&body=${body}`;
+  return `
+    <div class="page">
+      <div class="page-inner support-page">
+        <p class="eyebrow">Help</p>
+        <h1 class="page-title">Customer support</h1>
+        <p class="muted" style="max-width:36rem;line-height:1.55">
+          Having a problem with your order, login, or delivery? Email us and we will help.
+          Include your <strong style="color:var(--text)">Order ID</strong> or Payment ID when you have one.
+        </p>
+        <div class="support-card">
+          <p class="eyebrow" style="margin:0 0 8px">Support email</p>
+          <a class="support-email-link" href="${escapeAttr(mailto)}">${escapeHtml(email)}</a>
+          <p class="muted" style="margin:14px 0 0;font-size:0.9rem;line-height:1.5">
+            Tap the address to open your email app. We use this inbox for order help, defective products, and delivery issues.
+          </p>
+          <div class="cta" style="margin-top:18px">
+            <a class="btn solid" href="${escapeAttr(mailto)}">Email support</a>
+            <a class="btn" href="#/deals">Back to deals</a>
+          </div>
+        </div>
+        <div class="note" style="margin-top:22px">
+          <h3 style="margin-top:0">Before you write</h3>
+          <ul class="muted" style="margin:8px 0 0;padding-left:1.2rem;line-height:1.55">
+            <li>Include your Order ID from the success page or payment email.</li>
+            <li>Describe what is wrong (e.g. login failed, code missing, wrong product).</li>
+            <li>Do not change username, password, billing, or subscription on shared accounts — that voids support.</li>
+            <li>Refunds only if the product is defective or not delivered.</li>
+          </ul>
+        </div>
+      </div>
+    </div>`;
 }
 
 function paymentMethodsList() {
@@ -1385,6 +1434,11 @@ function viewSuccess() {
         </div>
 
         <p class="muted" style="font-size:0.8rem;margin-top:16px">Save these credentials now. Redeem / sign in on the official service. Not affiliated with listed brands.</p>
+        <div class="support-inline">
+          <p class="muted" style="margin:0;font-size:0.9rem">Problem with this order?</p>
+          <a class="btn" href="mailto:${escapeAttr(supportEmailAddress())}?subject=${encodeURIComponent("Order help " + (order.id || ""))}&body=${encodeURIComponent("Order ID: " + (order.id || "") + "\nPayment ID: " + (order.providerRef || order.stripeSessionId || "") + "\n\nProblem:\n")}">Email ${escapeHtml(supportEmailAddress())}</a>
+          <a class="btn ghost" href="#/support">Support page</a>
+        </div>
         <div class="cta" style="justify-content:center;margin-top:22px">
           <a class="btn solid" href="#/deals">More deals</a>
           <a class="btn" href="#/home">Home</a>
@@ -1617,6 +1671,10 @@ function render() {
       break;
     case "privacy":
       html = viewPrivacy();
+      break;
+    case "support":
+    case "contact":
+      html = viewSupport();
       break;
     case "checkout":
       html = viewCheckout();

@@ -1,126 +1,102 @@
-# Create a real support@subsaverph.com
+# Support email: support@subsaverph.com
 
-You **cannot** create `support@subsaverph.com` while the site only lives on  
-`subsaverph.onrender.com`. Email addresses after the `@` need a **domain you own**.
-
-| Piece | What it is | Cost |
-|--------|------------|------|
-| Domain `subsaverph.com` | You own the name | ~$8–15 / year |
-| Mailbox / routing | Receives mail to support@… | Free options exist |
-| Sending (orders / replies) | Outbound mail as support@… | Free tier possible |
-
----
-
-## Recommended path (cheapest real setup)
-
-### Step 1 — Buy the domain
-
-Buy **subsaverph.com** (or `.shop` / `.ph` if `.com` is taken):
-
-- [Cloudflare Registrar](https://dash.cloudflare.com/) (often best price + easy DNS)
-- [Porkbun](https://porkbun.com/)
-- [Namecheap](https://www.namecheap.com/)
-
-After purchase, **add the domain to Cloudflare** (free plan) and set the nameservers Cloudflare shows you.
-
-### Step 2 — Create support@ with Cloudflare Email Routing (free)
-
-This gives you a **real** address that **forwards** to your personal Gmail (or any inbox).
-
-1. Cloudflare dashboard → select **subsaverph.com**
-2. Left menu → **Email** → **Email Routing**
-3. Click **Get started** / **Enable Email Routing**
-4. Add destination address = **your real Gmail** (e.g. `you@gmail.com`)  
-   → confirm the verification email Cloudflare sends
-5. **Routing rules** → **Create address**:
-   - Custom address: `support`
-   - Action: **Send to** → your Gmail
-6. Save
-
-You now receive mail sent to:
+Your store already shows this address to customers:
 
 ```text
 support@subsaverph.com
 ```
 
-in your Gmail inbox.
+| Where | Link |
+|--------|------|
+| Support page | https://subsaverph.com/#/support |
+| Footer | “Contact support” + email |
+| After purchase | “Email support” with Order ID filled in |
+| Checkout rules | Mentions support email |
 
-### Step 3 — Reply / send as support@subsaverph.com (optional but useful)
+**Creating the mailbox** is done in Cloudflare (or another host) — the website cannot invent a real inbox by itself.
 
-#### A) Gmail “Send mail as” (good for manual support replies)
+---
 
-1. Gmail → ⚙️ → **See all settings** → **Accounts and Import**
-2. **Send mail as** → **Add another email address**
-3. Name: `SubSaverPH Support`  
-   Email: `support@subsaverph.com`
-4. SMTP (Cloudflare does not provide SMTP for routing-only).  
-   Use one of:
-   - **Resend SMTP** (after domain verify) — see Step 4  
-   - Or a free Zoho Mail mailbox on the domain
+## Create the inbox (free) — Cloudflare Email Routing
 
-#### B) Zoho Mail free plan (real mailbox on your domain)
+You already own **subsaverph.com**. Do this once:
 
-1. https://www.zoho.com/mail/zohomail-pricing.html → free forever (limited users)
-2. Add domain `subsaverph.com`, verify DNS (MX records)
-3. Create user `support@subsaverph.com`
-4. Use Zoho webmail or Gmail “Send mail as” with Zoho SMTP
+### 1. Enable Email Routing
 
-### Step 4 — Site order emails (Resend + your domain)
+1. Open [Cloudflare Dashboard](https://dash.cloudflare.com/)  
+2. Select domain **subsaverph.com**  
+3. Left menu → **Email** → **Email Routing**  
+4. Click **Get started** / **Enable Email Routing**  
+5. Cloudflare will add the required **MX** DNS records (accept if asked)
 
-So customers get invoices **from** SubSaverPH:
+### 2. Add your personal inbox as destination
 
-1. https://resend.com → sign up  
-2. **Domains** → add `subsaverph.com` → add the DNS records Resend shows (in Cloudflare DNS)  
-3. Create API key  
-4. On **Render** → your web service → **Environment**:
+1. **Destination addresses** → **Add**  
+2. Enter your real Gmail (or Outlook), e.g. `you@gmail.com`  
+3. Open Gmail and **confirm** the verification link from Cloudflare  
+
+### 3. Create the public address
+
+1. **Routing rules** → **Create address**  
+2. Custom address: `support`  
+   → full address becomes **support@subsaverph.com**  
+3. Action: **Send to** → your Gmail  
+4. Save  
+
+### 4. Test
+
+From a **different** email account, send a message to:
+
+```text
+support@subsaverph.com
+```
+
+It should arrive in your Gmail within a minute (check spam).
+
+---
+
+## Optional: reply *as* support@subsaverph.com
+
+Cloudflare Email Routing only **receives** mail. To **send** from support@:
+
+### Option A — Resend (recommended with your order emails)
+
+1. Resend → **Domains** → add `subsaverph.com` → add DNS records  
+2. Render → Environment:
 
 | Key | Value |
 |-----|--------|
-| `RESEND_API_KEY` | `re_...` |
 | `MAIL_FROM` | `SubSaverPH <support@subsaverph.com>` |
-| `MAIL_FROM_NAME` | `SubSaverPH` |
 | `MAIL_REPLY_TO` | `support@subsaverph.com` |
+| `ORDER_NOTIFY_EMAIL` | your Gmail (BCC of every order) |
+| `RESEND_API_KEY` | your `re_...` key |
 
-5. Redeploy Render  
-6. Check: https://subsaverph.onrender.com/api/health → `"emailConfigured": true`
+Customers can reply to order emails and it goes to support@.
 
----
+### Option B — Zoho Mail free
 
-## Point website at the domain (optional, recommended)
-
-After you own `subsaverph.com`:
-
-1. Render → service → **Custom Domains** → add `subsaverph.com` and `www`
-2. Cloudflare DNS → CNAME/A records Render gives you  
-3. Site becomes `https://subsaverph.com` (better for trust + Google)
+Create a real mailbox `support@subsaverph.com` on Zoho (domain MX must point to Zoho — conflicts with Cloudflare Routing; pick one approach).
 
 ---
 
-## What I can do in the project for you
+## Site settings (already set)
 
-Already on the site: links/text use `support@subsaverph.com`.
+Admin → **Site content**:
 
-After **you** finish Steps 1–2 (domain + routing), tell me:
-
-1. Domain is purchased: `subsaverph.com` (or the name you bought)  
-2. Your personal Gmail that should receive support mail  
-
-Then I can:
-
-- Confirm DNS / Email Routing checklist with you  
-- Wire Resend env vars instructions for Render  
-- Update the live site domain in SEO/footer if you switch off `.onrender.com`
+| Field | Value |
+|-------|--------|
+| Support email | `support@subsaverph.com` |
+| Footer support | `support@subsaverph.com` |
 
 ---
 
 ## Checklist
 
-- [ ] Domain purchased  
-- [ ] Domain on Cloudflare (nameservers active)  
-- [ ] Email Routing enabled  
-- [ ] `support@…` → your Gmail  
-- [ ] Test: send email TO support@ from another account  
-- [ ] (Optional) Resend domain verified for outbound  
-- [ ] (Optional) Custom domain on Render  
+- [ ] Cloudflare Email Routing enabled  
+- [ ] Destination Gmail verified  
+- [ ] Rule: `support@subsaverph.com` → Gmail  
+- [ ] Test email received  
+- [ ] Render: `MAIL_REPLY_TO=support@subsaverph.com`  
+- [ ] Open https://subsaverph.com/#/support — address looks correct  
 
-**I cannot create the address from this PC alone** — registrars and Cloudflare need your account and (for the domain) a payment. Follow Steps 1–2 above; when the domain is yours, we finish the rest together.
+When routing works, customers email **support@subsaverph.com** and you answer from Gmail.
