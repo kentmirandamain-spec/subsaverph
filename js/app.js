@@ -59,6 +59,7 @@ const state = {
   xenditEnabled: false,
   paypalEnabled: false,
   cryptoEnabled: false,
+  liqpayEnabled: false,
   ewalletProvider: "demo",
   paymentMethods: [],
 };
@@ -838,6 +839,7 @@ function paymentMethodsList() {
         { id: "shopeepay", label: "ShopeePay", desc: "Pay with ShopeePay (PHP)", group: "ewallet" },
         { id: "paypal", label: "PayPal", desc: "Pay with PayPal balance or linked card", group: "other" },
         { id: "crypto", label: "Crypto", desc: "USDT, BTC, ETH & more", group: "other" },
+        { id: "liqpay", label: "LiqPay", desc: "Card & wallets via LiqPay", group: "other" },
         { id: "demo", label: "Demo", desc: "Test without real money", group: "other" },
       ];
   return list;
@@ -857,6 +859,9 @@ function payButtonLabel(method) {
   if (method === "crypto") {
     return state.cryptoEnabled ? "Continue to crypto pay" : "Pay with crypto (demo)";
   }
+  if (method === "liqpay") {
+    return state.liqpayEnabled ? "Continue to LiqPay" : "Pay with LiqPay (demo)";
+  }
   return "Continue to pay";
 }
 
@@ -874,6 +879,7 @@ function viewCheckout() {
   const xenditOn = !!state.xenditEnabled;
   const paypalOn = !!state.paypalEnabled || methods.some((m) => m.id === "paypal");
   const cryptoOn = !!state.cryptoEnabled || methods.some((m) => m.id === "crypto");
+  const liqpayOn = !!state.liqpayEnabled || methods.some((m) => m.id === "liqpay");
   const ewalletBackend = state.ewalletProvider || (paymongoOn ? "paymongo" : xenditOn ? "xendit" : "demo");
   const isTestKey = String(state.stripePublishableKey || "").startsWith("pk_test_");
   const hasEwallet = methods.some((m) => PH_EWALLETS.has(m.id));
@@ -959,6 +965,18 @@ function viewCheckout() {
               state.cryptoEnabled
                 ? "NOWPayments is configured (USDT, BTC, ETH, etc.). Pay on the hosted crypto page, then return for codes."
                 : "shown in demo mode until you set NOWPAYMENTS_API_KEY (see CRYPTO-SETUP.md)."
+            }
+          </p>`
+              : ""
+          }
+          ${
+            liqpayOn
+              ? `<p class="muted" style="margin:8px 0 0;font-size:0.8rem;text-transform:none;letter-spacing:0;font-weight:400">
+            <strong style="color:var(--text)">LiqPay</strong> —
+            ${
+              state.liqpayEnabled
+                ? "LiqPay is configured for card/wallet checkout."
+                : "demo until you set LIQPAY_PUBLIC_KEY + LIQPAY_PRIVATE_KEY (see LIQPAY-SETUP.md)."
             }
           </p>`
               : ""
@@ -1599,6 +1617,7 @@ async function loadLiveCatalog() {
     state.xenditEnabled = !!data.xenditEnabled;
     state.paypalEnabled = !!data.paypalEnabled;
     state.cryptoEnabled = !!data.cryptoEnabled;
+    state.liqpayEnabled = !!data.liqpayEnabled;
     state.ewalletProvider = data.ewalletProvider || "demo";
     state.paymentMethods = Array.isArray(data.paymentMethods)
       ? data.paymentMethods

@@ -309,6 +309,7 @@ def health():
             "paypalConfigured": paypal_configured(),
             "paypalMode": paypal_credentials()[2] if paypal_configured() else None,
             "cryptoConfigured": crypto_configured(),
+            "liqpayConfigured": liqpay_configured(),
             "ewalletProvider": ewallet_provider(),
             # Add this IP in NOWPayments → Settings → Payments → IP addresses
             "outboundIp": outbound,
@@ -391,6 +392,7 @@ def api_catalog():
             "xenditEnabled": xendit_configured(),
             "paypalEnabled": paypal_configured(),
             "cryptoEnabled": crypto_configured(),
+            "liqpayEnabled": liqpay_configured(),
             "ewalletProvider": ewallet_provider(),
             "paymentMethods": available_payment_methods(),
         }
@@ -668,6 +670,50 @@ def crypto_configured() -> bool:
     )
 
 
+def liqpay_configured() -> bool:
+    pub = (os.environ.get("LIQPAY_PUBLIC_KEY") or "").strip().strip('"').strip("'")
+    priv = (os.environ.get("LIQPAY_PRIVATE_KEY") or "").strip().strip('"').strip("'")
+    return bool(pub and priv)
+
+
+def liqpay_keys() -> tuple[str, str]:
+    pub = (os.environ.get("LIQPAY_PUBLIC_KEY") or "").strip().strip('"').strip("'")
+    priv = (os.environ.get("LIQPAY_PRIVATE_KEY") or "").strip().strip('"').strip("'")
+    return pub, priv
+
+
+def liqpay_encode(params: dict, private_key: str) -> tuple[str, str]:
+    """Return (data_b64, signature_b64) for LiqPay Checkout API."""
+    import base64
+    import hashlib
+
+    data_json = json.dumps(params, ensure_ascii=False, separators=(",", ":"))
+    data_b64 = base64.b64encode(data_json.encode("utf-8")).decode("ascii")
+    sign_str = f"{private_key}{data_b64}{private_key}"
+    signature = base64.b64encode(hashlib.sha1(sign_str.encode("utf-8")).digest()).decode(
+        "ascii"
+    )
+    return data_b64, signature
+
+
+def liqpay_decode_callback(data_b64: str, signature: str, private_key: str) -> dict | None:
+    """Verify signature and decode LiqPay callback data. Returns dict or None if invalid."""
+    import base64
+    import hashlib
+
+    if not data_b64 or not signature:
+        return None
+    sign_str = f"{private_key}{data_b64}{private_key}"
+    expected = base64.b64encode(hashlib.sha1(sign_str.encode("utf-8")).digest()).decode(
+        "ascii"
+    )
+    if expected != signature:
+        return None
+    try:
+        raw = base64.b64decode(data_b64.encode("ascii")).decode("utf-8")
+        return json.loads(raw)
+    except Exception:
+        return None
 
 
 def _nowpayments_http(method: str, url: str, *, api_key: str, json_body=None, timeout: int = 30):
@@ -794,6 +840,7 @@ def available_payment_methods() -> list:
     has_xendit = xendit_configured()
     has_paypal = paypal_configured()
     has_crypto = crypto_configured()
+    has_liqpay = liqpay_configured()
     ewallet_prov = ewallet_provider()
     any_live = (
         (has_stripe and show_stripe)
@@ -801,6 +848,7 @@ def available_payment_methods() -> list:
         or has_xendit
         or has_paypal
         or has_crypto
+        or has_liqpay
     )
     demo_only = not any_live
 
@@ -935,6 +983,20 @@ def available_payment_methods() -> list:
         }
     )
 
+    # LiqPay — cards / wallets via LiqPay hosted page
+    methods.append(
+        {
+            "id": "liqpay",
+            "label": "LiqPay",
+            "provider": "liqpay" if has_liqpay else "demo",
+            "desc": (
+                "Card & wallets via LiqPay"
+                if has_liqpay
+                else "LiqPay (demo — set LIQPAY_PUBLIC_KEY + LIQPAY_PRIVATE_KEY)"
+            ),
+            "group": "other",
+        }
+    )
 
     # Deduplicate by id keeping first
     seen = set()
@@ -998,7 +1060,7 @@ def payments_config():
 def api_checkout_start():
     """
     Unified checkout start.
-    method: card | gcash | paymaya | grab_pay | shopeepay | xendit | paypal | crypto | demo
+    method: card | gcash | paymaya | grab_pay | shopeepay | xendit | paypal | crypto | liqpay | demo
     Returns { url } for redirect providers, or { order } for demo.
     """
     data = request.get_json(silent=True) or {}
@@ -1068,9 +1130,207 @@ def api_checkout_start():
     if method == "crypto" and provider == "nowpayments":
         return _crypto_checkout(email, name, normalized, cart_meta, base)
 
+    # ---- LiqPay ----
+    if method == "liqpay" and provider == "liqpay":
+        return _liqpay_checkout(email, name, currency, normalized, cart_meta, base)
 
     return jsonify({"error": "Payment method not configured on server"}), 503
 
+
+def _liqpay_checkout(email, name, currency, normalized, cart_meta, base):
+    """Create LiqPay checkout payload; client redirected via auto-POST form page."""
+    public_key, private_key = liqpay_keys()
+    if not public_key or not private_key:
+        return jsonify({"error": "LIQPAY_PUBLIC_KEY / LIQPAY_PRIVATE_KEY not set"}), 503
+
+    pay_currency = (currency or "USD").upper()
+    if pay_currency not in {"UAH", "USD", "EUR"}:
+        pay_currency = "USD"
+    if pay_currency == "USD":
+        amount = cart_total_usd(normalized)
+    elif pay_currency == "EUR":
+        amount = round(cart_total_usd(normalized) * 0.92, 2)
+    else:
+        amount = round(cart_total_usd(normalized) * 41.0, 2)
+
+    if amount < 0.5:
+        return jsonify({"error": "Order total too low for LiqPay"}), 400
+
+    ref = f"lq_{uuid.uuid4().hex[:16]}"
+    params = {
+        "public_key": public_key,
+        "version": "3",
+        "action": "pay",
+        "amount": f"{amount:.2f}",
+        "currency": pay_currency,
+        "description": f"SubSaverPH order for {email}",
+        "order_id": ref,
+        "result_url": f"{base}/api/checkout/liqpay/return?ref={ref}",
+        "server_url": f"{base}/api/webhooks/liqpay",
+        "language": "en",
+        "info": name or email,
+        "customer": email,
+    }
+    data_b64, signature = liqpay_encode(params, private_key)
+
+    pending = read_json(STORE / "pending_payments.json", {})
+    pending[ref] = {
+        "email": email,
+        "name": name,
+        "cart": cart_meta,
+        "method": "liqpay",
+        "provider": "liqpay",
+        "currency": pay_currency,
+        "amount": amount,
+        "liqpayData": data_b64,
+        "liqpaySignature": signature,
+        "createdAt": __import__("datetime").datetime.utcnow().isoformat() + "Z",
+    }
+    write_json(STORE / "pending_payments.json", pending)
+
+    return jsonify(
+        {
+            "ok": True,
+            "provider": "liqpay",
+            "method": "liqpay",
+            "url": f"{base}/api/checkout/liqpay/go?ref={ref}",
+            "ref": ref,
+        }
+    )
+
+
+@app.get("/api/checkout/liqpay/go")
+def liqpay_go():
+    """Auto-submit HTML form to LiqPay hosted checkout."""
+    ref = (request.args.get("ref") or "").strip()
+    if not ref:
+        return "Missing ref", 400
+    pending_all = read_json(STORE / "pending_payments.json", {})
+    pending = pending_all.get(ref) or {}
+    data_b64 = pending.get("liqpayData")
+    signature = pending.get("liqpaySignature")
+    if not data_b64 or not signature:
+        return "Unknown or expired LiqPay session", 404
+
+    def esc(s: str) -> str:
+        return (
+            str(s)
+            .replace("&", "&amp;")
+            .replace('"', "&quot;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+        )
+
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Redirecting to LiqPay…</title>
+  <style>
+    body {{ font-family: system-ui, sans-serif; background:#000; color:#fff;
+      display:flex; align-items:center; justify-content:center; min-height:100vh; margin:0; }}
+    p {{ opacity:0.8; }}
+  </style>
+</head>
+<body>
+  <div>
+    <p>Redirecting to LiqPay secure checkout…</p>
+    <form id="liqpay" method="POST" action="https://www.liqpay.ua/api/3/checkout" accept-charset="utf-8">
+      <input type="hidden" name="data" value="{esc(data_b64)}" />
+      <input type="hidden" name="signature" value="{esc(signature)}" />
+      <noscript><button type="submit">Continue to LiqPay</button></noscript>
+    </form>
+  </div>
+  <script>document.getElementById("liqpay").submit();</script>
+</body>
+</html>"""
+    return make_response(html)
+
+
+@app.get("/api/checkout/liqpay/return")
+def liqpay_return():
+    """Customer browser return after LiqPay payment page."""
+    ref = (request.args.get("ref") or "").strip()
+    base = public_base_url()
+    if not ref:
+        return redirect(f"{base}/#/checkout?cancelled=1")
+    return redirect(f"{base}/#/success?provider=liqpay&ref={ref}")
+
+
+@app.route("/api/webhooks/liqpay", methods=["GET", "POST"])
+def liqpay_webhook():
+    """LiqPay server_url callback (payment status)."""
+    if request.method == "GET":
+        return jsonify(
+            {
+                "ok": True,
+                "webhook": "liqpay",
+                "message": "LiqPay server_url ready",
+                "url": f"{public_base_url()}/api/webhooks/liqpay",
+            }
+        )
+
+    data_b64 = request.form.get("data") or (request.get_json(silent=True) or {}).get("data")
+    signature = request.form.get("signature") or (request.get_json(silent=True) or {}).get(
+        "signature"
+    )
+    _public_key, private_key = liqpay_keys()
+    if not private_key:
+        return jsonify({"ok": False, "error": "liqpay_not_configured"}), 503
+
+    payload = liqpay_decode_callback(str(data_b64 or ""), str(signature or ""), private_key)
+    if not payload:
+        if os.environ.get("LIQPAY_TRUST_UNSIGNED", "0") == "1" and data_b64:
+            try:
+                import base64
+
+                payload = json.loads(base64.b64decode(str(data_b64)).decode("utf-8"))
+            except Exception:
+                return jsonify({"ok": False, "error": "bad_signature"}), 401
+        else:
+            return jsonify({"ok": False, "error": "bad_signature"}), 401
+
+    status = str(payload.get("status") or "").lower()
+    order_id = str(payload.get("order_id") or "").strip()
+    paid_ok = status in (
+        "success",
+        "sandbox",
+        "wait_accept",
+        "wait_secure",
+        "subscribed",
+    )
+    if not paid_ok:
+        return jsonify({"ok": True, "skipped": status, "order_id": order_id})
+
+    if not order_id:
+        return jsonify({"ok": True, "skipped": "no_order_id"})
+
+    for existing in load_orders():
+        if existing.get("providerRef") == order_id:
+            return jsonify({"ok": True, "duplicate": True})
+
+    pending_all = read_json(STORE / "pending_payments.json", {})
+    pending = pending_all.get(order_id)
+    if not pending:
+        return jsonify({"ok": True, "skipped": "unknown_order", "order_id": order_id})
+
+    try:
+        fulfill_order(
+            email=pending.get("email") or payload.get("sender_email") or "",
+            name=pending.get("name") or "",
+            currency=pending.get("currency") or payload.get("currency") or "USD",
+            items=pending.get("cart") or [],
+            payment_mode_name="liqpay",
+            method="liqpay",
+            provider_ref=order_id,
+        )
+        pending_all.pop(order_id, None)
+        write_json(STORE / "pending_payments.json", pending_all)
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 409
+
+    return jsonify({"ok": True, "fulfilled": True, "order_id": order_id, "status": status})
 
 
 def _stripe_session(email, name, currency, items, normalized, base):
@@ -1712,6 +1972,14 @@ def api_checkout_complete():
         ok = _crypto_paid(pending)
         if not ok:
             return jsonify({"error": "Crypto payment not confirmed yet"}), 402
+    elif provider == "liqpay" or pending.get("provider") == "liqpay":
+        # Prefer server_url webhook; allow return if already fulfilled or soft trust
+        if os.environ.get("LIQPAY_TRUST_RETURN", "1") != "1":
+            return jsonify(
+                {
+                    "error": "Waiting for LiqPay callback. Refresh in a few seconds.",
+                }
+            ), 402
 
     try:
         order = fulfill_order(
