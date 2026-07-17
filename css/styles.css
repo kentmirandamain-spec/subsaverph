@@ -376,106 +376,222 @@ body {
 /* ---------- Shooting stars (sporadic streaks) ---------- */
 .shooting-star {
   position: absolute;
+  z-index: 2;
   top: 0;
   left: 0;
-  width: 100px;
+  width: 120px;
   height: 2px;
   border-radius: 999px;
+  /* Trail fades to the left; bright head on the right */
   background: linear-gradient(
     90deg,
     rgba(255, 255, 255, 0) 0%,
-    rgba(255, 255, 255, 0.2) 25%,
-    rgba(255, 255, 255, 0.95) 85%,
-    #fff 100%
+    rgba(255, 255, 255, 0.15) 30%,
+    rgba(255, 255, 255, 0.75) 70%,
+    #ffffff 100%
   );
   box-shadow:
-    0 0 6px 1px rgba(255, 255, 255, 0.6),
-    0 0 12px 2px rgba(255, 255, 255, 0.25);
+    0 0 4px 1px rgba(255, 255, 255, 0.55),
+    0 0 14px 2px rgba(255, 255, 255, 0.2);
   opacity: 0;
   pointer-events: none;
-  transform-origin: right center;
+  /* Head is the leading edge when moving down-right after rotate */
+  transform-origin: 100% 50%;
   will-change: transform, opacity;
+  /* Keep off-screen until animation starts (fill-mode both) */
+  animation-fill-mode: both;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
 }
 
+/* Bright head of the meteor */
 .shooting-star::after {
   content: "";
   position: absolute;
-  right: -2px;
+  right: -1px;
   top: 50%;
-  width: 5px;
-  height: 5px;
-  margin-top: -2.5px;
+  width: 6px;
+  height: 6px;
+  margin-top: -3px;
   border-radius: 50%;
   background: #fff;
-  box-shadow: 0 0 8px 2px rgba(255, 255, 255, 0.9);
+  box-shadow:
+    0 0 6px 2px rgba(255, 255, 255, 0.95),
+    0 0 14px 4px rgba(255, 255, 255, 0.45);
 }
 
-/* Each star: different path, delay, and long idle between streaks */
+/* Soft secondary trail behind the streak */
+.shooting-star::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 100%;
+  height: 1px;
+  margin-top: -0.5px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.35) 55%,
+    rgba(255, 255, 255, 0.7) 100%
+  );
+  filter: blur(1px);
+}
+
+/*
+  Each star: start near top, streak southeast, idle rest of cycle.
+  Delays are short so a meteor appears within a few seconds of load.
+*/
 .ss-1 {
-  top: 12%;
-  left: 8%;
-  animation: shoot-se 9s linear infinite;
-  animation-delay: 2s;
+  top: 8%;
+  left: -5%;
+  width: 130px;
+  animation-name: shoot-se-a;
+  animation-duration: 6.5s;
+  animation-delay: 0.6s;
 }
 
 .ss-2 {
-  top: 22%;
-  left: 55%;
-  width: 80px;
-  animation: shoot-se 11s linear infinite;
-  animation-delay: 7s;
+  top: 18%;
+  left: 25%;
+  width: 100px;
+  animation-name: shoot-se-b;
+  animation-duration: 7.5s;
+  animation-delay: 2.8s;
 }
 
 .ss-3 {
-  top: 8%;
-  left: 30%;
-  width: 120px;
-  animation: shoot-se 13s linear infinite;
-  animation-delay: 14s;
+  top: 5%;
+  left: 45%;
+  width: 140px;
+  animation-name: shoot-se-a;
+  animation-duration: 8s;
+  animation-delay: 4.5s;
 }
 
 .ss-4 {
-  top: 40%;
-  left: 15%;
-  width: 70px;
-  animation: shoot-se 10s linear infinite;
-  animation-delay: 21s;
+  top: 32%;
+  left: -2%;
+  width: 90px;
+  animation-name: shoot-se-c;
+  animation-duration: 7s;
+  animation-delay: 1.5s;
 }
 
 .ss-5 {
-  top: 18%;
-  left: 70%;
-  width: 90px;
-  animation: shoot-se 12s linear infinite;
-  animation-delay: 28s;
+  top: 12%;
+  left: 60%;
+  width: 110px;
+  animation-name: shoot-se-b;
+  animation-duration: 9s;
+  animation-delay: 5.5s;
 }
 
-/* Diagonal down-right streak; visible only briefly at the start of each cycle */
-@keyframes shoot-se {
+/*
+  Path uses translate then rotate so motion is true screen-diagonal
+  (down-right). Visible window ~0–12% of each cycle; rest is idle.
+*/
+@keyframes shoot-se-a {
   0% {
     opacity: 0;
-    transform: rotate(32deg) translate3d(0, 0, 0) scaleX(0.3);
+    transform: translate3d(0, 0, 0) rotate(28deg) scaleX(0.25);
   }
-  2% {
+  1% {
     opacity: 1;
+    transform: translate3d(2vw, 1.5vh, 0) rotate(28deg) scaleX(0.55);
   }
   8% {
     opacity: 1;
-    transform: rotate(32deg) translate3d(55vw, 38vh, 0) scaleX(1);
+    transform: translate3d(48vw, 36vh, 0) rotate(28deg) scaleX(1);
   }
-  10% {
+  12% {
     opacity: 0;
-    transform: rotate(32deg) translate3d(70vw, 48vh, 0) scaleX(0.6);
+    transform: translate3d(62vw, 46vh, 0) rotate(28deg) scaleX(0.45);
   }
+  12.01%,
   100% {
     opacity: 0;
-    transform: rotate(32deg) translate3d(70vw, 48vh, 0) scaleX(0.3);
+    transform: translate3d(62vw, 46vh, 0) rotate(28deg) scaleX(0.25);
   }
 }
 
+@keyframes shoot-se-b {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) rotate(38deg) scaleX(0.2);
+  }
+  1% {
+    opacity: 1;
+    transform: translate3d(1.5vw, 1.5vh, 0) rotate(38deg) scaleX(0.5);
+  }
+  7% {
+    opacity: 1;
+    transform: translate3d(36vw, 40vh, 0) rotate(38deg) scaleX(1);
+  }
+  11% {
+    opacity: 0;
+    transform: translate3d(48vw, 52vh, 0) rotate(38deg) scaleX(0.4);
+  }
+  11.01%,
+  100% {
+    opacity: 0;
+    transform: translate3d(48vw, 52vh, 0) rotate(38deg) scaleX(0.2);
+  }
+}
+
+@keyframes shoot-se-c {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) rotate(22deg) scaleX(0.2);
+  }
+  1% {
+    opacity: 1;
+    transform: translate3d(2vw, 1vh, 0) rotate(22deg) scaleX(0.5);
+  }
+  9% {
+    opacity: 1;
+    transform: translate3d(55vw, 28vh, 0) rotate(22deg) scaleX(1);
+  }
+  13% {
+    opacity: 0;
+    transform: translate3d(70vw, 36vh, 0) rotate(22deg) scaleX(0.4);
+  }
+  13.01%,
+  100% {
+    opacity: 0;
+    transform: translate3d(70vw, 36vh, 0) rotate(22deg) scaleX(0.2);
+  }
+}
+
+/* Light theme: dim streaks so they still read on a pale sky */
 html[data-theme="light"] .shooting-star {
-  opacity: 0 !important;
-  animation: none !important;
+  background: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0) 0%,
+    rgba(30, 30, 30, 0.12) 30%,
+    rgba(20, 20, 20, 0.45) 70%,
+    rgba(0, 0, 0, 0.7) 100%
+  );
+  box-shadow:
+    0 0 4px 1px rgba(0, 0, 0, 0.15),
+    0 0 10px 2px rgba(0, 0, 0, 0.08);
+}
+
+html[data-theme="light"] .shooting-star::after {
+  background: #222;
+  box-shadow:
+    0 0 4px 1px rgba(0, 0, 0, 0.35),
+    0 0 8px 2px rgba(0, 0, 0, 0.15);
+}
+
+html[data-theme="light"] .shooting-star::before {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(0, 0, 0, 0.2) 55%,
+    rgba(0, 0, 0, 0.4) 100%
+  );
 }
 
 /* Content sits above galaxy — never flatten fixed chrome z-index */
