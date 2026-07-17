@@ -57,6 +57,7 @@ const state = {
   stripePublishableKey: "",
   paymongoEnabled: false,
   xenditEnabled: false,
+  paypalEnabled: false,
   ewalletProvider: "demo",
   paymentMethods: [],
 };
@@ -834,7 +835,7 @@ function paymentMethodsList() {
         { id: "paymaya", label: "Maya", desc: "Pay with Maya / PayMaya (PHP)", group: "ewallet" },
         { id: "grab_pay", label: "GrabPay", desc: "Pay with GrabPay (PHP)", group: "ewallet" },
         { id: "shopeepay", label: "ShopeePay", desc: "Pay with ShopeePay (PHP)", group: "ewallet" },
-        { id: "paypal", label: "PayPal", desc: "PayPal", group: "other" },
+        { id: "paypal", label: "PayPal", desc: "Pay with PayPal balance or linked card", group: "other" },
         { id: "crypto", label: "Crypto", desc: "USDT, BTC, ETH", group: "other" },
         { id: "demo", label: "Demo", desc: "Test without real money", group: "other" },
       ];
@@ -851,7 +852,7 @@ function payButtonLabel(method) {
   if (method === "xendit") return "Continue to Xendit";
   if (method === "card" && state.stripeEnabled) return "Continue to Stripe";
   if (method === "card" && state.xenditEnabled) return "Continue to Xendit Card";
-  if (method === "paypal") return "Continue to PayPal";
+  if (method === "paypal") return state.paypalEnabled ? "Continue to PayPal" : "Pay with PayPal (demo)";
   if (method === "crypto") return "Continue to crypto pay";
   return "Continue to pay";
 }
@@ -868,6 +869,7 @@ function viewCheckout() {
   const stripeOn = !!state.stripeEnabled;
   const paymongoOn = !!state.paymongoEnabled;
   const xenditOn = !!state.xenditEnabled;
+  const paypalOn = !!state.paypalEnabled || methods.some((m) => m.id === "paypal");
   const ewalletBackend = state.ewalletProvider || (paymongoOn ? "paymongo" : xenditOn ? "xendit" : "demo");
   const isTestKey = String(state.stripePublishableKey || "").startsWith("pk_test_");
   const hasEwallet = methods.some((m) => PH_EWALLETS.has(m.id));
@@ -910,9 +912,9 @@ function viewCheckout() {
           <strong>How payment works</strong>
           <p id="payHelpText">
             ${
-              stripeOn || paymongoOn || xenditOn
+              stripeOn || paymongoOn || xenditOn || state.paypalEnabled
                 ? "Pick a method below. You’ll be redirected to a secure payment page. Codes unlock after payment succeeds."
-                : "Demo mode — no real money. Add Xendit or PayMongo keys for real GCash / Maya / GrabPay / ShopeePay."
+                : "Demo mode — no real money. Add payment keys for live GCash / Maya / PayPal / Card."
             }
           </p>
           ${
@@ -925,6 +927,18 @@ function viewCheckout() {
               xenditOn || paymongoOn
                 ? "Gateway keys are configured."
                 : "Showing demo e-wallets until Xendit/PayMongo is configured."
+            }
+          </p>`
+              : ""
+          }
+          ${
+            paypalOn
+              ? `<p class="muted" style="margin:8px 0 0;font-size:0.8rem;text-transform:none;letter-spacing:0;font-weight:400">
+            <strong style="color:var(--text)">PayPal</strong> —
+            ${
+              state.paypalEnabled
+                ? "live PayPal Checkout is configured. You’ll approve payment on PayPal, then return here for codes."
+                : "shown in demo mode until you set PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET."
             }
           </p>`
               : ""
@@ -1563,6 +1577,7 @@ async function loadLiveCatalog() {
     state.stripePublishableKey = data.stripePublishableKey || "";
     state.paymongoEnabled = !!data.paymongoEnabled;
     state.xenditEnabled = !!data.xenditEnabled;
+    state.paypalEnabled = !!data.paypalEnabled;
     state.ewalletProvider = data.ewalletProvider || "demo";
     state.paymentMethods = Array.isArray(data.paymentMethods)
       ? data.paymentMethods

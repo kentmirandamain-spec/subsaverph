@@ -18,6 +18,7 @@ from flask import (
     Flask,
     jsonify,
     make_response,
+    redirect,
     request,
     send_from_directory,
     session,
@@ -255,6 +256,7 @@ def health():
             "stripeConfigured": stripe_configured(),
             "paymongoConfigured": paymongo_configured(),
             "xenditConfigured": xendit_configured(),
+            "paypalConfigured": paypal_configured(),
             "ewalletProvider": ewallet_provider(),
         }
     )
@@ -292,6 +294,7 @@ def api_catalog():
             "stripePublishableKey": os.environ.get("STRIPE_PUBLISHABLE_KEY") or "",
             "paymongoEnabled": paymongo_configured(),
             "xenditEnabled": xendit_configured(),
+            "paypalEnabled": paypal_configured(),
             "ewalletProvider": ewallet_provider(),
             "paymentMethods": available_payment_methods(),
         }
@@ -543,6 +546,13 @@ def xendit_configured() -> bool:
     return bool((os.environ.get("XENDIT_SECRET_KEY") or "").strip())
 
 
+def paypal_configured() -> bool:
+    return bool(
+        (os.environ.get("PAYPAL_CLIENT_ID") or "").strip()
+        and (os.environ.get("PAYPAL_CLIENT_SECRET") or "").strip()
+    )
+
+
 def ewallet_provider() -> str:
     """
     Which backend powers PH e-wallets (gcash, maya, grab_pay, shopeepay).
@@ -572,7 +582,7 @@ def available_payment_methods() -> list:
     has_stripe = bool((os.environ.get("STRIPE_SECRET_KEY") or "").strip())
     has_paymongo = paymongo_configured()
     has_xendit = xendit_configured()
-    has_paypal = bool((os.environ.get("PAYPAL_CLIENT_ID") or "").strip())
+    has_paypal = paypal_configured()
     has_crypto = bool((os.environ.get("NOWPAYMENTS_API_KEY") or "").strip())
     ewallet_prov = ewallet_provider()
     any_live = has_stripe or has_paymongo or has_xendit or has_paypal or has_crypto
@@ -680,16 +690,20 @@ def available_payment_methods() -> list:
             }
         )
 
-    if has_paypal or demo_only:
-        methods.append(
-            {
-                "id": "paypal",
-                "label": "PayPal",
-                "provider": "paypal" if has_paypal else "demo",
-                "desc": "PayPal balance or linked card" if has_paypal else "PayPal (demo)",
-                "group": "other",
-            }
-        )
+    # PayPal — always offered (live when keys set, otherwise demo checkout)
+    methods.append(
+        {
+            "id": "paypal",
+            "label": "PayPal",
+            "provider": "paypal" if has_paypal else "demo",
+            "desc": (
+                "Pay with PayPal balance or linked card"
+                if has_paypal
+                else "PayPal (demo — set PAYPAL_CLIENT_ID + SECRET for live)"
+            ),
+            "group": "other",
+        }
+    )
     if has_crypto or demo_only:
         methods.append(
             {
@@ -1195,11 +1209,32 @@ def _paypal_checkout(email, name, currency, normalized, cart_meta, base):
     except Exception as e:
         return jsonify({"error": f"PayPal auth error: {e}"}), 502
 
-    # PayPal prefers USD for digital often; convert
-    pay_currency = currency if currency in {"USD", "EUR", "GBP", "AUD", "CAD"} else "USD"
-    total = cart_total_usd(normalized) if pay_currency == "USD" else cart_total_usd(normalized)
-    value = f"{total:.2f}"
+    # PayPal supports major currencies; fall back to USD for others (e.g. PHP display)
+    pay_currency = (currency or "USD").upper()
+    if pay_currency not in {"USD", "EUR", "GBP", "AUD", "CAD", "SGD", "JPY", "PHP"}:
+        pay_currency = "USD"
+    # Always compute from USD cart total then convert for supported FX
+    total_usd = cart_total_usd(normalized)
+    rates_from_usd = {
+        "USD": 1.0,
+        "EUR": 0.92,
+        "GBP": 0.79,
+        "AUD": 1.53,
+        "CAD": 1.36,
+        "SGD": 1.34,
+        "JPY": 149.5,
+        "PHP": 56.5,
+    }
+    total = total_usd * rates_from_usd.get(pay_currency, 1.0)
+    if pay_currency == "JPY":
+        value = str(max(1, int(round(total))))
+    else:
+        value = f"{total:.2f}"
     ref = f"pp_{uuid.uuid4().hex[:16]}"
+
+    # Server-side return URL — PayPal appends ?token= which breaks hash-only return URLs
+    return_url = f"{base}/api/checkout/paypal/return?ref={ref}"
+    cancel_url = f"{base}/api/checkout/paypal/cancel"
 
     order_body = {
         "intent": "CAPTURE",
@@ -1218,8 +1253,9 @@ def _paypal_checkout(email, name, currency, normalized, cart_meta, base):
             "brand_name": "SubSaverPH",
             "landing_page": "LOGIN",
             "user_action": "PAY_NOW",
-            "return_url": f"{base}/#/success?provider=paypal&ref={ref}",
-            "cancel_url": f"{base}/#/checkout?cancelled=1",
+            "shipping_preference": "NO_SHIPPING",
+            "return_url": return_url,
+            "cancel_url": cancel_url,
         },
     }
 
@@ -1420,6 +1456,31 @@ def api_checkout_complete():
     pending_all.pop(ref, None)
     write_json(STORE / "pending_payments.json", pending_all)
     return jsonify({"ok": True, "order": order})
+
+
+@app.get("/api/checkout/paypal/return")
+def paypal_return():
+    """PayPal redirects here after approval (avoids broken hash return URLs)."""
+    ref = (request.args.get("ref") or "").strip()
+    base = public_base_url()
+    if not ref:
+        return redirect(f"{base}/#/checkout?cancelled=1")
+    # Optional: token is PayPal order id — store if missing
+    token = (request.args.get("token") or "").strip()
+    if token:
+        pending_all = read_json(STORE / "pending_payments.json", {})
+        pending = pending_all.get(ref) or {}
+        if pending and not pending.get("paypalOrderId"):
+            pending["paypalOrderId"] = token
+            pending_all[ref] = pending
+            write_json(STORE / "pending_payments.json", pending_all)
+    return redirect(f"{base}/#/success?provider=paypal&ref={ref}")
+
+
+@app.get("/api/checkout/paypal/cancel")
+def paypal_cancel():
+    base = public_base_url()
+    return redirect(f"{base}/#/checkout?cancelled=1")
 
 
 def _paypal_capture(pending: dict) -> bool:
