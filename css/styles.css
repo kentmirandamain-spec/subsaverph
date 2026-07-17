@@ -478,10 +478,48 @@ html[data-theme="light"] .shooting-star {
   animation: none !important;
 }
 
-/* Content sits above galaxy */
+/* Content sits above galaxy — never flatten fixed chrome z-index */
 body.galaxy > *:not(.galaxy-bg) {
   position: relative;
   z-index: 1;
+}
+
+/* Keep nav, drawers, overlays clickable above main content */
+body.galaxy > .nav,
+body.galaxy > header.nav {
+  position: fixed !important;
+  z-index: 1000 !important;
+}
+
+body.galaxy > .overlay {
+  position: fixed !important;
+  z-index: 2000 !important;
+}
+
+body.galaxy > .drawer {
+  position: fixed !important;
+  z-index: 2100 !important;
+}
+
+body.galaxy > .toast {
+  position: fixed !important;
+  z-index: 3000 !important;
+}
+
+.currency-picker,
+.prefs-picker {
+  position: relative;
+  z-index: 1100;
+}
+
+.fx-panel,
+.prefs-panel {
+  z-index: 1200 !important;
+}
+
+.prefs-panel:not([hidden]),
+.fx-panel:not([hidden]) {
+  display: block;
 }
 
 body.galaxy main,
@@ -574,16 +612,21 @@ img.brand-logo {
   margin: 0 auto;
 }
 
-/* NAV â€” fixed transparent */
+/* NAV — fixed transparent; overflow visible for currency/prefs panels */
 .nav {
   position: fixed;
   inset: 0 0 auto 0;
-  z-index: 100;
+  z-index: 1000;
   height: var(--nav-h);
   display: flex;
   align-items: center;
   border-bottom: 1px solid transparent;
   transition: background 0.25s, border-color 0.25s, backdrop-filter 0.25s;
+  overflow: visible;
+}
+
+.nav-inner {
+  overflow: visible;
 }
 
 .nav.scrolled {

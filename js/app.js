@@ -92,6 +92,13 @@ function bindPrefsPanel() {
   const langSel = $("#prefLang");
   const themeSel = $("#prefTheme");
   if (!picker || !btn || !panel) return;
+  if (picker.dataset.bound === "1") {
+    // Refresh select values if already bound
+    if (langSel) fillLanguageSelect(langSel);
+    if (themeSel) themeSel.value = getThemePref();
+    return;
+  }
+  picker.dataset.bound = "1";
 
   if (langSel) fillLanguageSelect(langSel);
   if (themeSel) themeSel.value = getThemePref();
@@ -102,16 +109,27 @@ function bindPrefsPanel() {
     picker.classList.remove("open");
   };
   const open = () => {
+    // Close currency picker if open
+    document.querySelectorAll(".currency-picker.open").forEach((el) => {
+      el.classList.remove("open");
+      const p = el.querySelector("[data-fx-panel]");
+      if (p) p.hidden = true;
+    });
     panel.hidden = false;
     btn.setAttribute("aria-expanded", "true");
     picker.classList.add("open");
+    if (langSel) fillLanguageSelect(langSel);
+    if (themeSel) themeSel.value = getThemePref();
   };
 
   btn.addEventListener("click", (e) => {
+    e.preventDefault();
     e.stopPropagation();
     if (panel.hidden) open();
     else close();
   });
+
+  panel.addEventListener("click", (e) => e.stopPropagation());
 
   document.addEventListener("click", (e) => {
     if (!picker.contains(e.target)) close();
@@ -121,18 +139,37 @@ function bindPrefsPanel() {
   });
 
   langSel?.addEventListener("change", async () => {
-    setLang(langSel.value);
+    const val = langSel.value;
+    setLang(val);
     applyI18n();
     render();
-    toast(t("translating"));
+    toast(t("translating") || "Updating language…");
     await localizeFullPage();
-    toast(t("toast_lang"));
+    // Re-sync selects after re-render chrome
+    const lang2 = $("#prefLang");
+    if (lang2) {
+      fillLanguageSelect(lang2);
+      lang2.value = val;
+    }
+    toast(t("toast_lang") || "Language updated");
   });
 
   themeSel?.addEventListener("change", () => {
-    setThemePref(themeSel.value);
-    applyTheme(themeSel.value);
-    toast(t("toast_theme"));
+    const val = themeSel.value;
+    setThemePref(val);
+    applyTheme(val);
+    // Force attribute on html for CSS
+    document.documentElement.setAttribute("data-theme-pref", val);
+    const resolved =
+      val === "system"
+        ? window.matchMedia("(prefers-color-scheme: light)").matches
+          ? "light"
+          : "dark"
+        : val === "light"
+          ? "light"
+          : "dark";
+    document.documentElement.setAttribute("data-theme", resolved);
+    toast(t("toast_theme") || "Theme updated");
   });
 }
 
@@ -1563,8 +1600,10 @@ async function init() {
   if (yearEl) yearEl.textContent = String(new Date().getFullYear());
 
   await loadLiveCatalog();
+  await loadRates();
   applyI18n();
   bindGlobalSearch();
+  bindPrefsPanel(); // ensure language list filled after catalog
 
   // Logo + Home nav (and any #/home links) → always go home
   document.addEventListener("click", (e) => {
@@ -1578,13 +1617,13 @@ async function init() {
     }
   });
 
-  // Nav currency picker
-  const navMount = $("#navFxMount");
-  if (navMount) {
-    mountCurrencyPicker($("#navCurrencyPicker"), {
+  // Nav currency picker (Pay button)
+  const navPicker = $("#navCurrencyPicker");
+  if (navPicker) {
+    mountCurrencyPicker(navPicker, {
       onChange: () => {
         render();
-        if ($("#drawer").classList.contains("open")) renderCart();
+        if ($("#drawer")?.classList.contains("open")) renderCart();
         toast(`${t("toast_pay")} ${getCurrencyCode()}`);
       },
     });

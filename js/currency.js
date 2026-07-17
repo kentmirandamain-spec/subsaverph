@@ -292,7 +292,14 @@ export function populateCurrencySelect(selectEl, { showName = true } = {}) {
  * container needs structure: .currency-picker with [data-fx-search], [data-fx-list], [data-fx-btn], [data-fx-label]
  */
 export function mountCurrencyPicker(container, { onChange } = {}) {
-  if (!container || container.dataset.mounted === "1") return;
+  if (!container) return;
+  // Allow remount on checkout page re-render: only skip if same instance already live
+  if (container.dataset.mounted === "1" && container._fxClose) {
+    // Still sync label for current currency
+    const label = container.querySelector("[data-fx-label]");
+    if (label) label.textContent = currentCode;
+    return;
+  }
   container.dataset.mounted = "1";
 
   const btn = container.querySelector("[data-fx-btn]");
@@ -300,6 +307,7 @@ export function mountCurrencyPicker(container, { onChange } = {}) {
   const panel = container.querySelector("[data-fx-panel]");
   const search = container.querySelector("[data-fx-search]");
   const list = container.querySelector("[data-fx-list]");
+  if (!btn || !panel || !list) return;
 
   function meta(code) {
     return CURRENCY_LIST.find((c) => c.code === code) || { code, name: code };
@@ -333,9 +341,21 @@ export function mountCurrencyPicker(container, { onChange } = {}) {
   }
 
   function open() {
+    // Close prefs if open
+    const prefs = document.getElementById("prefsPanel");
+    if (prefs) prefs.hidden = true;
+    document.getElementById("prefsPicker")?.classList.remove("open");
+    // Close other currency pickers
+    document.querySelectorAll(".currency-picker.open").forEach((el) => {
+      if (el !== container) {
+        el.classList.remove("open");
+        const p = el.querySelector("[data-fx-panel]");
+        if (p) p.hidden = true;
+      }
+    });
     panel.hidden = false;
     container.classList.add("open");
-    renderList(search.value || "");
+    renderList(search?.value || "");
     setTimeout(() => search?.focus(), 10);
   }
 
@@ -343,17 +363,22 @@ export function mountCurrencyPicker(container, { onChange } = {}) {
     panel.hidden = true;
     container.classList.remove("open");
   }
+  container._fxClose = close;
 
-  btn?.addEventListener("click", (e) => {
+  btn.addEventListener("click", (e) => {
+    e.preventDefault();
     e.stopPropagation();
     if (container.classList.contains("open")) close();
     else open();
   });
 
+  panel.addEventListener("click", (e) => e.stopPropagation());
+
   search?.addEventListener("input", () => renderList(search.value));
   search?.addEventListener("keydown", (e) => {
     if (e.key === "Escape") close();
     if (e.key === "Enter") {
+      e.preventDefault();
       const first = list.querySelector("[data-code]");
       if (first) {
         setCurrency(first.dataset.code);
@@ -364,9 +389,11 @@ export function mountCurrencyPicker(container, { onChange } = {}) {
     }
   });
 
-  list?.addEventListener("click", (e) => {
+  list.addEventListener("click", (e) => {
     const opt = e.target.closest("[data-code]");
     if (!opt) return;
+    e.preventDefault();
+    e.stopPropagation();
     setCurrency(opt.dataset.code);
     syncLabel();
     close();
