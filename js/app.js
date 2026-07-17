@@ -927,8 +927,9 @@ function viewCheckout() {
               xenditOn ||
               state.paypalEnabled ||
               state.cryptoEnabled ||
+              state.liqpayEnabled
                 ? "Pick a method below. You’ll be redirected to a secure payment page. Codes unlock after payment succeeds."
-                : "Demo mode — no real money. Add payment keys for live PayPal / Crypto."
+                : "Demo mode — no real money. Add payment keys for live PayPal / Crypto / LiqPay."
             }
           </p>
           ${
