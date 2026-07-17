@@ -3168,10 +3168,11 @@ def admin_test_invoice():
             )
 
         # No BCC on test sends (avoids Resend free-tier multi-recipient failures)
+        # IMPORTANT: do not use HTTP 502 for mail failures — Cloudflare replaces
+        # origin 502 bodies with its own HTML error page, hiding our JSON.
         result = send_order_invoice(order, skip_notify=True)
         if not result.get("ok"):
             detail = str(result.get("detail") or "Failed to send test invoice")
-            # Never return provider HTML blobs as the only clue
             if "<!DOCTYPE" in detail or "<html" in detail.lower():
                 detail = (
                     "Email provider returned an HTML error page. "
@@ -3190,7 +3191,7 @@ def admin_test_invoice():
                         "fromAddress": result.get("fromAddress") or _from_header(),
                     }
                 ),
-                502,
+                422,
             )
 
         return jsonify(
@@ -3209,7 +3210,8 @@ def admin_test_invoice():
             }
         )
     except Exception as e:
-        return jsonify({"error": f"Test invoice failed: {e}"}), 500
+        # Use 400 not 500/502 so Cloudflare keeps the JSON body
+        return jsonify({"ok": False, "error": f"Test invoice failed: {e}"}), 400
 
 
 def normalize_deal(data: dict, deal_id: str) -> dict:
