@@ -1029,10 +1029,12 @@ function viewCheckout() {
               ${methodRadios}
             </div>
             ${payHelp}
-            <label class="check"><input type="checkbox" name="agree" required /> I agree to purchase digital codes; delivery is instant after payment.</label>
+            <p class="muted" style="font-size:0.8rem;margin:12px 0 0;text-transform:none;letter-spacing:0;font-weight:400">
+              Next you will review purchase rules and must accept the terms before payment.
+            </p>
             <p class="err" id="checkoutErr" style="color:#ff8a8a;font-size:0.85rem;min-height:1.2em"></p>
             <button class="btn solid full" type="submit" id="payBtn" data-total="${escapeHtml(formatMoney(t.total))}">
-              ${defaultBtn} · ${formatMoney(t.total)}
+              Review &amp; continue · ${formatMoney(t.total)}
             </button>
           </form>
           <aside class="summary">
@@ -1057,6 +1059,80 @@ function viewCheckout() {
             </div>
             <p class="rates" data-rates style="margin-top:12px">${ratesNote()}</p>
           </aside>
+        </div>
+      </div>
+
+      <!-- Pre-payment rules / terms modal -->
+      <div class="terms-modal" id="termsModal" hidden>
+        <div class="terms-modal-backdrop" data-terms-close></div>
+        <div class="terms-modal-panel" role="dialog" aria-modal="true" aria-labelledby="termsModalTitle">
+          <div class="terms-modal-head">
+            <p class="eyebrow" style="margin:0">Before you pay</p>
+            <h2 id="termsModalTitle">Purchase details &amp; rules</h2>
+            <button type="button" class="icon terms-modal-x" data-terms-close aria-label="Close">×</button>
+          </div>
+          <div class="terms-modal-body">
+            <section class="terms-block">
+              <h3>Order summary</h3>
+              <ul class="terms-order-list">
+                ${cart
+                  .map(
+                    (i) => `
+                  <li>
+                    <strong>${escapeHtml(i.name)}</strong>
+                    <span>${escapeHtml(i.duration)} × ${i.qty} · ${formatLinePrice(i)}</span>
+                  </li>`
+                  )
+                  .join("")}
+              </ul>
+              <p class="terms-total"><span>Total</span><strong>${formatMoney(t.total)}</strong></p>
+            </section>
+
+            <section class="terms-block">
+              <h3>What you are buying</h3>
+              <ul>
+                <li>You are purchasing a <strong>prepaid digital access account or code</strong> for the selected product (e.g. SuperGrok, Canva, streaming).</li>
+                <li>Delivery is <strong>digital</strong> — username/password or access code is shown after successful payment (and emailed when email is configured).</li>
+                <li>SubSaverPH is an <strong>independent reseller / storefront</strong>. We are <strong>not</strong> affiliated with, endorsed by, or sponsored by xAI, Canva, CapCut, Netflix, YouTube, Google, or any listed brand.</li>
+              </ul>
+            </section>
+
+            <section class="terms-block">
+              <h3>Rules &amp; regulations</h3>
+              <ul>
+                <li><strong>Digital goods are non-refundable</strong> once login details or codes are delivered, except where the credentials are defective or not delivered — contact support with your order ID.</li>
+                <li>You must be at least <strong>18 years old</strong> and able to form a binding contract.</li>
+                <li>Use the product only for <strong>personal, lawful use</strong> and follow the official service’s terms of use.</li>
+                <li><strong>Do not</strong> resell, share publicly, or abuse accounts in a way that violates the brand’s policies.</li>
+                <li>Change the password after first login when possible; keep credentials private.</li>
+                <li>Prices may be shown in other currencies; the amount charged is confirmed at payment (PH e-wallets bill in PHP when applicable).</li>
+                <li>By paying you confirm you understand this is a digital delivery product and you accept these rules.</li>
+              </ul>
+            </section>
+
+            <section class="terms-block">
+              <h3>Support</h3>
+              <p class="muted" style="margin:0;text-transform:none;letter-spacing:0;font-weight:400;font-size:0.9rem">
+                Questions or delivery issues: <a href="mailto:support@subsaverph.com">support@subsaverph.com</a>
+                — include your order ID. Full policies:
+                <a href="#/terms">Terms of Use</a> ·
+                <a href="#/privacy">Privacy Policy</a>.
+              </p>
+            </section>
+          </div>
+          <div class="terms-modal-foot">
+            <label class="check terms-accept-label">
+              <input type="checkbox" id="termsAccept" />
+              <span>I have read and accept the purchase details, rules, and regulations above.</span>
+            </label>
+            <p class="err" id="termsErr" style="color:#ff8a8a;font-size:0.85rem;min-height:1.2em;margin:0"></p>
+            <div class="terms-actions">
+              <button type="button" class="btn" data-terms-close>Back</button>
+              <button type="button" class="btn solid" id="termsConfirmBtn" disabled>
+                Accept &amp; pay · ${formatMoney(t.total)}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>`;
@@ -1588,32 +1664,99 @@ function bind() {
   if (form) {
     const btn = $("#payBtn");
     const totalLabel = btn?.dataset?.total || "";
+    const modal = $("#termsModal");
+    const termsAccept = $("#termsAccept");
+    const termsConfirm = $("#termsConfirmBtn");
+    const termsErr = $("#termsErr");
+
     const updatePayBtn = () => {
       const method = form.querySelector('input[name="method"]:checked')?.value || "card";
       const testBox = $("#stripeTestBox");
       if (testBox) testBox.hidden = method !== "card";
       if (!btn) return;
-      const label = payButtonLabel(method);
-      btn.textContent = totalLabel ? `${label} · ${totalLabel}` : label;
+      // Keep review CTA until they open terms
+      btn.textContent = totalLabel ? `Review & continue · ${totalLabel}` : "Review & continue";
     };
+
+    const openTermsModal = () => {
+      if (!modal) return;
+      modal.hidden = false;
+      document.body.style.overflow = "hidden";
+      if (termsAccept) termsAccept.checked = false;
+      if (termsConfirm) termsConfirm.disabled = true;
+      if (termsErr) termsErr.textContent = "";
+      // Sync confirm button label with selected method
+      const method = form.querySelector('input[name="method"]:checked')?.value || "card";
+      const label = payButtonLabel(method);
+      if (termsConfirm) {
+        termsConfirm.textContent = totalLabel ? `Accept & pay · ${totalLabel}` : `Accept & ${label}`;
+      }
+      termsAccept?.focus();
+    };
+
+    const closeTermsModal = () => {
+      if (!modal) return;
+      modal.hidden = true;
+      document.body.style.overflow = "";
+    };
+
     form.querySelectorAll('input[name="method"]').forEach((el) => {
       el.addEventListener("change", updatePayBtn);
     });
     updatePayBtn();
 
-    form.addEventListener("submit", async (e) => {
+    // Step 1: validate form → open terms panel
+    form.addEventListener("submit", (e) => {
       e.preventDefault();
       if (!form.reportValidity()) return;
+      const errEl = $("#checkoutErr");
+      if (errEl) errEl.textContent = "";
+      openTermsModal();
+    });
+
+    termsAccept?.addEventListener("change", () => {
+      if (termsConfirm) termsConfirm.disabled = !termsAccept.checked;
+      if (termsErr) termsErr.textContent = "";
+    });
+
+    modal?.querySelectorAll("[data-terms-close]").forEach((el) => {
+      el.addEventListener("click", () => closeTermsModal());
+    });
+
+    document.addEventListener(
+      "keydown",
+      (e) => {
+        if (e.key === "Escape" && modal && !modal.hidden) closeTermsModal();
+      },
+      { once: false }
+    );
+
+    // Step 2: accept terms → process payment / redirect
+    termsConfirm?.addEventListener("click", async () => {
+      if (!termsAccept?.checked) {
+        if (termsErr) termsErr.textContent = "Please accept the terms and rules to continue.";
+        return;
+      }
+      if (!form.reportValidity()) {
+        closeTermsModal();
+        return;
+      }
+
       const fd = new FormData(form);
       const errEl = $("#checkoutErr");
       const payBtn = $("#payBtn");
       if (errEl) errEl.textContent = "";
+      if (termsErr) termsErr.textContent = "";
+      if (termsConfirm) {
+        termsConfirm.disabled = true;
+        termsConfirm.textContent = "Processing…";
+      }
       if (payBtn) {
         payBtn.disabled = true;
         payBtn.textContent = "Processing…";
       }
+
       const method = String(fd.get("method") || "card");
-      // PH e-wallets settle in PHP via PayMongo
       const currency = PH_EWALLETS.has(method) ? "PHP" : getCurrencyCode();
       const payload = {
         email: fd.get("email"),
@@ -1621,7 +1764,9 @@ function bind() {
         currency,
         method,
         items: getCart().map((i) => ({ id: i.id, qty: i.qty })),
+        termsAccepted: true,
       };
+
       try {
         const res = await fetch("/api/checkout/start", {
           method: "POST",
@@ -1632,7 +1777,7 @@ function bind() {
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.error || "Checkout failed");
 
-        // Redirect providers: Stripe, PayMongo, PayPal, Crypto
+        // Redirect providers: Stripe, PayMongo, PayPal, Crypto, LiqPay…
         if (data.url) {
           sessionStorage.setItem(
             "subsaverph_pending",
@@ -1659,10 +1804,20 @@ function bind() {
         }
         clearCart();
         updateBadge();
+        closeTermsModal();
         location.hash = "#/success";
       } catch (err) {
-        if (errEl) errEl.textContent = err.message || "Checkout failed";
-        toast(err.message || "Checkout failed");
+        const msg = err.message || "Checkout failed";
+        if (termsErr) termsErr.textContent = msg;
+        if (errEl) errEl.textContent = msg;
+        toast(msg);
+        if (termsConfirm) {
+          termsConfirm.disabled = !termsAccept?.checked;
+          const method = form.querySelector('input[name="method"]:checked')?.value || "card";
+          termsConfirm.textContent = totalLabel
+            ? `Accept & pay · ${totalLabel}`
+            : `Accept & ${payButtonLabel(method)}`;
+        }
         if (payBtn) {
           payBtn.disabled = false;
           updatePayBtn();
