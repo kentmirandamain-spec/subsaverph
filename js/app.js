@@ -1142,7 +1142,9 @@ function checkoutTermsModalHtml(cart, totals) {
     "You must be at least **18 years old** and able to form a binding contract.",
     "Use the product only for **personal, lawful use** and follow the official service’s terms of use.",
     "**Do not** resell, share publicly, or abuse accounts in a way that violates the brand’s policies.",
-    "Change the password after first login when possible; keep credentials private.",
+    "**Do not change the username/email, password, billing address, or subscription plan** on the shared/prepaid account — doing so may lock you out and voids support or refunds.",
+    "**Do not** add your own payment method, cancel the plan, or transfer ownership of the account.",
+    "Keep the login details private; use only as provided.",
     "Prices may be shown in other currencies; the amount charged is confirmed at payment (PH e-wallets bill in PHP when applicable).",
     "By paying you confirm you understand this is a digital delivery product and you accept these rules.",
   ]);
