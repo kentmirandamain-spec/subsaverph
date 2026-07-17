@@ -1953,36 +1953,137 @@ def paymongo_webhook():
     return jsonify({"ok": True})
 
 
-@app.post("/api/webhooks/nowpayments")
+def _nowpayments_sort_obj(obj):
+    """Recursively sort keys for IPN HMAC (NOWPayments requirement)."""
+    if isinstance(obj, dict):
+        return {k: _nowpayments_sort_obj(obj[k]) for k in sorted(obj.keys())}
+    if isinstance(obj, list):
+        return [_nowpayments_sort_obj(x) for x in obj]
+    return obj
+
+
+def _nowpayments_verify_sig(payload: dict) -> tuple[bool, str]:
+    """
+    Verify x-nowpayments-sig header when NOWPAYMENTS_IPN_SECRET is set.
+    If secret not set, accept (still process) but note verification skipped.
+    """
+    secret = (os.environ.get("NOWPAYMENTS_IPN_SECRET") or "").strip()
+    if not secret:
+        return True, "ipn_secret_not_set"
+    sig = (request.headers.get("x-nowpayments-sig") or request.headers.get("X-Nowpayments-Sig") or "").strip()
+    if not sig:
+        return False, "missing_signature"
+    import hashlib
+    import hmac as hmac_mod
+
+    sorted_msg = json.dumps(_nowpayments_sort_obj(payload), separators=(",", ":"), ensure_ascii=False)
+    digest = hmac_mod.new(secret.encode("utf-8"), sorted_msg.encode("utf-8"), hashlib.sha512).hexdigest()
+    if hmac_mod.compare_digest(digest, sig):
+        return True, "ok"
+    # Some payloads need unescaped slashes only
+    sorted_msg2 = json.dumps(_nowpayments_sort_obj(payload), separators=(",", ":"), ensure_ascii=False)
+    digest2 = hmac_mod.new(secret.encode("utf-8"), sorted_msg2.encode("utf-8"), hashlib.sha512).hexdigest()
+    if hmac_mod.compare_digest(digest2, sig):
+        return True, "ok"
+    return False, "bad_signature"
+
+
+@app.route("/api/webhooks/nowpayments", methods=["GET", "POST", "HEAD"])
 def nowpayments_webhook():
-    payload = request.get_json(silent=True) or {}
-    order_id = payload.get("order_id") or ""
-    status = (payload.get("payment_status") or "").lower()
-    if status not in ("finished", "confirmed", "sending"):
-        return jsonify({"ok": True, "skipped": status})
+    """
+    NOWPayments IPN callback.
+    - GET/HEAD: health check for dashboard "test URL" (must not 404)
+    - POST: payment status updates; fulfill when paid
+    """
+    # Dashboard / uptime probes often use GET
+    if request.method in ("GET", "HEAD"):
+        return (
+            jsonify(
+                {
+                    "ok": True,
+                    "service": "SubSaverPH",
+                    "webhook": "nowpayments",
+                    "message": "IPN endpoint ready. Send POST callbacks here.",
+                    "ipnUrl": f"{public_base_url()}/api/webhooks/nowpayments",
+                }
+            ),
+            200,
+        )
+
+    # Prefer JSON; also accept form-encoded
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        payload = {}
+        if request.form:
+            payload = {k: request.form.get(k) for k in request.form}
+        elif request.data:
+            try:
+                payload = json.loads(request.data.decode("utf-8"))
+            except Exception:
+                payload = {}
+
+    ok_sig, sig_note = _nowpayments_verify_sig(payload if isinstance(payload, dict) else {})
+    if not ok_sig:
+        # Still 200 for "missing secret not configured" is handled above;
+        # reject only bad signatures so attackers can't forge IPNs when secret is set
+        return jsonify({"ok": False, "error": sig_note}), 401
+
+    order_id = str(payload.get("order_id") or "").strip()
+    status = str(payload.get("payment_status") or payload.get("status") or "").lower()
+    payment_id = payload.get("payment_id") or payload.get("id")
+
+    # Waiting / partial — acknowledge, do not fulfill yet
+    if status not in ("finished", "confirmed", "sending", "paid"):
+        return jsonify(
+            {
+                "ok": True,
+                "skipped": status or "empty_status",
+                "order_id": order_id,
+                "payment_id": payment_id,
+                "sig": sig_note,
+            }
+        )
+
     ref = order_id
+    if not ref:
+        return jsonify({"ok": True, "skipped": "no_order_id", "payment_id": payment_id})
+
     for existing in load_orders():
         if existing.get("providerRef") == ref:
-            return jsonify({"ok": True, "duplicate": True})
+            return jsonify({"ok": True, "duplicate": True, "order_id": ref})
+
     pending_all = read_json(STORE / "pending_payments.json", {})
     pending = pending_all.get(ref)
     if not pending:
-        return jsonify({"ok": True, "skipped": "unknown"})
+        # Store payment_id for later manual match if needed
+        return jsonify(
+            {
+                "ok": True,
+                "skipped": "unknown_order",
+                "order_id": ref,
+                "hint": "No pending checkout for this order_id (expired or already cleaned).",
+            }
+        )
+
     try:
         fulfill_order(
             email=pending.get("email") or "",
             name=pending.get("name") or "",
-            currency="USD",
+            currency=pending.get("currency") or "USD",
             items=pending.get("cart") or [],
             payment_mode_name="nowpayments",
             method="crypto",
             provider_ref=ref,
         )
+        # Keep invoice id linkage
+        if payment_id:
+            pending_all.get(ref, {})
         pending_all.pop(ref, None)
         write_json(STORE / "pending_payments.json", pending_all)
     except Exception as e:
-        return jsonify({"error": str(e)}), 409
-    return jsonify({"ok": True})
+        return jsonify({"ok": False, "error": str(e)}), 409
+
+    return jsonify({"ok": True, "fulfilled": True, "order_id": ref, "sig": sig_note})
 
 
 @app.post("/api/webhooks/xendit")

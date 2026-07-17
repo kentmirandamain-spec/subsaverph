@@ -78,17 +78,36 @@ For a stable IP: paid Render static outbound IP, or set `SERVER_OUTBOUND_IP` if 
 
 ## 5. IPN / webhook (important for auto delivery)
 
-In NOWPayments dashboard, set **IPN callback URL** to:
+### Callback URL (paste exactly)
 
 ```text
 https://subsaverph.onrender.com/api/webhooks/nowpayments
 ```
 
-(Dashboard → Settings → Payments → Instant payment notifications)
+Dashboard → **Settings → Payments → Instant payment notifications**  
+(or Store settings → notifications)
 
-The checkout also sends this URL on each invoice.
+Also generate and save **IPN Secret key**, then on Render set:
 
-If you use Cloudflare or a firewall in front of the site, allow NOWPayments notification IPs (also listed on `/api/nowpayments/ip`):
+```env
+NOWPAYMENTS_IPN_SECRET=your_ipn_secret_from_dashboard
+```
+
+(Optional but recommended — verifies `x-nowpayments-sig`.)
+
+### Test the URL yourself
+
+Open in browser (GET must return OK, not 404):
+
+```text
+https://subsaverph.onrender.com/api/webhooks/nowpayments
+```
+
+You should see JSON like: `"ok": true, "message": "IPN endpoint ready..."`.
+
+### Firewall / Cloudflare
+
+Allow NOWPayments notification IPs (if you use Cloudflare WAF):
 
 ```text
 51.89.194.21
@@ -98,8 +117,8 @@ If you use Cloudflare or a firewall in front of the site, allow NOWPayments noti
 144.76.201.30
 ```
 
-Webhook fulfills the order when status is `finished` / `confirmed` / `sending`.  
-When the buyer returns to the site, `/api/checkout/complete` also checks payment status.
+Webhook fulfills when status is `finished` / `confirmed` / `sending` / `paid`.  
+Buyer return also verifies via `/api/checkout/complete`.
 
 ---
 
