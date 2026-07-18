@@ -919,12 +919,29 @@ function goSupportPage(opts = {}) {
   } catch {
     /* ignore */
   }
-  if (location.hash.replace(/[?#].*$/, "") === "#/support" || location.hash.startsWith("#/support")) {
+  // Leave checkout terms modal / cart drawer so support page is usable
+  try {
+    document.body.style.overflow = "";
+    $("#drawer")?.classList.remove("open");
+    $("#overlay")?.classList.remove("open");
+  } catch {
+    /* ignore */
+  }
+  const hash = location.hash || "";
+  const onSupport =
+    hash.replace(/[?#].*$/, "") === "#/support" || hash.startsWith("#/support");
+  if (onSupport) {
     state.view = "support";
     render();
     window.scrollTo(0, 0);
-  } else {
-    location.hash = "#/support";
+    return;
+  }
+  location.hash = "#/support";
+  // Fallback if hashchange does not fire (rare)
+  if ((location.hash || "").replace(/[?#].*$/, "") === "#/support" && state.view !== "support") {
+    state.view = "support";
+    render();
+    window.scrollTo(0, 0);
   }
 }
 
@@ -965,8 +982,7 @@ function viewSupport() {
         <p class="muted" style="max-width:36rem;line-height:1.55">
           Having a problem with your order, login, or delivery? Fill this form and tap
           <strong style="color:var(--text)">Send message</strong>.
-          Do <strong style="color:var(--text)">not</strong> email support@… from Outlook yet
-          if you get “Address not found” — use this form instead (no mail app needed).
+          Works in the browser — no Outlook/Gmail app required.
         </p>
 
         <form class="support-card support-form" id="supportForm" novalidate>
@@ -1780,6 +1796,7 @@ function bind() {
   $$("[data-go-support-order]").forEach((btn) => {
     btn.addEventListener("click", (e) => {
       e.preventDefault();
+      e.stopPropagation();
       const oid = btn.getAttribute("data-go-support-order") || "";
       const pay = btn.getAttribute("data-go-support-pay") || "";
       goSupportPage({
@@ -1792,7 +1809,9 @@ function bind() {
     });
   });
   $$("[data-copy-support-email]").forEach((btn) => {
-    btn.addEventListener("click", async () => {
+    btn.addEventListener("click", async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
       const email = supportEmailAddress();
       try {
         await navigator.clipboard.writeText(email);
@@ -1802,16 +1821,19 @@ function bind() {
       }
     });
   });
+  // Per-element handlers for buttons/links rendered inside #app
   $$("a.js-go-support, button.js-go-support, a[href='#/support'], a[href='#/contact']").forEach((a) => {
     a.addEventListener("click", (e) => {
       e.preventDefault();
+      e.stopPropagation();
       goSupportPage();
     });
   });
 
   // On-site support form → server Resend
   const supportForm = $("#supportForm");
-  if (supportForm) {
+  if (supportForm && !supportForm.dataset.bound) {
+    supportForm.dataset.bound = "1";
     supportForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -1830,10 +1852,12 @@ function bind() {
       };
       if (!payload.email || !payload.email.includes("@")) {
         if (errEl) errEl.textContent = "Enter your email so we can reply.";
+        toast("Enter your email so we can reply.", true);
         return;
       }
       if (payload.message.length < 10) {
         if (errEl) errEl.textContent = "Please describe your problem (a few more words).";
+        toast("Please describe your problem (a few more words).", true);
         return;
       }
       if (btn) {
@@ -1854,7 +1878,7 @@ function bind() {
         } catch {
           if (/^\s*<!DOCTYPE/i.test(raw) || /^\s*<html/i.test(raw)) {
             throw new Error(
-              "Server error page (try again in a minute). If it keeps failing, set SUPPORT_INBOX on Render to your Outlook email."
+              "Server error page (try again in a minute). Please retry — your message may still be saved."
             );
           }
           data = {};
@@ -1867,11 +1891,13 @@ function bind() {
         } catch {
           /* ignore */
         }
-        if (okEl) {
-          okEl.textContent =
-            data.message || "Message sent. We will reply to your email as soon as we can.";
-        }
-        toast("Support message sent");
+        const friendly =
+          data.message ||
+          (data.emailOk === false
+            ? "Message saved. We will get back to you soon."
+            : "Message sent. We will reply to your email as soon as we can.");
+        if (okEl) okEl.textContent = friendly;
+        toast(data.emailOk === false ? "Message saved — we will reply soon" : "Support message sent");
         supportForm.reset();
       } catch (err) {
         const msg = err.message || "Could not send message";
@@ -2355,13 +2381,18 @@ async function init() {
   });
   window.addEventListener("rates:loaded", () => render());
 
-  // Footer lives outside #app — bind support links once (not wiped by render)
+  // Footer + any support CTA outside/inside #app (delegated, survives re-renders)
   document.body.addEventListener("click", (e) => {
+    // Order-specific button has its own handler with draft fields
+    if (e.target.closest("[data-go-support-order]")) return;
+    if (e.target.closest("[data-copy-support-email]")) return;
+    if (e.target.closest("#supportForm")) return;
     const go = e.target.closest(
       "a.js-go-support, button.js-go-support, a[href='#/support'], a[href='#/contact'], a[data-support-link]"
     );
     if (go) {
       e.preventDefault();
+      e.stopPropagation();
       goSupportPage();
     }
   });

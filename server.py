@@ -531,18 +531,17 @@ def api_support_contact():
 
     if not result.get("ok"):
         detail = str(result.get("detail") or "Failed to send email")
-        # Still OK for customer if saved — tell them we got it
+        # Still OK for customer if saved — never expose long provider errors
         return jsonify(
             {
                 "ok": True,
                 "message": (
-                    "Your message was saved for the store owner. "
-                    f"Email notify failed ({detail[:120]}). "
-                    "They can still see it — or set SUPPORT_INBOX on Render to a real Outlook address."
+                    "Your message was received and saved. "
+                    "We will reply to your email as soon as possible."
                 ),
                 "ticketId": ticket["id"],
                 "emailOk": False,
-                "detail": detail,
+                "detail": detail[:300],
             }
         )
 
@@ -552,6 +551,7 @@ def api_support_contact():
             "message": "Message sent. We will reply to your email as soon as possible.",
             "ticketId": ticket["id"],
             "emailOk": True,
+            "to": result.get("to"),
         }
     )
 

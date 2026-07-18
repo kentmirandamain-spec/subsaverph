@@ -475,6 +475,29 @@ def _resend_http_post(api_key: str, payload: dict) -> tuple[int, str]:
         return 0, f"Resend network error: {e}"
 
 
+def _resend_test_mode_allowed_to(raw: str) -> str:
+    """
+    Resend free/test mode only allows sending to the account email.
+    Error looks like: only send testing emails to your own email address (you@gmail.com)
+    """
+    import re
+
+    text = raw or ""
+    m = re.search(
+        r"only send testing emails to your own email address\s*\(([^)]+@[^)]+)\)",
+        text,
+        re.I,
+    )
+    if m:
+        return m.group(1).strip()
+    # Optional explicit override for test-mode delivery
+    for key in ("RESEND_ACCOUNT_EMAIL", "RESEND_TEST_TO"):
+        v = (os.environ.get(key) or "").strip()
+        if v and "@" in v:
+            return v.replace(";", ",").split(",")[0].strip()
+    return ""
+
+
 def _send_via_resend(
     to_email: str,
     subject: str,
@@ -489,26 +512,52 @@ def _send_via_resend(
     from_hdr = _from_header()
     if "<" not in from_hdr:
         from_hdr = f"SubSaverPH <{_from_address()}>"
-    payload = {
-        "from": from_hdr,
-        "to": [to_email],
-        "subject": subject,
-        "text": text,
-        "html": html,
-    }
-    reply = (os.environ.get("MAIL_REPLY_TO") or "").strip()
-    if reply:
-        payload["reply_to"] = reply
-    bcc_list = [e for e in (bcc or []) if e.lower() != to_email.lower()]
-    if bcc_list:
-        payload["bcc"] = bcc_list
 
-    status, raw = _resend_http_post(api_key, payload)
+    def _payload(dest: str) -> dict:
+        p = {
+            "from": from_hdr,
+            "to": [dest],
+            "subject": subject,
+            "text": text,
+            "html": html,
+        }
+        reply = (os.environ.get("MAIL_REPLY_TO") or "").strip()
+        if reply:
+            p["reply_to"] = reply
+        bcc_list = [e for e in (bcc or []) if e.lower() != dest.lower()]
+        if bcc_list:
+            p["bcc"] = bcc_list
+        return p
+
+    status, raw = _resend_http_post(api_key, _payload(to_email))
     if status and 200 <= status < 300:
         return True, raw[:300]
 
-    # Cloudflare Error 1010 (bot blocked) — often returned as HTML or short text
+    # Unverified domain / test mode: only the Resend account email is allowed.
+    # Retry once to that address so support form + invoices still notify the owner.
     low = (raw or "").lower()
+    if status == 403 and "only send testing emails" in low:
+        allowed = _resend_test_mode_allowed_to(raw)
+        if allowed and allowed.lower() != (to_email or "").strip().lower():
+            status2, raw2 = _resend_http_post(api_key, _payload(allowed))
+            if status2 and 200 <= status2 < 300:
+                return (
+                    True,
+                    f"ok (Resend test-mode redirect {to_email} → {allowed}) {raw2[:160]}",
+                )
+            return (
+                False,
+                f"Resend test mode: cannot send to {to_email}. "
+                f"Retried {allowed}: HTTP {status2}: {raw2[:240]}. "
+                "Verify subsaverph.com at resend.com/domains and set MAIL_FROM to that domain.",
+            )
+        return (
+            False,
+            f"Resend test mode: can only email the account owner. "
+            f"Set SUPPORT_INBOX to that Gmail, or verify your domain on Resend. Detail: {raw[:280]}",
+        )
+
+    # Cloudflare Error 1010 (bot blocked) — often returned as HTML or short text
     if (
         status == 403
         and ("1010" in (raw or "") or "cloudflare" in low or "<!doctype" in low)
