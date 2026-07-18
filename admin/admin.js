@@ -14,6 +14,7 @@ const state = {
   stockProductId: "",
   stockCodes: [],
   orders: [],
+  supportMessages: [],
 };
 
 function friendlyApiError(status, raw, data) {
@@ -97,6 +98,7 @@ function shell(content) {
         <button type="button" data-tab="deals" class="${state.tab === "deals" ? "active" : ""}">Products</button>
         <button type="button" data-tab="stock" class="${state.tab === "stock" ? "active" : ""}">Codes / Stock</button>
         <button type="button" data-tab="orders" class="${state.tab === "orders" ? "active" : ""}">Orders</button>
+        <button type="button" data-tab="support" class="${state.tab === "support" ? "active" : ""}">Support inbox</button>
         <button type="button" data-tab="emailtest" class="${state.tab === "emailtest" ? "active" : ""}">★ Test email</button>
         <button type="button" data-tab="settings" class="${state.tab === "settings" ? "active" : ""}">Site content</button>
         <button type="button" data-tab="account" class="${state.tab === "account" ? "active" : ""}">Account</button>
@@ -382,6 +384,33 @@ function ordersView() {
     </div>`;
 }
 
+function supportInboxView() {
+  const rows = (state.supportMessages || [])
+    .map((m) => {
+      const sent = m.emailSent ? "emailed" : m.emailDetail ? "email fail" : "saved";
+      return `
+      <tr>
+        <td><strong>${escapeHtml(m.id || "")}</strong><div class="muted">${escapeHtml(m.createdAt || "")}</div></td>
+        <td>${escapeHtml(m.email || "")}<div class="muted">${escapeHtml(m.name || "")}</div></td>
+        <td>${escapeHtml(m.orderId || "—")}</td>
+        <td><strong>${escapeHtml(m.subject || "")}</strong>
+          <div class="muted" style="max-width:360px;white-space:pre-wrap;word-break:break-word">${escapeHtml(m.message || "")}</div>
+          <div class="muted">${escapeHtml(sent)}${m.emailTo ? " → " + escapeHtml(m.emailTo) : ""}</div>
+        </td>
+      </tr>`;
+    })
+    .join("");
+  return `
+    <div class="top"><h1>Support inbox</h1></div>
+    <p class="muted">Messages from the website form at <code>/#/support</code>. Also emailed to <code>SUPPORT_INBOX</code> / <code>ORDER_NOTIFY_EMAIL</code> when Resend is set.</p>
+    <div class="panel" style="overflow:auto">
+      <table class="table">
+        <thead><tr><th>Ticket</th><th>From</th><th>Order</th><th>Message</th></tr></thead>
+        <tbody>${rows || `<tr><td colspan="4" class="muted">No support messages yet.</td></tr>`}</tbody>
+      </table>
+    </div>`;
+}
+
 function emptyDeal() {
   return {
     id: "",
@@ -541,6 +570,7 @@ function render() {
   else if (state.tab === "emailtest") content = emailTestView();
   else if (state.tab === "stock") content = stockView();
   else if (state.tab === "orders") content = ordersView();
+  else if (state.tab === "support") content = supportInboxView();
   else content = dealsView();
 
   app.innerHTML = shell(content);
@@ -556,6 +586,7 @@ function bindShell() {
       try {
         if (state.tab === "stock") await loadInventory();
         if (state.tab === "orders") await loadOrders();
+        if (state.tab === "support") await loadSupportMessages();
       } catch (err) {
         toast(err.message, true);
       }
@@ -787,6 +818,11 @@ async function loadInventory() {
 async function loadOrders() {
   const data = await api("/api/admin/orders");
   state.orders = data.orders || [];
+}
+
+async function loadSupportMessages() {
+  const data = await api("/api/admin/support-messages");
+  state.supportMessages = data.messages || [];
 }
 
 async function boot() {

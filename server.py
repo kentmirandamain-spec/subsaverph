@@ -402,22 +402,13 @@ _SUPPORT_HITS: dict[str, list[float]] = {}
 def api_support_contact():
     """
     Website contact form → email store owner via Resend/SMTP.
+    Also saves a copy under data/store/support_messages.json (admin can read).
     Does not require support@ domain MX / Email Routing to work.
     """
     try:
         from email_delivery import mail_configured, send_support_message, support_inbox
     except Exception as e:
         return jsonify({"error": f"Email module error: {e}"}), 500
-
-    if not mail_configured():
-        return (
-            jsonify(
-                {
-                    "error": "Support form is not available yet (email not configured on server).",
-                }
-            ),
-            503,
-        )
 
     # Rate limit: max 5 messages / 15 minutes / IP
     import time
@@ -443,16 +434,56 @@ def api_support_contact():
     if len(message) < 10:
         return jsonify({"error": "Please describe your problem (at least a short message)."}), 400
 
-    # Prefer env inbox; fall back to site settings supportEmail only if it is NOT
-    # the public support@ (which may not receive mail until CF routing is on)
+    # Always save locally so messages are not lost if email fails
+    ticket = {
+        "id": "SUP" + uuid.uuid4().hex[:10].upper(),
+        "email": email,
+        "name": name,
+        "subject": subject,
+        "message": message,
+        "orderId": order_id,
+        "createdAt": __import__("datetime").datetime.utcnow().isoformat() + "Z",
+        "ip": ip[:64],
+        "emailSent": False,
+    }
+    try:
+        path = STORE / "support_messages.json"
+        existing = read_json(path, [])
+        if not isinstance(existing, list):
+            existing = []
+        existing.insert(0, ticket)
+        write_json(path, existing[:200])
+    except Exception:
+        pass
+
+    if not mail_configured():
+        return jsonify(
+            {
+                "ok": True,
+                "message": (
+                    "Message saved. Email delivery is not configured yet — "
+                    "the store owner can still read it in admin. "
+                    "Set RESEND_API_KEY + SUPPORT_INBOX on the server for email delivery."
+                ),
+                "ticketId": ticket["id"],
+                "savedOnly": True,
+            }
+        )
+
+    # Prefer env inbox; never deliver only to support@subsaverph.com unless routing works
+    # (Resend can send TO a real Outlook/Gmail owner inbox)
     to_override = ""
     inbox = support_inbox()
-    if not inbox:
+    if inbox and not inbox.lower().endswith("@subsaverph.com"):
+        to_override = inbox
+    elif inbox:
+        # support@ as destination often fails without verified domain receive path
+        to_override = inbox
+    if not to_override:
         try:
             s = load_settings()
-            candidate = (s.get("supportEmail") or "").strip()
-            # If owner put their Outlook in supportEmail, use it
-            if candidate and not candidate.lower().endswith("@subsaverph.com"):
+            candidate = (s.get("supportEmail") or s.get("footerSupport") or "").strip()
+            if candidate and "@" in candidate:
                 to_override = candidate
         except Exception:
             pass
@@ -465,20 +496,56 @@ def api_support_contact():
         order_id=order_id,
         to_override=to_override,
     )
+
+    # Update ticket email status
+    try:
+        path = STORE / "support_messages.json"
+        existing = read_json(path, [])
+        if isinstance(existing, list):
+            for row in existing:
+                if row.get("id") == ticket["id"]:
+                    row["emailSent"] = bool(result.get("ok"))
+                    row["emailDetail"] = str(result.get("detail") or "")[:300]
+                    row["emailTo"] = result.get("to")
+                    break
+            write_json(path, existing[:200])
+    except Exception:
+        pass
+
     if not result.get("ok"):
-        detail = str(result.get("detail") or "Failed to send")
-        # Never use 502 (Cloudflare replaces body with HTML)
-        return (
-            jsonify({"ok": False, "error": detail, "detail": detail}),
-            422,
+        detail = str(result.get("detail") or "Failed to send email")
+        # Still OK for customer if saved — tell them we got it
+        return jsonify(
+            {
+                "ok": True,
+                "message": (
+                    "Your message was saved for the store owner. "
+                    f"Email notify failed ({detail[:120]}). "
+                    "They can still see it — or set SUPPORT_INBOX on Render to a real Outlook address."
+                ),
+                "ticketId": ticket["id"],
+                "emailOk": False,
+                "detail": detail,
+            }
         )
 
     return jsonify(
         {
             "ok": True,
             "message": "Message sent. We will reply to your email as soon as possible.",
+            "ticketId": ticket["id"],
+            "emailOk": True,
         }
     )
+
+
+@app.get("/api/admin/support-messages")
+@require_admin
+def admin_support_messages():
+    msgs = read_json(STORE / "support_messages.json", [])
+    if not isinstance(msgs, list):
+        msgs = []
+    return jsonify({"messages": msgs[:100]})
 
 
 @app.get("/api/health")

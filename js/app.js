@@ -903,45 +903,72 @@ function supportEmailAddress() {
   return ["support", "subsaverph.com"].join("@");
 }
 
-/** Open mail client without static mailto in HTML (avoids Cloudflare email-protection breakage). */
-function openSupportMail(opts = {}) {
-  const email = supportEmailAddress();
-  const subject = opts.subject || "SubSaverPH support request";
-  const body =
-    opts.body ||
-    "Hi SubSaverPH Support,\n\nOrder ID (if any):\nProblem:\n\nThank you.";
-  const url = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+/** Prefer on-site form (mailto fails on many phones/PCs with no default mail app). */
+function goSupportPage(opts = {}) {
   try {
-    window.location.href = url;
+    if (opts.orderId || opts.subject || opts.message) {
+      sessionStorage.setItem(
+        "subsaverph_support_draft",
+        JSON.stringify({
+          orderId: opts.orderId || "",
+          subject: opts.subject || "",
+          message: opts.message || "",
+        })
+      );
+    }
   } catch {
-    window.open(url, "_self");
+    /* ignore */
   }
-  return false;
-}
-
-function goSupportPage() {
-  if (location.hash !== "#/support" && location.hash !== "#/contact") {
-    location.hash = "#/support";
-  } else {
+  if (location.hash.replace(/[?#].*$/, "") === "#/support" || location.hash.startsWith("#/support")) {
     state.view = "support";
     render();
     window.scrollTo(0, 0);
+  } else {
+    location.hash = "#/support";
   }
+}
+
+function openSupportMail(opts = {}) {
+  // No longer uses mailto — opens the working web form instead
+  goSupportPage({
+    orderId: opts.orderId || "",
+    subject: opts.subject || "SubSaverPH support request",
+    message: opts.body || "",
+  });
+  return false;
 }
 
 function viewSupport() {
   const email = supportEmailAddress();
+  let draft = { orderId: "", subject: "", message: "" };
+  try {
+    draft = { ...draft, ...JSON.parse(sessionStorage.getItem("subsaverph_support_draft") || "{}") };
+  } catch {
+    /* ignore */
+  }
+  // Also accept #/support?order=...
+  try {
+    const q = location.hash.includes("?")
+      ? location.hash.slice(location.hash.indexOf("?") + 1)
+      : "";
+    const p = new URLSearchParams(q);
+    if (p.get("order")) draft.orderId = p.get("order");
+    if (p.get("subject")) draft.subject = p.get("subject");
+  } catch {
+    /* ignore */
+  }
   return `
     <div class="page">
       <div class="page-inner support-page">
         <p class="eyebrow">Help</p>
         <h1 class="page-title">Customer support</h1>
         <p class="muted" style="max-width:36rem;line-height:1.55">
-          Having a problem with your order, login, or delivery? Send a message below —
-          <strong style="color:var(--text)">no email app needed</strong>. We reply to the address you enter.
+          Having a problem with your order, login, or delivery? Fill this form and tap
+          <strong style="color:var(--text)">Send message</strong> —
+          works without Outlook/Gmail apps.
         </p>
 
-        <form class="support-card support-form" id="supportForm">
+        <form class="support-card support-form" id="supportForm" novalidate>
           <p class="eyebrow" style="margin:0 0 12px">Send a message</p>
           <label>Your name
             <input name="name" type="text" autocomplete="name" placeholder="Your name" />
@@ -950,13 +977,13 @@ function viewSupport() {
             <input name="email" type="email" required autocomplete="email" placeholder="you@outlook.com" />
           </label>
           <label>Order ID (optional)
-            <input name="orderId" type="text" placeholder="e.g. PHxxxxxxxxxx" />
+            <input name="orderId" type="text" placeholder="e.g. PHxxxxxxxxxx" value="${escapeAttr(draft.orderId || "")}" />
           </label>
           <label>Subject
-            <input name="subject" type="text" placeholder="Login not working / missing code…" />
+            <input name="subject" type="text" placeholder="Login not working / missing code…" value="${escapeAttr(draft.subject || "")}" />
           </label>
           <label>Message
-            <textarea name="message" required rows="5" placeholder="Describe the problem…"></textarea>
+            <textarea name="message" required rows="5" placeholder="Describe the problem…">${escapeHtml(draft.message || "")}</textarea>
           </label>
           <p class="err" id="supportFormErr" style="min-height:1.2em;margin:0"></p>
           <p class="ok" id="supportFormOk" style="min-height:1.2em;margin:0;color:var(--ok,#7dffa3)"></p>
@@ -965,8 +992,7 @@ function viewSupport() {
             <button type="button" class="btn" data-copy-support-email>Copy ${escapeHtml(email)}</button>
           </div>
           <p class="muted" style="margin:14px 0 0;font-size:0.85rem;line-height:1.45">
-            Prefer your own email app? Write to <strong style="color:var(--text)">${escapeHtml(email)}</strong>
-            (only works after Email Routing is set up in Cloudflare).
+            Messages are sent through the website to the store owner. You do not need a mail app.
           </p>
         </form>
 
@@ -1292,8 +1318,8 @@ function checkoutTermsModalHtml(cart, totals) {
               <p class="muted" style="margin:0;text-transform:none;letter-spacing:0;font-weight:400;font-size:0.9rem">
                 ${escapeHtml(supportText)}
                 <br/>
-                <button type="button" class="btn ghost" data-open-support-mail style="margin:6px 0 0;padding:6px 12px;font-size:0.85rem">Email ${escapeHtml(supportEmail)}</button>
-                · <a href="#/support" class="js-go-support">Support page</a>
+                <button type="button" class="btn ghost js-go-support" style="margin:6px 0 0;padding:6px 12px;font-size:0.85rem">Contact support</button>
+                · <a href="#/support" class="js-go-support">Support form</a>
                 · <a href="#/terms">Terms of Use</a>
                 · <a href="#/privacy">Privacy Policy</a>
               </p>
@@ -1481,8 +1507,8 @@ function viewSuccess() {
         <p class="muted" style="font-size:0.8rem;margin-top:16px">Save these credentials now. Redeem / sign in on the official service. Not affiliated with listed brands.</p>
         <div class="support-inline">
           <p class="muted" style="margin:0;font-size:0.9rem">Problem with this order?</p>
-          <button type="button" class="btn" data-open-support-mail data-support-subject="${escapeAttr("Order help " + (order.id || ""))}" data-support-body="${escapeAttr("Order ID: " + (order.id || "") + "\nPayment ID: " + (order.providerRef || order.stripeSessionId || "") + "\n\nProblem:\n")}">Email support</button>
-          <a class="btn ghost js-go-support" href="#/support">Support page</a>
+          <button type="button" class="btn solid" data-go-support-order="${escapeAttr(order.id || "")}" data-go-support-pay="${escapeAttr(order.providerRef || order.stripeSessionId || "")}">Contact support</button>
+          <a class="btn ghost js-go-support" href="#/support">Support form</a>
         </div>
         <div class="cta" style="justify-content:center;margin-top:22px">
           <a class="btn solid" href="#/deals">More deals</a>
@@ -1749,13 +1775,18 @@ function render() {
 }
 
 function bind() {
-  // Support mail / page (Cloudflare-safe — no broken /cdn-cgi/l/email-protection links)
-  $$("[data-open-support-mail]").forEach((btn) => {
+  // Support form navigation (no mailto)
+  $$("[data-go-support-order]").forEach((btn) => {
     btn.addEventListener("click", (e) => {
       e.preventDefault();
-      openSupportMail({
-        subject: btn.getAttribute("data-support-subject") || undefined,
-        body: btn.getAttribute("data-support-body") || undefined,
+      const oid = btn.getAttribute("data-go-support-order") || "";
+      const pay = btn.getAttribute("data-go-support-pay") || "";
+      goSupportPage({
+        orderId: oid,
+        subject: oid ? `Order help ${oid}` : "Order help",
+        message: oid
+          ? `Order ID: ${oid}\nPayment ID: ${pay || "—"}\n\nProblem:\n`
+          : "",
       });
     });
   });
@@ -1770,21 +1801,19 @@ function bind() {
       }
     });
   });
-  $$("a.js-go-support, a[href='#/support'], a[href='#/contact']").forEach((a) => {
+  $$("a.js-go-support, button.js-go-support, a[href='#/support'], a[href='#/contact']").forEach((a) => {
     a.addEventListener("click", (e) => {
-      // Ensure SPA navigation even if hash is sticky / CF rewrote something
-      if (a.getAttribute("href")?.startsWith("#/")) {
-        e.preventDefault();
-        goSupportPage();
-      }
+      e.preventDefault();
+      goSupportPage();
     });
   });
 
-  // On-site support form → server Resend (works without mailto / without support@ MX)
+  // On-site support form → server Resend
   const supportForm = $("#supportForm");
   if (supportForm) {
     supportForm.addEventListener("submit", async (e) => {
       e.preventDefault();
+      e.stopPropagation();
       const errEl = $("#supportFormErr");
       const okEl = $("#supportFormOk");
       const btn = $("#supportFormSubmit");
@@ -1798,6 +1827,14 @@ function bind() {
         subject: String(fd.get("subject") || "Support request").trim(),
         message: String(fd.get("message") || "").trim(),
       };
+      if (!payload.email || !payload.email.includes("@")) {
+        if (errEl) errEl.textContent = "Enter your email so we can reply.";
+        return;
+      }
+      if (payload.message.length < 10) {
+        if (errEl) errEl.textContent = "Please describe your problem (a few more words).";
+        return;
+      }
       if (btn) {
         btn.disabled = true;
         btn.textContent = "Sending…";
@@ -1806,6 +1843,7 @@ function bind() {
         const res = await fetch("/api/support/contact", {
           method: "POST",
           headers: { "Content-Type": "application/json", Accept: "application/json" },
+          credentials: "same-origin",
           body: JSON.stringify(payload),
         });
         const raw = await res.text();
@@ -1813,12 +1851,25 @@ function bind() {
         try {
           data = raw ? JSON.parse(raw) : {};
         } catch {
+          if (/^\s*<!DOCTYPE/i.test(raw) || /^\s*<html/i.test(raw)) {
+            throw new Error(
+              "Server error page (try again in a minute). If it keeps failing, set SUPPORT_INBOX on Render to your Outlook email."
+            );
+          }
           data = {};
         }
         if (!res.ok) {
           throw new Error(data.error || data.detail || `Send failed (HTTP ${res.status})`);
         }
-        if (okEl) okEl.textContent = data.message || "Message sent. Check your inbox for our reply.";
+        try {
+          sessionStorage.removeItem("subsaverph_support_draft");
+        } catch {
+          /* ignore */
+        }
+        if (okEl) {
+          okEl.textContent =
+            data.message || "Message sent. We will reply to your email as soon as we can.";
+        }
         toast("Support message sent");
         supportForm.reset();
       } catch (err) {
@@ -2305,19 +2356,12 @@ async function init() {
 
   // Footer lives outside #app — bind support links once (not wiped by render)
   document.body.addEventListener("click", (e) => {
-    const go = e.target.closest("a.js-go-support, a[href='#/support'], a[href='#/contact'], a[data-support-link]");
+    const go = e.target.closest(
+      "a.js-go-support, button.js-go-support, a[href='#/support'], a[href='#/contact'], a[data-support-link]"
+    );
     if (go) {
       e.preventDefault();
       goSupportPage();
-      return;
-    }
-    const mailBtn = e.target.closest("[data-open-support-mail]");
-    if (mailBtn && !mailBtn.closest("#app")) {
-      e.preventDefault();
-      openSupportMail({
-        subject: mailBtn.getAttribute("data-support-subject") || undefined,
-        body: mailBtn.getAttribute("data-support-body") || undefined,
-      });
     }
   });
 
@@ -2326,7 +2370,7 @@ async function init() {
   render();
 }
 
-// Expose for inline debugging / future buttons
+// Expose for debugging
 window.SubSaverSupport = { openSupportMail, goSupportPage, supportEmailAddress };
 
 init();
