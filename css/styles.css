@@ -4300,16 +4300,14 @@ html[data-theme="light"] .footer {
 }
 .support-email-link {
   display: inline-block;
+  margin: 0;
   font-size: 1.15rem;
   font-weight: 700;
   letter-spacing: 0.02em;
   color: var(--text);
-  text-decoration: underline;
-  text-underline-offset: 4px;
   word-break: break-all;
-}
-.support-email-link:hover {
-  opacity: 0.85;
+  user-select: all;
+  -webkit-user-select: all;
 }
 .support-inline {
   margin-top: 20px;

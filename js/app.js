@@ -504,7 +504,7 @@ function applySiteChrome() {
   setText("#footerBrand", s.footerBrand || s.siteName || "SubSaverPH");
   setText("#footerServiceArea", c("footer_service_area", "footerServiceArea"));
   setText("#footerWebsiteLabel", s.footerWebsite || "subsaverph.com");
-  const support = s.footerSupport || s.supportEmail || "support@subsaverph.com";
+  const support = supportEmailAddress();
   setText("#footerBusinessType", c("footer_business_type", "footerBusinessType"));
   setText("#footerDisclaimer", c("footer_disclaimer", "footerDisclaimer"));
   const year = new Date().getFullYear();
@@ -512,13 +512,14 @@ function applySiteChrome() {
   document.querySelectorAll(".footer-meta li span[data-i18n-meta]").forEach((span) => {
     span.textContent = t(span.getAttribute("data-i18n-meta"));
   });
-  // Footer support: clickable mailto + visible address
+  // Footer support: go to support page (no static mailto — Cloudflare breaks those)
   const supportLabel = document.querySelector("#footerSupportLabel");
   if (supportLabel) {
-    supportLabel.innerHTML = `<a href="mailto:${escapeAttr(support)}" data-support-email>${escapeHtml(support)}</a>`;
+    supportLabel.innerHTML = `<a href="#/support" class="js-go-support">${escapeHtml(support)}</a>`;
   }
-  document.querySelectorAll("a[data-support-email]").forEach((a) => {
-    a.href = `mailto:${support}`;
+  document.querySelectorAll("a[data-support-email], a[data-support-link]").forEach((a) => {
+    a.setAttribute("href", "#/support");
+    a.classList.add("js-go-support");
   });
 }
 
@@ -896,16 +897,40 @@ function viewPrivacy() {
 
 function supportEmailAddress() {
   const s = siteSettings();
-  return (s.supportEmail || s.footerSupport || "support@subsaverph.com").trim();
+  // Prefer settings; fall back to assembled parts so Cloudflare cannot obfuscate static HTML only
+  const fromSettings = (s.supportEmail || s.footerSupport || "").trim();
+  if (fromSettings && fromSettings.includes("@")) return fromSettings;
+  return ["support", "subsaverph.com"].join("@");
+}
+
+/** Open mail client without static mailto in HTML (avoids Cloudflare email-protection breakage). */
+function openSupportMail(opts = {}) {
+  const email = supportEmailAddress();
+  const subject = opts.subject || "SubSaverPH support request";
+  const body =
+    opts.body ||
+    "Hi SubSaverPH Support,\n\nOrder ID (if any):\nProblem:\n\nThank you.";
+  const url = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  try {
+    window.location.href = url;
+  } catch {
+    window.open(url, "_self");
+  }
+  return false;
+}
+
+function goSupportPage() {
+  if (location.hash !== "#/support" && location.hash !== "#/contact") {
+    location.hash = "#/support";
+  } else {
+    state.view = "support";
+    render();
+    window.scrollTo(0, 0);
+  }
 }
 
 function viewSupport() {
   const email = supportEmailAddress();
-  const subject = encodeURIComponent("SubSaverPH support request");
-  const body = encodeURIComponent(
-    "Hi SubSaverPH Support,\n\nOrder ID (if any):\nProblem:\n\nThank you."
-  );
-  const mailto = `mailto:${email}?subject=${subject}&body=${body}`;
   return `
     <div class="page">
       <div class="page-inner support-page">
@@ -917,12 +942,14 @@ function viewSupport() {
         </p>
         <div class="support-card">
           <p class="eyebrow" style="margin:0 0 8px">Support email</p>
-          <a class="support-email-link" href="${escapeAttr(mailto)}">${escapeHtml(email)}</a>
+          <p class="support-email-link" id="supportEmailDisplay" data-support-display>${escapeHtml(email)}</p>
           <p class="muted" style="margin:14px 0 0;font-size:0.9rem;line-height:1.5">
-            Tap the address to open your email app. We use this inbox for order help, defective products, and delivery issues.
+            Tap <strong style="color:var(--text)">Email support</strong> to open your email app (Outlook, Gmail, etc.).
+            Or copy the address above.
           </p>
           <div class="cta" style="margin-top:18px">
-            <a class="btn solid" href="${escapeAttr(mailto)}">Email support</a>
+            <button type="button" class="btn solid" data-open-support-mail>Email support</button>
+            <button type="button" class="btn" data-copy-support-email>Copy email</button>
             <a class="btn" href="#/deals">Back to deals</a>
           </div>
         </div>
@@ -1248,7 +1275,8 @@ function checkoutTermsModalHtml(cart, totals) {
               <p class="muted" style="margin:0;text-transform:none;letter-spacing:0;font-weight:400;font-size:0.9rem">
                 ${escapeHtml(supportText)}
                 <br/>
-                <a href="mailto:${escapeHtml(supportEmail)}">${escapeHtml(supportEmail)}</a>
+                <button type="button" class="btn ghost" data-open-support-mail style="margin:6px 0 0;padding:6px 12px;font-size:0.85rem">Email ${escapeHtml(supportEmail)}</button>
+                · <a href="#/support" class="js-go-support">Support page</a>
                 · <a href="#/terms">Terms of Use</a>
                 · <a href="#/privacy">Privacy Policy</a>
               </p>
@@ -1436,8 +1464,8 @@ function viewSuccess() {
         <p class="muted" style="font-size:0.8rem;margin-top:16px">Save these credentials now. Redeem / sign in on the official service. Not affiliated with listed brands.</p>
         <div class="support-inline">
           <p class="muted" style="margin:0;font-size:0.9rem">Problem with this order?</p>
-          <a class="btn" href="mailto:${escapeAttr(supportEmailAddress())}?subject=${encodeURIComponent("Order help " + (order.id || ""))}&body=${encodeURIComponent("Order ID: " + (order.id || "") + "\nPayment ID: " + (order.providerRef || order.stripeSessionId || "") + "\n\nProblem:\n")}">Email ${escapeHtml(supportEmailAddress())}</a>
-          <a class="btn ghost" href="#/support">Support page</a>
+          <button type="button" class="btn" data-open-support-mail data-support-subject="${escapeAttr("Order help " + (order.id || ""))}" data-support-body="${escapeAttr("Order ID: " + (order.id || "") + "\nPayment ID: " + (order.providerRef || order.stripeSessionId || "") + "\n\nProblem:\n")}">Email support</button>
+          <a class="btn ghost js-go-support" href="#/support">Support page</a>
         </div>
         <div class="cta" style="justify-content:center;margin-top:22px">
           <a class="btn solid" href="#/deals">More deals</a>
@@ -1704,6 +1732,37 @@ function render() {
 }
 
 function bind() {
+  // Support mail / page (Cloudflare-safe — no broken /cdn-cgi/l/email-protection links)
+  $$("[data-open-support-mail]").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      openSupportMail({
+        subject: btn.getAttribute("data-support-subject") || undefined,
+        body: btn.getAttribute("data-support-body") || undefined,
+      });
+    });
+  });
+  $$("[data-copy-support-email]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const email = supportEmailAddress();
+      try {
+        await navigator.clipboard.writeText(email);
+        toast("Support email copied");
+      } catch {
+        toast(email, false);
+      }
+    });
+  });
+  $$("a.js-go-support, a[href='#/support'], a[href='#/contact']").forEach((a) => {
+    a.addEventListener("click", (e) => {
+      // Ensure SPA navigation even if hash is sticky / CF rewrote something
+      if (a.getAttribute("href")?.startsWith("#/")) {
+        e.preventDefault();
+        goSupportPage();
+      }
+    });
+  });
+
   // Success page: copy username / password
   $$(".cred-copy").forEach((btn) => {
     btn.addEventListener("click", async () => {
@@ -2173,9 +2232,30 @@ async function init() {
   });
   window.addEventListener("rates:loaded", () => render());
 
+  // Footer lives outside #app — bind support links once (not wiped by render)
+  document.body.addEventListener("click", (e) => {
+    const go = e.target.closest("a.js-go-support, a[href='#/support'], a[href='#/contact'], a[data-support-link]");
+    if (go) {
+      e.preventDefault();
+      goSupportPage();
+      return;
+    }
+    const mailBtn = e.target.closest("[data-open-support-mail]");
+    if (mailBtn && !mailBtn.closest("#app")) {
+      e.preventDefault();
+      openSupportMail({
+        subject: mailBtn.getAttribute("data-support-subject") || undefined,
+        body: mailBtn.getAttribute("data-support-body") || undefined,
+      });
+    }
+  });
+
   parseRoute();
   await loadRates();
   render();
 }
+
+// Expose for inline debugging / future buttons
+window.SubSaverSupport = { openSupportMail, goSupportPage, supportEmailAddress };
 
 init();
