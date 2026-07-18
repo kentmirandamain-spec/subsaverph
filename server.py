@@ -470,23 +470,40 @@ def api_support_contact():
             }
         )
 
-    # Prefer env inbox; never deliver only to support@subsaverph.com unless routing works
-    # (Resend can send TO a real Outlook/Gmail owner inbox)
-    to_override = ""
-    inbox = support_inbox()
-    if inbox and not inbox.lower().endswith("@subsaverph.com"):
-        to_override = inbox
-    elif inbox:
-        # support@ as destination often fails without verified domain receive path
-        to_override = inbox
+    # Deliver to owner's REAL inbox (Outlook/Gmail). Never to support@subsaverph.com
+    # — that public address has no mailbox until Cloudflare Email Routing is enabled
+    # ("Address not found" bounce).
+    to_override = support_inbox()
     if not to_override:
         try:
             s = load_settings()
-            candidate = (s.get("supportEmail") or s.get("footerSupport") or "").strip()
-            if candidate and "@" in candidate:
-                to_override = candidate
+            for key in ("ownerInbox", "notifyEmail", "supportInbox"):
+                candidate = (s.get(key) or "").strip()
+                if (
+                    candidate
+                    and "@" in candidate
+                    and not candidate.lower().endswith("@subsaverph.com")
+                    and not candidate.lower().endswith("@subsaverph.onrender.com")
+                ):
+                    to_override = candidate
+                    break
         except Exception:
             pass
+
+    if not to_override:
+        # Message already saved — instruct owner to set inbox
+        return jsonify(
+            {
+                "ok": True,
+                "message": (
+                    "Your message was saved. The store owner will see it in admin → Support inbox. "
+                    "(Email notify is not set up yet.)"
+                ),
+                "ticketId": ticket["id"],
+                "emailOk": False,
+                "detail": "Set SUPPORT_INBOX or admin ownerInbox to a real Outlook/Gmail address.",
+            }
+        )
 
     result = send_support_message(
         from_email=email,

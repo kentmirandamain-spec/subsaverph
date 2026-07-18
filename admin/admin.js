@@ -178,8 +178,17 @@ function settingsView() {
         <label>Site name<input name="siteName" value="${escapeAttr(s.siteName || "")}" /></label>
         <label>Tagline<input name="tagline" value="${escapeAttr(s.tagline || "")}" /></label>
         <label>Default currency<input name="defaultCurrency" value="${escapeAttr(s.defaultCurrency || "PHP")}" /></label>
-        <label>Support email<input name="supportEmail" value="${escapeAttr(s.supportEmail || "")}" /></label>
+        <label>Public support label (shown on site)
+          <input name="supportEmail" value="${escapeAttr(s.supportEmail || "support@subsaverph.com")}" placeholder="support@subsaverph.com" />
+        </label>
       </div>
+      <label>Owner inbox — where form messages are emailed (your real Outlook/Gmail)
+        <input name="ownerInbox" type="email" value="${escapeAttr(s.ownerInbox || "")}" placeholder="you@outlook.com" />
+      </label>
+      <p class="muted" style="margin-top:-6px;margin-bottom:14px;font-size:0.85rem">
+        Do <strong>not</strong> put support@subsaverph.com here until Cloudflare Email Routing works
+        (that address currently bounces: “Address not found”). Use your personal Outlook/Gmail.
+      </p>
       <label>Website URL<input name="websiteUrl" value="${escapeAttr(s.websiteUrl || "")}" /></label>
       <label>Announcement bar (optional)<input name="announcement" value="${escapeAttr(s.announcement || "")}" placeholder="Leave empty to hide" /></label>
 

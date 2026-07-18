@@ -586,8 +586,17 @@ def _send_via_smtp(
         return False, f"SMTP error: {e}"
 
 
+def _is_public_brand_address(addr: str) -> bool:
+    """support@subsaverph.com has no mailbox until Email Routing is set — don't deliver here."""
+    a = (addr or "").strip().lower()
+    return a.endswith("@subsaverph.com") or a.endswith("@subsaverph.onrender.com")
+
+
 def support_inbox() -> str:
-    """Where customer support form messages are delivered (your real inbox)."""
+    """
+    Where customer support form messages are delivered (your real Outlook/Gmail).
+    Skips brand addresses like support@subsaverph.com (they bounce: Address not found).
+    """
     for key in (
         "SUPPORT_INBOX",
         "ORDER_NOTIFY_EMAIL",
@@ -595,9 +604,13 @@ def support_inbox() -> str:
         "MAIL_REPLY_TO",
     ):
         v = (os.environ.get(key) or "").strip()
-        if v and "@" in v:
-            # first address if comma-separated
-            return v.replace(";", ",").split(",")[0].strip()
+        if not v or "@" not in v:
+            continue
+        # first address if comma-separated
+        first = v.replace(";", ",").split(",")[0].strip()
+        if first and not _is_public_brand_address(first):
+            return first
+        # If only brand address, keep looking for a real inbox
     return ""
 
 

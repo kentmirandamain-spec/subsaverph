@@ -964,8 +964,9 @@ function viewSupport() {
         <h1 class="page-title">Customer support</h1>
         <p class="muted" style="max-width:36rem;line-height:1.55">
           Having a problem with your order, login, or delivery? Fill this form and tap
-          <strong style="color:var(--text)">Send message</strong> —
-          works without Outlook/Gmail apps.
+          <strong style="color:var(--text)">Send message</strong>.
+          Do <strong style="color:var(--text)">not</strong> email support@… from Outlook yet
+          if you get “Address not found” — use this form instead (no mail app needed).
         </p>
 
         <form class="support-card support-form" id="supportForm" novalidate>
