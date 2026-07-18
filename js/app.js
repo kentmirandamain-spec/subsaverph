@@ -512,12 +512,21 @@ function applySiteChrome() {
   document.querySelectorAll(".footer-meta li span[data-i18n-meta]").forEach((span) => {
     span.textContent = t(span.getAttribute("data-i18n-meta"));
   });
-  // Footer support: go to support page (no static mailto — Cloudflare breaks those)
+  // Footer support email → open Gmail compose (not a dead page link)
   const supportLabel = document.querySelector("#footerSupportLabel");
   if (supportLabel) {
-    supportLabel.innerHTML = `<a href="#/support" class="js-go-support">${escapeHtml(support)}</a>`;
+    supportLabel.innerHTML = `<a href="${escapeAttr(gmailComposeUrl())}" class="js-email-support" target="_blank" rel="noopener noreferrer">${escapeHtml(support)}</a>`;
   }
-  document.querySelectorAll("a[data-support-email], a[data-support-link]").forEach((a) => {
+  document.querySelectorAll("a[data-support-email]").forEach((a) => {
+    a.setAttribute("href", gmailComposeUrl());
+    a.setAttribute("target", "_blank");
+    a.setAttribute("rel", "noopener noreferrer");
+    a.classList.add("js-email-support");
+    a.classList.remove("js-go-support");
+  });
+  // "Contact support" / form links still go to the support page
+  document.querySelectorAll("a[data-support-link]").forEach((a) => {
+    if (a.classList.contains("js-email-support")) return;
     a.setAttribute("href", "#/support");
     a.classList.add("js-go-support");
   });
@@ -903,7 +912,66 @@ function supportEmailAddress() {
   return ["support", "subsaverph.com"].join("@");
 }
 
-/** Prefer on-site form (mailto fails on many phones/PCs with no default mail app). */
+/** Build Gmail web compose URL (opens Gmail in browser — what users expect). */
+function gmailComposeUrl(opts = {}) {
+  const email = supportEmailAddress();
+  const subject = opts.subject || "SubSaverPH support request";
+  let body =
+    opts.body ||
+    opts.message ||
+    "Hi SubSaverPH Support,\n\nOrder ID (if any):\nProblem:\n\nThank you.";
+  if (opts.orderId && !body.includes(opts.orderId)) {
+    body = `Order ID: ${opts.orderId}\n\n${body}`;
+  }
+  const params = new URLSearchParams({
+    view: "cm",
+    fs: "1",
+    to: email,
+    su: subject,
+    body,
+  });
+  return `https://mail.google.com/mail/?${params.toString()}`;
+}
+
+/** mailto: fallback for devices with a default mail app (Outlook, Apple Mail, etc.). */
+function mailtoSupportUrl(opts = {}) {
+  const email = supportEmailAddress();
+  const subject = opts.subject || "SubSaverPH support request";
+  let body =
+    opts.body ||
+    opts.message ||
+    "Hi SubSaverPH Support,\n\nOrder ID (if any):\nProblem:\n\nThank you.";
+  if (opts.orderId && !body.includes(opts.orderId)) {
+    body = `Order ID: ${opts.orderId}\n\n${body}`;
+  }
+  return `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
+
+/** Open Gmail compose in a new tab (primary). Falls back to mailto if popup blocked. */
+function openSupportMail(opts = {}) {
+  const gmail = gmailComposeUrl(opts);
+  const mail = mailtoSupportUrl(opts);
+  try {
+    const win = window.open(gmail, "_blank", "noopener,noreferrer");
+    if (!win) {
+      // Popup blocked — try same-tab Gmail, then mailto
+      try {
+        location.href = gmail;
+      } catch {
+        location.href = mail;
+      }
+    }
+  } catch {
+    try {
+      location.href = gmail;
+    } catch {
+      location.href = mail;
+    }
+  }
+  return false;
+}
+
+/** On-site support form page (no mail app required). */
 function goSupportPage(opts = {}) {
   try {
     if (opts.orderId || opts.subject || opts.message) {
@@ -919,7 +987,6 @@ function goSupportPage(opts = {}) {
   } catch {
     /* ignore */
   }
-  // Leave checkout terms modal / cart drawer so support page is usable
   try {
     document.body.style.overflow = "";
     $("#drawer")?.classList.remove("open");
@@ -937,22 +1004,11 @@ function goSupportPage(opts = {}) {
     return;
   }
   location.hash = "#/support";
-  // Fallback if hashchange does not fire (rare)
   if ((location.hash || "").replace(/[?#].*$/, "") === "#/support" && state.view !== "support") {
     state.view = "support";
     render();
     window.scrollTo(0, 0);
   }
-}
-
-function openSupportMail(opts = {}) {
-  // No longer uses mailto — opens the working web form instead
-  goSupportPage({
-    orderId: opts.orderId || "",
-    subject: opts.subject || "SubSaverPH support request",
-    message: opts.body || "",
-  });
-  return false;
 }
 
 function viewSupport() {
@@ -980,18 +1036,28 @@ function viewSupport() {
         <p class="eyebrow">Help</p>
         <h1 class="page-title">Customer support</h1>
         <p class="muted" style="max-width:36rem;line-height:1.55">
-          Having a problem with your order, login, or delivery? Fill this form and tap
-          <strong style="color:var(--text)">Send message</strong>.
-          Works in the browser — no Outlook/Gmail app required.
+          Having a problem with your order, login, or delivery? Email us in Gmail, or use the form below.
         </p>
 
+        <div class="support-card" style="margin-bottom:18px">
+          <p class="eyebrow" style="margin:0 0 10px">Email support</p>
+          <p class="muted" style="margin:0 0 14px;line-height:1.5;font-size:0.95rem">
+            Opens Gmail with a message ready to send to
+            <strong style="color:var(--text)">${escapeHtml(email)}</strong>.
+          </p>
+          <div class="cta" style="margin:0">
+            <a class="btn solid js-email-support" href="${escapeAttr(gmailComposeUrl({ subject: draft.subject || "SubSaverPH support request", body: draft.message || "", orderId: draft.orderId || "" }))}" target="_blank" rel="noopener noreferrer">Open in Gmail</a>
+            <button type="button" class="btn" data-copy-support-email>Copy ${escapeHtml(email)}</button>
+          </div>
+        </div>
+
         <form class="support-card support-form" id="supportForm" novalidate>
-          <p class="eyebrow" style="margin:0 0 12px">Send a message</p>
+          <p class="eyebrow" style="margin:0 0 12px">Or send from this page</p>
           <label>Your name
             <input name="name" type="text" autocomplete="name" placeholder="Your name" />
           </label>
           <label>Your email (we reply here)
-            <input name="email" type="email" required autocomplete="email" placeholder="you@outlook.com" />
+            <input name="email" type="email" required autocomplete="email" placeholder="you@gmail.com" />
           </label>
           <label>Order ID (optional)
             <input name="orderId" type="text" placeholder="e.g. PHxxxxxxxxxx" value="${escapeAttr(draft.orderId || "")}" />
@@ -1006,10 +1072,9 @@ function viewSupport() {
           <p class="ok" id="supportFormOk" style="min-height:1.2em;margin:0;color:var(--ok,#7dffa3)"></p>
           <div class="cta" style="margin-top:8px">
             <button type="submit" class="btn solid" id="supportFormSubmit">Send message</button>
-            <button type="button" class="btn" data-copy-support-email>Copy ${escapeHtml(email)}</button>
           </div>
           <p class="muted" style="margin:14px 0 0;font-size:0.85rem;line-height:1.45">
-            Messages are sent through the website to the store owner. You do not need a mail app.
+            No Gmail? Use this form — we still get your message.
           </p>
         </form>
 
@@ -1335,7 +1400,7 @@ function checkoutTermsModalHtml(cart, totals) {
               <p class="muted" style="margin:0;text-transform:none;letter-spacing:0;font-weight:400;font-size:0.9rem">
                 ${escapeHtml(supportText)}
                 <br/>
-                <button type="button" class="btn ghost js-go-support" style="margin:6px 0 0;padding:6px 12px;font-size:0.85rem">Contact support</button>
+                <button type="button" class="btn ghost js-email-support" style="margin:6px 0 0;padding:6px 12px;font-size:0.85rem">Email support (Gmail)</button>
                 · <a href="#/support" class="js-go-support">Support form</a>
                 · <a href="#/terms">Terms of Use</a>
                 · <a href="#/privacy">Privacy Policy</a>
@@ -1524,7 +1589,7 @@ function viewSuccess() {
         <p class="muted" style="font-size:0.8rem;margin-top:16px">Save these credentials now. Redeem / sign in on the official service. Not affiliated with listed brands.</p>
         <div class="support-inline">
           <p class="muted" style="margin:0;font-size:0.9rem">Problem with this order?</p>
-          <button type="button" class="btn solid" data-go-support-order="${escapeAttr(order.id || "")}" data-go-support-pay="${escapeAttr(order.providerRef || order.stripeSessionId || "")}">Contact support</button>
+          <button type="button" class="btn solid js-email-support" data-go-support-order="${escapeAttr(order.id || "")}" data-go-support-pay="${escapeAttr(order.providerRef || order.stripeSessionId || "")}">Email support (Gmail)</button>
           <a class="btn ghost js-go-support" href="#/support">Support form</a>
         </div>
         <div class="cta" style="justify-content:center;margin-top:22px">
@@ -1792,20 +1857,29 @@ function render() {
 }
 
 function bind() {
-  // Support form navigation (no mailto)
+  // Email support → open Gmail (with order details when present)
   $$("[data-go-support-order]").forEach((btn) => {
     btn.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
       const oid = btn.getAttribute("data-go-support-order") || "";
       const pay = btn.getAttribute("data-go-support-pay") || "";
-      goSupportPage({
+      openSupportMail({
         orderId: oid,
         subject: oid ? `Order help ${oid}` : "Order help",
-        message: oid
-          ? `Order ID: ${oid}\nPayment ID: ${pay || "—"}\n\nProblem:\n`
-          : "",
+        body: oid
+          ? `Hi SubSaverPH Support,\n\nOrder ID: ${oid}\nPayment ID: ${pay || "—"}\n\nProblem:\n\nThank you.`
+          : "Hi SubSaverPH Support,\n\nOrder ID (if any):\nProblem:\n\nThank you.",
       });
+    });
+  });
+  $$(".js-email-support").forEach((el) => {
+    // Order buttons already handled above
+    if (el.hasAttribute("data-go-support-order")) return;
+    el.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      openSupportMail();
     });
   });
   $$("[data-copy-support-email]").forEach((btn) => {
@@ -1821,7 +1895,7 @@ function bind() {
       }
     });
   });
-  // Per-element handlers for buttons/links rendered inside #app
+  // Support form page (not Gmail)
   $$("a.js-go-support, button.js-go-support, a[href='#/support'], a[href='#/contact']").forEach((a) => {
     a.addEventListener("click", (e) => {
       e.preventDefault();
@@ -2224,6 +2298,10 @@ function escapeHtml(s) {
     .replace(/"/g, "&quot;");
 }
 
+function escapeAttr(s) {
+  return escapeHtml(s).replace(/'/g, "&#39;");
+}
+
 async function loadLiveCatalog() {
   try {
     const res = await fetch("/api/catalog", { credentials: "same-origin" });
@@ -2383,10 +2461,18 @@ async function init() {
 
   // Footer + any support CTA outside/inside #app (delegated, survives re-renders)
   document.body.addEventListener("click", (e) => {
-    // Order-specific button has its own handler with draft fields
     if (e.target.closest("[data-go-support-order]")) return;
     if (e.target.closest("[data-copy-support-email]")) return;
     if (e.target.closest("#supportForm")) return;
+
+    const emailBtn = e.target.closest("a.js-email-support, button.js-email-support, a[data-support-email]");
+    if (emailBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      openSupportMail();
+      return;
+    }
+
     const go = e.target.closest(
       "a.js-go-support, button.js-go-support, a[href='#/support'], a[href='#/contact'], a[data-support-link]"
     );
@@ -2403,6 +2489,12 @@ async function init() {
 }
 
 // Expose for debugging
-window.SubSaverSupport = { openSupportMail, goSupportPage, supportEmailAddress };
+window.SubSaverSupport = {
+  openSupportMail,
+  goSupportPage,
+  supportEmailAddress,
+  gmailComposeUrl,
+  mailtoSupportUrl,
+};
 
 init();
