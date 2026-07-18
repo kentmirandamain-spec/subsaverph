@@ -394,6 +394,93 @@ NOWPAYMENTS_IPN_IPS = [
 ]
 
 
+# Simple in-memory rate limit for public support form (per IP)
+_SUPPORT_HITS: dict[str, list[float]] = {}
+
+
+@app.post("/api/support/contact")
+def api_support_contact():
+    """
+    Website contact form → email store owner via Resend/SMTP.
+    Does not require support@ domain MX / Email Routing to work.
+    """
+    try:
+        from email_delivery import mail_configured, send_support_message, support_inbox
+    except Exception as e:
+        return jsonify({"error": f"Email module error: {e}"}), 500
+
+    if not mail_configured():
+        return (
+            jsonify(
+                {
+                    "error": "Support form is not available yet (email not configured on server).",
+                }
+            ),
+            503,
+        )
+
+    # Rate limit: max 5 messages / 15 minutes / IP
+    import time
+
+    ip = (request.headers.get("CF-Connecting-IP") or request.remote_addr or "unknown").strip()
+    now = time.time()
+    window = 15 * 60
+    hits = [t for t in _SUPPORT_HITS.get(ip, []) if now - t < window]
+    if len(hits) >= 5:
+        return jsonify({"error": "Too many messages. Please wait a few minutes and try again."}), 429
+    hits.append(now)
+    _SUPPORT_HITS[ip] = hits
+
+    data = request.get_json(silent=True) or {}
+    email = (data.get("email") or "").strip()
+    name = (data.get("name") or "").strip()
+    subject = (data.get("subject") or "Support request").strip()
+    message = (data.get("message") or data.get("body") or "").strip()
+    order_id = (data.get("orderId") or data.get("order_id") or "").strip()
+
+    if not email or "@" not in email:
+        return jsonify({"error": "Please enter your email so we can reply."}), 400
+    if len(message) < 10:
+        return jsonify({"error": "Please describe your problem (at least a short message)."}), 400
+
+    # Prefer env inbox; fall back to site settings supportEmail only if it is NOT
+    # the public support@ (which may not receive mail until CF routing is on)
+    to_override = ""
+    inbox = support_inbox()
+    if not inbox:
+        try:
+            s = load_settings()
+            candidate = (s.get("supportEmail") or "").strip()
+            # If owner put their Outlook in supportEmail, use it
+            if candidate and not candidate.lower().endswith("@subsaverph.com"):
+                to_override = candidate
+        except Exception:
+            pass
+
+    result = send_support_message(
+        from_email=email,
+        from_name=name,
+        subject=subject,
+        message=message,
+        order_id=order_id,
+        to_override=to_override,
+    )
+    if not result.get("ok"):
+        detail = str(result.get("detail") or "Failed to send")
+        # Never use 502 (Cloudflare replaces body with HTML)
+        return (
+            jsonify({"ok": False, "error": detail, "detail": detail}),
+            422,
+        )
+
+    return jsonify(
+        {
+            "ok": True,
+            "message": "Message sent. We will reply to your email as soon as possible.",
+        }
+    )
+
+
 @app.get("/api/health")
 def health():
     try:

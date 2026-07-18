@@ -4326,3 +4326,37 @@ html[data-theme="light"] .footer {
   text-decoration: underline;
   text-underline-offset: 3px;
 }
+
+/* Support contact form */
+.support-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mute);
+}
+.support-form input,
+.support-form textarea {
+  font: inherit;
+  color: var(--text);
+  background: var(--input-bg, #000);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm, 6px);
+  padding: 10px 12px;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 0.95rem;
+}
+.support-form textarea {
+  min-height: 120px;
+  resize: vertical;
+  line-height: 1.45;
+}
+.support-form input:focus,
+.support-form textarea:focus {
+  outline: none;
+  border-color: #666;
+}

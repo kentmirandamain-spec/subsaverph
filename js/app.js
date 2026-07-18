@@ -937,22 +937,39 @@ function viewSupport() {
         <p class="eyebrow">Help</p>
         <h1 class="page-title">Customer support</h1>
         <p class="muted" style="max-width:36rem;line-height:1.55">
-          Having a problem with your order, login, or delivery? Email us and we will help.
-          Include your <strong style="color:var(--text)">Order ID</strong> or Payment ID when you have one.
+          Having a problem with your order, login, or delivery? Send a message below —
+          <strong style="color:var(--text)">no email app needed</strong>. We reply to the address you enter.
         </p>
-        <div class="support-card">
-          <p class="eyebrow" style="margin:0 0 8px">Support email</p>
-          <p class="support-email-link" id="supportEmailDisplay" data-support-display>${escapeHtml(email)}</p>
-          <p class="muted" style="margin:14px 0 0;font-size:0.9rem;line-height:1.5">
-            Tap <strong style="color:var(--text)">Email support</strong> to open your email app (Outlook, Gmail, etc.).
-            Or copy the address above.
-          </p>
-          <div class="cta" style="margin-top:18px">
-            <button type="button" class="btn solid" data-open-support-mail>Email support</button>
-            <button type="button" class="btn" data-copy-support-email>Copy email</button>
-            <a class="btn" href="#/deals">Back to deals</a>
+
+        <form class="support-card support-form" id="supportForm">
+          <p class="eyebrow" style="margin:0 0 12px">Send a message</p>
+          <label>Your name
+            <input name="name" type="text" autocomplete="name" placeholder="Your name" />
+          </label>
+          <label>Your email (we reply here)
+            <input name="email" type="email" required autocomplete="email" placeholder="you@outlook.com" />
+          </label>
+          <label>Order ID (optional)
+            <input name="orderId" type="text" placeholder="e.g. PHxxxxxxxxxx" />
+          </label>
+          <label>Subject
+            <input name="subject" type="text" placeholder="Login not working / missing code…" />
+          </label>
+          <label>Message
+            <textarea name="message" required rows="5" placeholder="Describe the problem…"></textarea>
+          </label>
+          <p class="err" id="supportFormErr" style="min-height:1.2em;margin:0"></p>
+          <p class="ok" id="supportFormOk" style="min-height:1.2em;margin:0;color:var(--ok,#7dffa3)"></p>
+          <div class="cta" style="margin-top:8px">
+            <button type="submit" class="btn solid" id="supportFormSubmit">Send message</button>
+            <button type="button" class="btn" data-copy-support-email>Copy ${escapeHtml(email)}</button>
           </div>
-        </div>
+          <p class="muted" style="margin:14px 0 0;font-size:0.85rem;line-height:1.45">
+            Prefer your own email app? Write to <strong style="color:var(--text)">${escapeHtml(email)}</strong>
+            (only works after Email Routing is set up in Cloudflare).
+          </p>
+        </form>
+
         <div class="note" style="margin-top:22px">
           <h3 style="margin-top:0">Before you write</h3>
           <ul class="muted" style="margin:8px 0 0;padding-left:1.2rem;line-height:1.55">
@@ -1762,6 +1779,60 @@ function bind() {
       }
     });
   });
+
+  // On-site support form → server Resend (works without mailto / without support@ MX)
+  const supportForm = $("#supportForm");
+  if (supportForm) {
+    supportForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const errEl = $("#supportFormErr");
+      const okEl = $("#supportFormOk");
+      const btn = $("#supportFormSubmit");
+      if (errEl) errEl.textContent = "";
+      if (okEl) okEl.textContent = "";
+      const fd = new FormData(supportForm);
+      const payload = {
+        name: String(fd.get("name") || "").trim(),
+        email: String(fd.get("email") || "").trim(),
+        orderId: String(fd.get("orderId") || "").trim(),
+        subject: String(fd.get("subject") || "Support request").trim(),
+        message: String(fd.get("message") || "").trim(),
+      };
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = "Sending…";
+      }
+      try {
+        const res = await fetch("/api/support/contact", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const raw = await res.text();
+        let data = {};
+        try {
+          data = raw ? JSON.parse(raw) : {};
+        } catch {
+          data = {};
+        }
+        if (!res.ok) {
+          throw new Error(data.error || data.detail || `Send failed (HTTP ${res.status})`);
+        }
+        if (okEl) okEl.textContent = data.message || "Message sent. Check your inbox for our reply.";
+        toast("Support message sent");
+        supportForm.reset();
+      } catch (err) {
+        const msg = err.message || "Could not send message";
+        if (errEl) errEl.textContent = msg;
+        toast(msg, true);
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = "Send message";
+        }
+      }
+    });
+  }
 
   // Success page: copy username / password
   $$(".cred-copy").forEach((btn) => {

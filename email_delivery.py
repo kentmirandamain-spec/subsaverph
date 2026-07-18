@@ -586,6 +586,121 @@ def _send_via_smtp(
         return False, f"SMTP error: {e}"
 
 
+def support_inbox() -> str:
+    """Where customer support form messages are delivered (your real inbox)."""
+    for key in (
+        "SUPPORT_INBOX",
+        "ORDER_NOTIFY_EMAIL",
+        "MAIL_NOTIFY_TO",
+        "MAIL_REPLY_TO",
+    ):
+        v = (os.environ.get(key) or "").strip()
+        if v and "@" in v:
+            # first address if comma-separated
+            return v.replace(";", ",").split(",")[0].strip()
+    return ""
+
+
+def send_support_message(
+    *,
+    from_email: str,
+    from_name: str,
+    subject: str,
+    message: str,
+    order_id: str = "",
+    to_override: str = "",
+) -> dict[str, Any]:
+    """
+    Deliver a customer support form message to the store owner inbox.
+    Uses Resend/SMTP (same as invoices). Does not require support@ MX to work.
+    """
+    from_email = (from_email or "").strip()
+    if not from_email or "@" not in from_email:
+        return {"ok": False, "detail": "Valid customer email is required"}
+
+    if not mail_configured():
+        return {
+            "ok": False,
+            "detail": "Email not configured on server (RESEND_API_KEY or SMTP_*)",
+            "skipped": True,
+        }
+
+    to_addr = (to_override or "").strip() or support_inbox()
+    if not to_addr or "@" not in to_addr:
+        return {
+            "ok": False,
+            "detail": (
+                "No support inbox configured. Set SUPPORT_INBOX or ORDER_NOTIFY_EMAIL "
+                "on Render to your Outlook/Gmail address."
+            ),
+        }
+
+    name = (from_name or "Customer").strip() or "Customer"
+    subj_raw = (subject or "Support request").strip() or "Support request"
+    oid = (order_id or "").strip()
+    msg = (message or "").strip()
+    if len(msg) < 5:
+        return {"ok": False, "detail": "Message is too short"}
+    if len(msg) > 5000:
+        msg = msg[:5000]
+
+    subject_line = f"[SubSaverPH Support] {subj_raw}"
+    if oid:
+        subject_line += f" · Order {oid}"
+
+    text = "\n".join(
+        [
+            "New support message from the website form",
+            "=" * 44,
+            f"From name:  {name}",
+            f"From email: {from_email}",
+            f"Order ID:   {oid or '—'}",
+            f"Subject:    {subj_raw}",
+            "",
+            "Message:",
+            msg,
+            "",
+            "=" * 44,
+            "Reply directly to this email to answer the customer.",
+        ]
+    )
+    html = f"""<!DOCTYPE html><html><body style="font-family:system-ui,sans-serif;background:#0a0a0a;color:#eee;padding:20px">
+    <div style="max-width:560px;margin:0 auto;border:1px solid #333;padding:20px;background:#111">
+      <p style="letter-spacing:0.15em;text-transform:uppercase;color:#888;font-size:12px">SubSaverPH Support</p>
+      <h1 style="font-size:18px;margin:8px 0 16px">Website contact form</h1>
+      <table style="width:100%;font-size:14px;color:#ccc">
+        <tr><td style="padding:6px 0;color:#888">From</td><td style="padding:6px 0;color:#fff">{escape(name)} &lt;{escape(from_email)}&gt;</td></tr>
+        <tr><td style="padding:6px 0;color:#888">Order ID</td><td style="padding:6px 0;color:#fff">{escape(oid or "—")}</td></tr>
+        <tr><td style="padding:6px 0;color:#888">Subject</td><td style="padding:6px 0;color:#fff">{escape(subj_raw)}</td></tr>
+      </table>
+      <div style="margin-top:16px;padding:14px;border:1px solid #333;background:#0d0d0d;white-space:pre-wrap;line-height:1.5;color:#ddd">{escape(msg)}</div>
+      <p style="margin-top:16px;font-size:12px;color:#888">Reply to this email to respond to the customer.</p>
+    </div></body></html>"""
+
+    # Force reply-to customer so you can answer them
+    old_reply = os.environ.get("MAIL_REPLY_TO")
+    try:
+        os.environ["MAIL_REPLY_TO"] = from_email
+        if (os.environ.get("RESEND_API_KEY") or "").strip():
+            ok, detail = _send_via_resend(to_addr, subject_line, text, html, bcc=None)
+            provider = "resend"
+        else:
+            ok, detail = _send_via_smtp(to_addr, subject_line, text, html, bcc=None)
+            provider = "smtp"
+    finally:
+        if old_reply is None:
+            os.environ.pop("MAIL_REPLY_TO", None)
+        else:
+            os.environ["MAIL_REPLY_TO"] = old_reply
+
+    return {
+        "ok": ok,
+        "provider": provider,
+        "detail": detail,
+        "to": to_addr,
+    }
+
+
 def send_order_invoice(
     order: dict[str, Any],
     *,
