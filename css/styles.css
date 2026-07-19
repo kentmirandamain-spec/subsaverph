@@ -2974,9 +2974,35 @@ html[data-theme="light"] .cred-value {
 .footer-company-blurb {
   margin: 0;
   color: var(--mute);
-  font-size: 0.86rem;
+  font-size: 0.9rem;
   line-height: 1.6;
-  max-width: 48ch;
+  max-width: none;
+}
+
+.footer-about-company {
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+
+.footer-about-company > h4 {
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--mute-2);
+  margin: 0 0 16px;
+  font-weight: 650;
+}
+
+.footer-about-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 24px 36px;
+  align-items: start;
+}
+
+.footer-about-grid .footer-facts {
+  border-top: 0;
+  padding-top: 0;
 }
 
 .footer-nav {
@@ -3205,6 +3231,11 @@ html[data-theme="light"] .cred-value {
   .footer-top {
     grid-template-columns: 1fr;
     gap: 28px;
+  }
+
+  .footer-about-grid {
+    grid-template-columns: 1fr;
+    gap: 18px;
   }
 
   .footer-nav,
