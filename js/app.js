@@ -2523,7 +2523,7 @@ async function init() {
   bindPrefsPanel(); // ensure language list filled after catalog
 
   try {
-    const { mountChatbot } = await import("./chatbot.js?v=chat2");
+    const { mountChatbot } = await import("./chatbot.js?v=chat3");
     mountChatbot();
   } catch {
     /* chatbot optional */

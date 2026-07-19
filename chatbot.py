@@ -1,13 +1,14 @@
 """
 SubSaverPH AI chatbot via SpaceXAI (xAI API).
 
-Answers store questions AND general knowledge (with optional web search).
+Store-only: products, checkout, delivery, rules, refunds, FAQ.
+Does NOT answer general off-topic questions.
 
 Env:
-  XAI_API_KEY   — required for full AI (answers any question)
+  XAI_API_KEY   — required for full AI store replies
   XAI_MODEL     — optional, default grok-4.5
   XAI_BASE_URL  — optional, default https://api.x.ai/v1
-  XAI_CHAT_TOOLS — optional, default 1 (web_search + code_interpreter). Set 0 to disable.
+  XAI_CHAT_TOOLS — optional, default 0 (tools off; store FAQ does not need web search)
 """
 
 from __future__ import annotations
@@ -37,8 +38,9 @@ def _base_url() -> str:
 
 
 def _tools_enabled() -> bool:
-    v = (os.environ.get("XAI_CHAT_TOOLS") or "1").strip().lower()
-    return v not in ("0", "false", "no", "off")
+    # Default OFF — store FAQ bot should not browse the open web
+    v = (os.environ.get("XAI_CHAT_TOOLS") or "0").strip().lower()
+    return v in ("1", "true", "yes", "on")
 
 
 def build_catalog_brief(deals: list[dict]) -> str:
@@ -80,46 +82,128 @@ def system_prompt(deals: list[dict], settings: dict | None = None) -> str:
     tagline = settings.get("tagline") or "Premium plans. Lower cost."
     about = (settings.get("aboutBody") or settings.get("footerCompanyBlurb") or "")[:900]
     terms_snip = (settings.get("checkoutRules") or settings.get("termsBody") or "")[:700]
+    faq_extra = (settings.get("chatbotFaq") or settings.get("supportFaq") or "")[:1200]
     catalog = build_catalog_brief(deals)
 
-    return f"""You are a highly capable AI assistant for {site} ({tagline}).
+    return f"""You are the official store support chatbot for {site} ({tagline}).
 
-You can and SHOULD answer ALL kinds of questions:
-- Store questions: products, prices, checkout, GCash/Maya/card, delivery, logins, CapCut rules, refunds, Order IDs
-- General knowledge: tech, how-to, definitions, math, writing help, comparisons, troubleshooting, etc.
-- Current events / facts when you have tools (web search) — use them when needed
+## SCOPE — STORE & FAQ ONLY
+You ONLY answer questions about this store and shopping FAQ, including:
+- Products, prices, stock, features, brands (SuperGrok, Canva, CapCut, Netflix, YouTube, etc.)
+- How checkout / payment works (card, GCash, Maya, GrabPay, ShopeePay, PayPal, crypto when shown on site)
+- What happens after payment (delivery package: login credentials, features, instructions, rules)
+- Product rules (especially CapCut logout / device limits)
+- Refunds, support, Order ID, contact email
+- How to use the website (cart, currency, support form)
+- About the company / terms / privacy at a high level from the facts below
 
-Style:
-- Be helpful, accurate, and clear. Use short paragraphs or bullets when useful.
+## OUT OF SCOPE — DO NOT ANSWER
+If the user asks about anything unrelated to SubSaverPH shopping (homework, coding projects, news, politics, medical/legal advice, random trivia, other brands not sold here, etc.):
+1. Politely refuse to answer that topic.
+2. Say you only help with SubSaverPH store and FAQ.
+3. Offer 2–3 example store questions they can ask instead.
+4. For human help, point to Support (#/support) or {support} with Order ID when relevant.
+
+Never role-play as a general assistant. Never answer off-topic even if the user insists.
+
+## Style
+- Clear, friendly, concise (short paragraphs or bullets).
 - Match the user's language (English, Filipino/Taglish, etc.).
-- Do not refuse ordinary questions. Only refuse illegal/harmful requests.
+- Prefer the catalog and policy facts below over guesses.
 
-SubSaverPH store facts (authoritative for shop topics):
-- Digital prepaid access codes / shared logins for SuperGrok, Canva, CapCut, Netflix, YouTube Premium, etc.
-- After successful payment, customers receive an access package: login credentials, features, instructions, and rules (success page + email when configured).
-- Never invent login credentials or claim an order was paid unless the customer already has an Order ID from checkout.
-- Never invent live order status from thin air — if they need status lookup, ask for Order ID and send them to Support.
-- Refunds: generally non-refundable once credentials are delivered, except defective or not delivered. CapCut: logout or 3rd device can lose access and is NOT refundable.
-- CapCut rules: Do NOT log out. Max 2 devices. Login on CapCut mobile app first; for PC scan QR from PC after mobile login.
+## Hard rules
+- Never invent login credentials or claim payment succeeded without the customer already having checkout confirmation / Order ID.
+- Never invent live order status — ask for Order ID and send them to Support if they need human follow-up.
+- Refunds: generally non-refundable once credentials are delivered, except defective or not delivered.
+- CapCut: Do NOT log out. Max 2 devices. 3rd device/session can lose access (not refundable). Login on CapCut mobile first; for PC scan QR after mobile login.
 - Not affiliated with xAI, Canva, CapCut, Netflix, YouTube, or Google.
-- Human support: {support} and website Support page (#/support) with Order ID.
-- Website: https://subsaverph.com/
+- Human support: {support} · Support page #/support · https://subsaverph.com/
 
-About {site}:
+## About {site}
 {about or "(see website)"}
 
-Checkout / policy notes:
+## Checkout / policy notes
 {terms_snip or "Digital goods limited refunds; contact support with Order ID."}
 
-Live catalog snapshot:
-{catalog}
+## Extra FAQ (admin)
+{faq_extra or "(none)"}
 
-When a question is unrelated to the store, still answer fully as a general assistant. When it is about the store, prefer the catalog and policy facts above.
+## Live catalog
+{catalog}
 """
+
+
+_STORE_KEYWORDS = (
+    "capcut",
+    "cap cut",
+    "supergrok",
+    "grok",
+    "canva",
+    "netflix",
+    "youtube",
+    "premium",
+    "refund",
+    "money back",
+    "chargeback",
+    "pay",
+    "gcash",
+    "maya",
+    "checkout",
+    "card",
+    "paypal",
+    "crypto",
+    "order",
+    "login",
+    "password",
+    "credential",
+    "code",
+    "deliver",
+    "price",
+    "product",
+    "deal",
+    "stock",
+    "cart",
+    "support",
+    "subsaver",
+    "account",
+    "device",
+    "logout",
+    "log out",
+    "instruction",
+    "rule",
+    "faq",
+    "how to",
+    "paano",
+    "bili",
+    "bayad",
+    "order id",
+)
+
+
+def _looks_like_store_question(user_text: str) -> bool:
+    t = (user_text or "").lower()
+    if not t.strip():
+        return False
+    return any(k in t for k in _STORE_KEYWORDS)
+
+
+def _offtopic_reply() -> str:
+    return (
+        "I only answer **SubSaverPH store and FAQ** questions (products, prices, checkout, delivery, "
+        "account rules, refunds, support).\n\n"
+        "Try asking something like:\n"
+        "• What are the CapCut account rules?\n"
+        "• How do I get my login after payment?\n"
+        "• How do refunds work?\n"
+        "• What products do you sell?\n\n"
+        "For other topics I can’t help — for order issues, open **Support** with your Order ID."
+    )
 
 
 def _fallback_reply(user_text: str) -> str:
     t = (user_text or "").lower()
+    if not _looks_like_store_question(t):
+        return _offtopic_reply()
     if any(k in t for k in ("capcut", "cap cut")):
         return (
             "For CapCut accounts:\n"
@@ -147,18 +231,16 @@ def _fallback_reply(user_text: str) -> str:
             "features, how-to-use instructions, and product rules. "
             "If something is missing, go to Support with your Order ID: support@subsaverph.com"
         )
-    if any(k in t for k in ("supergrok", "grok", "canva", "netflix", "youtube", "price", "product", "deal")):
+    if any(k in t for k in ("supergrok", "grok", "canva", "netflix", "youtube", "price", "product", "deal", "stock")):
         return (
-            "Browse products on the **Deals** page for current prices and stock. "
-            "Each product page lists features and fine print. After you buy, delivery includes login + instructions + rules.\n\n"
-            "For full AI answers to any topic, the store owner must set **XAI_API_KEY** on the server "
-            "(SpaceXAI / console.x.ai)."
+            "Browse **Deals** for current prices and stock. Each product page lists features and fine print. "
+            "After you buy, delivery includes login + instructions + rules.\n\n"
+            "Ask about a specific product (e.g. CapCut, SuperGrok) for more detail."
         )
     return (
-        "I can help with **any** SubSaverPH shop question — and with full AI enabled, almost any other topic too.\n\n"
-        "Right now the server is in **limited tip mode** (no live Grok key). "
-        "Ask about CapCut rules, refunds, payments, or delivery, or open **Support** with your Order ID.\n\n"
-        "To unlock answers to all questions, set `XAI_API_KEY` from https://console.x.ai on Render."
+        "I’m the SubSaverPH store helper (FAQ only).\n\n"
+        "Ask about products, CapCut rules, payments, delivery after payment, or refunds — "
+        "or open **Support** with your Order ID."
     )
 
 
@@ -216,8 +298,8 @@ def _call_responses_api(
         "model": _model(),
         "instructions": system_prompt(deals, settings),
         "input": messages,
-        "temperature": 0.65,
-        "max_output_tokens": 2048,
+        "temperature": 0.35,
+        "max_output_tokens": 1200,
     }
     if _tools_enabled():
         payload["tools"] = [
@@ -249,8 +331,8 @@ def _call_chat_completions(
             {"role": "system", "content": system_prompt(deals, settings)},
             *messages,
         ],
-        "temperature": 0.65,
-        "max_tokens": 2048,
+        "temperature": 0.35,
+        "max_tokens": 1200,
     }
     data = _http_json(f"{_base_url()}/chat/completions", payload, timeout=90)
     reply = data["choices"][0]["message"]["content"]

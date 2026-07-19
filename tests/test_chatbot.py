@@ -45,7 +45,8 @@ class ChatbotTests(unittest.TestCase):
         self.assertIn("Do NOT log out", prompt)
         self.assertIn("Login on mobile app", prompt)
         self.assertIn("not affiliated", prompt.lower())
-        self.assertIn("all kinds of questions", prompt.lower())
+        self.assertIn("store & faq only", prompt.lower())
+        self.assertIn("out of scope", prompt.lower())
 
     def test_call_without_api_key_uses_fallback(self):
         with mock.patch.dict("os.environ", {"XAI_API_KEY": ""}, clear=False):
@@ -57,6 +58,16 @@ class ChatbotTests(unittest.TestCase):
         self.assertTrue(out.get("ok"))
         self.assertEqual(out.get("provider"), "fallback")
         self.assertIn("refund", out.get("reply", "").lower())
+
+    def test_offtopic_fallback_refuses(self):
+        with mock.patch.object(chatbot, "chat_configured", return_value=False):
+            out = chatbot.call_xai_chat(
+                [{"role": "user", "content": "Write me a Python sorting algorithm"}]
+            )
+        self.assertTrue(out.get("ok"))
+        reply = out.get("reply", "").lower()
+        self.assertIn("only answer", reply)
+        self.assertIn("store", reply)
 
 
 if __name__ == "__main__":

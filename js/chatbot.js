@@ -52,7 +52,7 @@ export function mountChatbot() {
       <header class="ssph-chat-head">
         <div>
           <strong>SubSaverPH Assistant</strong>
-          <p class="ssph-chat-sub" id="ssphChatSub">Ask about products, CapCut rules, payments…</p>
+          <p class="ssph-chat-sub" id="ssphChatSub">Store &amp; FAQ only · products, payment, delivery, rules</p>
         </div>
         <button type="button" class="ssph-chat-close" id="ssphChatClose" aria-label="Close chat">✕</button>
       </header>
@@ -83,14 +83,14 @@ export function mountChatbot() {
     if (!messages.length) {
       list.innerHTML = `
         <div class="ssph-chat-bubble bot">
-          Hi! I’m the SubSaverPH assistant. Ask about SuperGrok, CapCut rules, checkout, or delivery after payment.
+          Hi! I’m the SubSaverPH store assistant. I only answer shop &amp; FAQ questions (products, payment, delivery, rules, refunds).
         </div>
         <div class="ssph-chat-suggestions">
           <button type="button" data-suggest="What are CapCut account rules?">CapCut rules</button>
           <button type="button" data-suggest="How do I receive my login after payment?">After payment</button>
           <button type="button" data-suggest="How do refunds work?">Refunds</button>
           <button type="button" data-suggest="What products do you sell and roughly how much?">Products</button>
-          <button type="button" data-suggest="Explain how GCash checkout usually works on this site">Payments</button>
+          <button type="button" data-suggest="What payment methods do you accept?">Payments</button>
         </div>`;
       list.querySelectorAll("[data-suggest]").forEach((btn) => {
         btn.addEventListener("click", () => {
@@ -161,11 +161,9 @@ export function mountChatbot() {
       messages.push({ role: "assistant", content: reply });
       saveHistory(messages);
       if (data.provider === "fallback") {
-        sub.textContent = "Limited tips — set XAI_API_KEY for full AI (any question)";
+        sub.textContent = "Store FAQ tips · set XAI_API_KEY for smarter store answers";
       } else if (data.provider === "xai" || data.provider === "spacexai") {
-        sub.textContent = data.mode
-          ? `Grok · ${data.mode}`
-          : "Powered by SpaceXAI (Grok) — ask anything";
+        sub.textContent = "Store & FAQ only · Powered by SpaceXAI (Grok)";
       }
       renderMessages();
     } catch (err) {
@@ -187,8 +185,8 @@ export function mountChatbot() {
   fetch("/api/chat/status", { credentials: "same-origin" })
     .then((r) => r.json())
     .then((d) => {
-      if (d.aiConfigured) sub.textContent = "Powered by SpaceXAI (Grok)";
-      else sub.textContent = "Ask about products, CapCut rules, payments…";
+      if (d.aiConfigured) sub.textContent = "Store & FAQ only · Powered by SpaceXAI (Grok)";
+      else sub.textContent = "Store & FAQ only · products, payment, delivery, rules";
     })
     .catch(() => {});
 
