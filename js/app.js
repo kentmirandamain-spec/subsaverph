@@ -1145,7 +1145,7 @@ function viewSupport() {
               </div>
               <div class="support-form-grid">
                 <label class="support-field">Order ID
-                  <input name="orderId" type="text" value="${escapeAttr(draft.orderId || "")}" />
+                  <input name="orderId" type="text" placeholder="e.g. PHA480BA604A" value="${escapeAttr(draft.orderId || "")}" />
                 </label>
                 <label class="support-field">Subject
                   <select name="subject" id="supportSubject" class="support-select" required>
