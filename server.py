@@ -3315,7 +3315,16 @@ def admin_delete_deal(deal_id: str):
 def admin_update_settings():
     data = request.get_json(silent=True) or {}
     current = load_settings()
-    current.update({k: v for k, v in data.items() if isinstance(k, str)})
+    for k, v in data.items():
+        if not isinstance(k, str):
+            continue
+        # Allow nested objects (e.g. uiStrings dict of all labels)
+        if k == "uiStrings" and isinstance(v, dict):
+            current["uiStrings"] = {
+                str(sk): str(sv) for sk, sv in v.items() if sk is not None
+            }
+        else:
+            current[k] = v
     save_settings(current)
     return jsonify({"ok": True, "settings": current})
 
