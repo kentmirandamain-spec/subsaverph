@@ -279,34 +279,8 @@ textarea { min-height: 90px; resize: vertical; }
   text-transform: uppercase;
 }
 
-.ui-strings-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px 14px;
-  max-height: 420px;
-  overflow: auto;
-  padding: 12px;
-  border: 1px solid var(--line);
-  background: #0a0a0a;
-  margin-bottom: 8px;
-}
-
-.ui-string-field {
-  margin: 0;
-}
-
-.ui-string-field code {
-  display: block;
-  font-size: 0.68rem;
-  color: var(--mute);
-  margin-bottom: 4px;
-  letter-spacing: 0.02em;
-  text-transform: none;
-}
-
 @media (max-width: 800px) {
   .shell { grid-template-columns: 1fr; }
   .side { border-right: none; border-bottom: 1px solid var(--line); }
   .grid2, .grid3 { grid-template-columns: 1fr; }
-  .ui-strings-grid { grid-template-columns: 1fr; }
 }

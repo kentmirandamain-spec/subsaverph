@@ -1533,34 +1533,9 @@ export function setLang(lang) {
   return v;
 }
 
-/** Admin-editable UI labels from settings.uiStrings (Site content). */
-let adminUiOverrides = {};
-
-export function setAdminUiOverrides(obj) {
-  adminUiOverrides =
-    obj && typeof obj === "object" && !Array.isArray(obj) ? { ...obj } : {};
-}
-
-export function getAdminUiOverrides() {
-  return { ...adminUiOverrides };
-}
-
-/** Default English UI strings (for admin “all labels” editor). */
-export function getDefaultUiStrings() {
-  return { ...EN };
-}
-
 export function t(key, lang = getLang()) {
-  // Admin English overrides apply first for English UI
-  if (lang === "en" && adminUiOverrides[key] != null && String(adminUiOverrides[key]).length) {
-    return String(adminUiOverrides[key]);
-  }
   const pack = packFor(lang);
-  if (pack[key]) return pack[key];
-  if (adminUiOverrides[key] != null && String(adminUiOverrides[key]).length) {
-    return String(adminUiOverrides[key]);
-  }
-  return EN[key] || key;
+  return pack[key] || EN[key] || key;
 }
 
 export function fillLanguageSelect(selectEl) {

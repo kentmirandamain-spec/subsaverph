@@ -167,169 +167,34 @@ function dealsView() {
     </div>`;
 }
 
-/** Default English UI labels (mirrors storefront prefs EN) — admin can override each. */
-const UI_STRING_DEFAULTS = {
-  nav_home: "Home",
-  nav_deals: "Deals",
-  nav_search: "Search",
-  nav_mission: "Mission",
-  nav_checkout: "Checkout",
-  nav_pay: "Pay",
-  nav_cart: "Cart",
-  nav_menu: "Menu",
-  nav_prefs: "Settings",
-  prefs_title: "Preferences",
-  prefs_language: "Language",
-  prefs_theme: "Appearance",
-  prefs_theme_hint: "Choose light, dark, or match your device.",
-  prefs_lang_hint: "UI language for menus and buttons.",
-  theme_dark: "Dark",
-  theme_light: "Light",
-  theme_system: "System",
-  search_placeholder: "Search SuperGrok, Netflix…",
-  search_aria: "Search products",
-  cart_title: "Cart",
-  cart_close: "Close",
-  cart_subtotal: "Subtotal",
-  cart_save: "You save",
-  cart_total: "Total",
-  cart_checkout: "Checkout",
-  cart_empty: "Cart empty",
-  cart_find: "Find a plan",
-  footer_shop: "Shop",
-  footer_company: "Company",
-  footer_legal: "Legal",
-  footer_about_company: "About the company",
-  footer_about: "About",
-  footer_terms: "Terms of Use",
-  footer_privacy: "Privacy Policy",
-  footer_how: "How it works",
-  footer_all_deals: "All deals",
-  footer_contact: "Support",
-  cta_search: "Open search",
-  cta_browse: "Browse deals",
-  eyebrow_platforms: "Platforms",
-  eyebrow_catalog: "Catalog",
-  view_all: "View all",
-  page_deals: "All deals",
-  page_search: "Search",
-  page_results: "Results",
-  page_how: "How it works",
-  toast_theme: "Theme updated",
-  toast_lang: "Language updated",
-  toast_pay: "Pay in",
-  meta_plans: "Active plans",
-  meta_platforms: "Platforms",
-  meta_currencies: "Currencies",
-  currency_search: "Search currency (PHP, USD, euro…)",
-  search_results_title: "Results",
-  search_only_match: "Only products that match",
-  search_are_shown: "are shown.",
-  products_found: "products found",
-  product_found: "product found",
-  clear_search: "Clear search",
-  no_products_matched: "No products matched",
-  try_brands: "Try SuperGrok, Netflix, or Canva.",
-  search_product_ph: "Search a product name…",
-  details: "Details",
-  add: "Add",
-  add_to_cart: "Add to cart",
-  buy_now: "Buy now",
-  sold_out: "SOLD OUT",
-  in_stock: "In stock",
-  only_left: "Only {n} left",
-  n_in_stock: "{n} in stock",
-  plan_not_found: "Plan not found",
-  back: "Back",
-  all_deals: "All deals",
-  versus_retail: "Versus retail",
-  no_codes_left: "No codes left in stock",
-  reviews: "reviews",
-  retail: "retail",
-  save: "Save",
-  pick_another: "This plan has no codes left. Check back later or pick another product.",
-  protocol: "Protocol",
-  how_step1_t: "Search",
-  how_step1_p: "Use the home search bar to find SuperGrok, Canva, CapCut, Netflix, or YouTube.",
-  how_step2_t: "Currency",
-  how_step2_p: "Open Pay → search any currency (PHP, USD, EUR…). Prices convert when you change currency.",
-  how_step3_t: "Checkout",
-  how_step3_p: "Complete checkout with your preferred payment method. Codes appear on confirmation.",
-  how_step4_t: "Redeem",
-  how_step4_p: "Apply codes on the official service. Keep the order ID.",
-  demo_notice: "Demo notice",
-  demo_notice_p: "SubSaverPH is a portfolio storefront. Not affiliated with xAI, Canva, CapCut, Netflix, or YouTube.",
-  brand_meta: "Brand",
-  service_area_meta: "Service area",
-  website_meta: "Website",
-  support_meta: "Support",
-  business_type_meta: "Business type",
-  company: "Company",
-  legal: "Legal",
-  last_updated: "Last updated",
-  back_to_home: "Back to home",
-  live_fx: "Live FX",
-  cached_fx: "Cached FX",
-  offline_fx: "Offline FX",
-  currencies_word: "currencies",
-  pay_in: "pay in",
-  sort_label: "Sort",
-  filter_all: "All",
-};
-
 function settingsView() {
   const s = state.settings || {};
-  const ui = s.uiStrings && typeof s.uiStrings === "object" ? s.uiStrings : {};
-  const uiKeys = [...new Set([...Object.keys(UI_STRING_DEFAULTS), ...Object.keys(ui)])].sort();
-  const uiFields = uiKeys
-    .map((key) => {
-      const val = ui[key] != null && String(ui[key]).length ? ui[key] : UI_STRING_DEFAULTS[key] || "";
-      return `<label class="ui-string-field"><code>${escapeHtml(key)}</code><input name="ui__${escapeAttr(key)}" value="${escapeAttr(val)}" /></label>`;
-    })
-    .join("");
-
   return `
     <div class="top"><h1>Site content</h1></div>
-    <p class="muted">Edit <strong>all</strong> storefront copy here. Products (names, prices, features, rules) are under <strong>Products</strong>. Save once to update the live site.</p>
+    <p class="muted">Edit every major text block on the storefront. Save once — the live site updates immediately.</p>
     <form class="panel" id="settingsForm">
       <h3 class="settings-h">Brand &amp; contact</h3>
       <div class="grid2">
         <label>Site name<input name="siteName" value="${escapeAttr(s.siteName || "")}" /></label>
         <label>Tagline<input name="tagline" value="${escapeAttr(s.tagline || "")}" /></label>
         <label>Default currency<input name="defaultCurrency" value="${escapeAttr(s.defaultCurrency || "PHP")}" /></label>
-        <label>Public support email
-          <input name="supportEmail" value="${escapeAttr(s.supportEmail || "support@subsaverph.com")}" />
+        <label>Public support label (shown on site)
+          <input name="supportEmail" value="${escapeAttr(s.supportEmail || "support@subsaverph.com")}" placeholder="support@subsaverph.com" />
         </label>
       </div>
-      <label>Owner inbox (form emails go here)
+      <label>Owner inbox — where form messages are emailed (your real Outlook/Gmail)
         <input name="ownerInbox" type="email" value="${escapeAttr(s.ownerInbox || "")}" placeholder="you@outlook.com" />
       </label>
+      <p class="muted" style="margin-top:-6px;margin-bottom:14px;font-size:0.85rem">
+        Do <strong>not</strong> put support@subsaverph.com here until Cloudflare Email Routing works
+        (that address currently bounces: “Address not found”). Use your personal Outlook/Gmail.
+      </p>
       <label>Website URL<input name="websiteUrl" value="${escapeAttr(s.websiteUrl || "")}" /></label>
       <label>Announcement bar (optional)<input name="announcement" value="${escapeAttr(s.announcement || "")}" placeholder="Leave empty to hide" /></label>
 
-      <h3 class="settings-h">Google / search preview (before click)</h3>
-      <p class="muted" style="margin-top:0">Title &amp; description shown when people search “SubSaverPH”. Request re-indexing in Google Search Console after changes.</p>
-      <label>SEO title (browser tab + Google blue link)
-        <input name="seoTitle" value="${escapeAttr(s.seoTitle || "")}" placeholder="SubSaverPH — Discounted SuperGrok, Canva, Netflix Philippines" />
-      </label>
-      <label>SEO description (gray text under the link)
-        <textarea name="seoDescription" rows="3" placeholder="Buy discounted prepaid subscriptions…">${escapeHtml(s.seoDescription || "")}</textarea>
-      </label>
-      <label>SEO keywords (comma-separated)
-        <input name="seoKeywords" value="${escapeAttr(s.seoKeywords || "")}" />
-      </label>
-      <div class="grid2">
-        <label>Share title (Facebook / Messenger)
-          <input name="seoOgTitle" value="${escapeAttr(s.seoOgTitle || "")}" />
-        </label>
-        <label>Share description
-          <input name="seoOgDescription" value="${escapeAttr(s.seoOgDescription || "")}" />
-        </label>
-      </div>
-
       <h3 class="settings-h">Homepage hero</h3>
       <label>Hero eyebrow<input name="heroEyebrow" value="${escapeAttr(s.heroEyebrow || "")}" /></label>
-      <label>Hero title (use Enter for line breaks)<textarea name="heroTitle" rows="4">${escapeHtml(s.heroTitle || "")}</textarea></label>
+      <label>Hero title (use Enter / \\n for line breaks)<textarea name="heroTitle" rows="4">${escapeHtml(s.heroTitle || "")}</textarea></label>
       <label>Hero lead<textarea name="heroLead" rows="3">${escapeHtml(s.heroLead || "")}</textarea></label>
 
       <h3 class="settings-h">Homepage strips &amp; sections</h3>
@@ -343,51 +208,6 @@ function settingsView() {
       </div>
       <label>Mission title<input name="missionTitle" value="${escapeAttr(s.missionTitle || "")}" /></label>
       <label>Mission text<textarea name="missionText" rows="3">${escapeHtml(s.missionText || "")}</textarea></label>
-
-      <h3 class="settings-h">How it works page</h3>
-      <div class="grid2">
-        <label>Eyebrow<input name="howEyebrow" value="${escapeAttr(s.howEyebrow || "Protocol")}" /></label>
-        <label>Page title<input name="howTitle" value="${escapeAttr(s.howTitle || "How it works")}" /></label>
-      </div>
-      <div class="grid2">
-        <label>Step 1 title<input name="howStep1Title" value="${escapeAttr(s.howStep1Title || UI_STRING_DEFAULTS.how_step1_t)}" /></label>
-        <label>Step 1 text<input name="howStep1Text" value="${escapeAttr(s.howStep1Text || UI_STRING_DEFAULTS.how_step1_p)}" /></label>
-        <label>Step 2 title<input name="howStep2Title" value="${escapeAttr(s.howStep2Title || UI_STRING_DEFAULTS.how_step2_t)}" /></label>
-        <label>Step 2 text<input name="howStep2Text" value="${escapeAttr(s.howStep2Text || UI_STRING_DEFAULTS.how_step2_p)}" /></label>
-        <label>Step 3 title<input name="howStep3Title" value="${escapeAttr(s.howStep3Title || UI_STRING_DEFAULTS.how_step3_t)}" /></label>
-        <label>Step 3 text<input name="howStep3Text" value="${escapeAttr(s.howStep3Text || UI_STRING_DEFAULTS.how_step3_p)}" /></label>
-        <label>Step 4 title<input name="howStep4Title" value="${escapeAttr(s.howStep4Title || UI_STRING_DEFAULTS.how_step4_t)}" /></label>
-        <label>Step 4 text<input name="howStep4Text" value="${escapeAttr(s.howStep4Text || UI_STRING_DEFAULTS.how_step4_p)}" /></label>
-      </div>
-      <label>Notice box title<input name="howNoticeTitle" value="${escapeAttr(s.howNoticeTitle || UI_STRING_DEFAULTS.demo_notice)}" /></label>
-      <label>Notice box text<textarea name="howNoticeText" rows="2">${escapeHtml(s.howNoticeText || UI_STRING_DEFAULTS.demo_notice_p)}</textarea></label>
-      <label>CTA button label<input name="howCtaLabel" value="${escapeAttr(s.howCtaLabel || UI_STRING_DEFAULTS.cta_browse)}" /></label>
-
-      <h3 class="settings-h">Support page</h3>
-      <label>Support page title<input name="supportPageTitle" value="${escapeAttr(s.supportPageTitle || "Support center")}" /></label>
-      <label>Support page subtitle<textarea name="supportPageLead" rows="2">${escapeHtml(s.supportPageLead || "Message us about orders, delivery, or login issues.")}</textarea></label>
-      <label>Support form heading<input name="supportFormTitle" value="${escapeAttr(s.supportFormTitle || "Send a message")}" /></label>
-      <label>Support form subtext<textarea name="supportFormSub" rows="2">${escapeHtml(s.supportFormSub || "")}</textarea></label>
-      <label>Support subject options (one topic per line)
-        <textarea name="supportSubjectOptions" rows="8" placeholder="Login not working&#10;Refund request">${escapeHtml(
-          s.supportSubjectOptions ||
-            "Login not working\nMissing code or credentials\nWrong product delivered\nPayment charged but no order\nAccount expired early\nRefund request\nOrder status question\nPayment / checkout problem\nOther"
-        )}</textarea>
-      </label>
-      <label>Chatbot extra FAQ (fed to Help chat when AI is on)
-        <textarea name="chatbotFaq" rows="4" placeholder="Optional FAQ bullets for the assistant…">${escapeHtml(s.chatbotFaq || "")}</textarea>
-      </label>
-      <label>Chat welcome line
-        <input name="chatWelcome" value="${escapeAttr(s.chatWelcome || "")}" placeholder="Hi! I’m here to help with SubSaverPH…" />
-      </label>
-
-      <h3 class="settings-h">Success page (after payment)</h3>
-      <label>Success heading<input name="successTitle" value="${escapeAttr(s.successTitle || "Order delivered")}" /></label>
-      <label>Success package title<input name="successPackageTitle" value="${escapeAttr(s.successPackageTitle || "Your access package")}" /></label>
-      <label>Success package subtitle
-        <input name="successPackageSub" value="${escapeAttr(s.successPackageSub || "Login credentials, features, instructions, and rules for each product.")}" />
-      </label>
-      <label>Success footer note<textarea name="successFooterNote" rows="2">${escapeHtml(s.successFooterNote || "Save these credentials now. Follow the instructions and rules for each product.")}</textarea></label>
 
       <h3 class="settings-h">Footer</h3>
       <label>Footer blurb (under logo)<textarea name="footerText" rows="3">${escapeHtml(s.footerText || "")}</textarea></label>
@@ -407,18 +227,19 @@ function settingsView() {
         <label>About title<input name="aboutTitle" value="${escapeAttr(s.aboutTitle || "")}" /></label>
         <label>Last updated<input name="aboutUpdated" value="${escapeAttr(s.aboutUpdated || "")}" /></label>
       </div>
-      <label>About body<textarea name="aboutBody" rows="10">${escapeHtml(s.aboutBody || "")}</textarea></label>
+      <label>About body (blank line = new paragraph; lines starting with • become bullets)<textarea name="aboutBody" rows="10">${escapeHtml(s.aboutBody || "")}</textarea></label>
 
       <h3 class="settings-h">Checkout — purchase rules (before pay)</h3>
+      <p class="muted" style="margin-top:0">Shown in the “Review &amp; continue” popup before payment. One bullet per line for list fields.</p>
       <label>Popup title<input name="checkoutTermsTitle" value="${escapeAttr(s.checkoutTermsTitle || "Purchase details & rules")}" /></label>
       <label>Eyebrow label<input name="checkoutTermsEyebrow" value="${escapeAttr(s.checkoutTermsEyebrow || "Before you pay")}" /></label>
-      <label>“What you are buying” (one line = one bullet)<textarea name="checkoutWhatYouBuy" rows="5">${escapeHtml(s.checkoutWhatYouBuy || "")}</textarea></label>
-      <label>Rules &amp; regulations (one line = one bullet)<textarea name="checkoutRules" rows="10">${escapeHtml(s.checkoutRules || "")}</textarea></label>
-      <label>Support blurb<textarea name="checkoutSupportText" rows="3">${escapeHtml(s.checkoutSupportText || "")}</textarea></label>
-      <label>Accept checkbox text<input name="checkoutAcceptLabel" value="${escapeAttr(s.checkoutAcceptLabel || "")}" /></label>
-      <label>Confirm button prefix<input name="checkoutConfirmLabel" value="${escapeAttr(s.checkoutConfirmLabel || "Accept & pay")}" /></label>
+      <label>“What you are buying” (one line = one bullet)<textarea name="checkoutWhatYouBuy" rows="5" placeholder="You are purchasing prepaid digital access…">${escapeHtml(s.checkoutWhatYouBuy || "")}</textarea></label>
+      <label>Rules &amp; regulations (one line = one bullet)<textarea name="checkoutRules" rows="10" placeholder="Digital goods are non-refundable once delivered…">${escapeHtml(s.checkoutRules || "")}</textarea></label>
+      <label>Support blurb (under rules)<textarea name="checkoutSupportText" rows="3">${escapeHtml(s.checkoutSupportText || "")}</textarea></label>
+      <label>Accept checkbox text<input name="checkoutAcceptLabel" value="${escapeAttr(s.checkoutAcceptLabel || "I have read and accept the purchase details, rules, and regulations above.")}" /></label>
+      <label>Confirm button prefix<input name="checkoutConfirmLabel" value="${escapeAttr(s.checkoutConfirmLabel || "Accept & pay")}" placeholder="Accept & pay" /></label>
 
-      <h3 class="settings-h">Terms of Use</h3>
+      <h3 class="settings-h">Terms of Use (legal page)</h3>
       <div class="grid2">
         <label>Terms title<input name="termsTitle" value="${escapeAttr(s.termsTitle || "")}" /></label>
         <label>Last updated<input name="termsUpdated" value="${escapeAttr(s.termsUpdated || "")}" /></label>
@@ -432,11 +253,7 @@ function settingsView() {
       </div>
       <label>Privacy body<textarea name="privacyBody" rows="12">${escapeHtml(s.privacyBody || "")}</textarea></label>
 
-      <h3 class="settings-h">All UI labels (buttons, nav, cart, filters…)</h3>
-      <p class="muted" style="margin-top:0">Every small English label on the site. Leave as-is or rewrite. Product names/prices stay under <strong>Products</strong>.</p>
-      <div class="ui-strings-grid">${uiFields}</div>
-
-      <button class="btn" type="submit" style="margin-top:20px">Save all site content</button>
+      <button class="btn" type="submit">Save all site content</button>
     </form>`;
 }
 
@@ -970,24 +787,14 @@ function bindShell() {
   $("#settingsForm")?.addEventListener("submit", async (e) => {
     e.preventDefault();
     const fd = new FormData(e.target);
-    const payload = {};
-    const uiStrings = {};
-    for (const [k, v] of fd.entries()) {
-      if (k.startsWith("ui__")) {
-        const key = k.slice(4);
-        uiStrings[key] = String(v);
-      } else {
-        payload[k] = v;
-      }
-    }
-    payload.uiStrings = uiStrings;
+    const payload = Object.fromEntries(fd.entries());
     try {
       const data = await api("/api/admin/settings", {
         method: "PUT",
         body: JSON.stringify(payload),
       });
       state.settings = data.settings;
-      toast("All site text saved — live on storefront");
+      toast("Site content saved");
     } catch (err) {
       toast(err.message, true);
     }
