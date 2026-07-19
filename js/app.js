@@ -357,7 +357,6 @@ function card(d, highlightQ = "") {
       <p class="cat">${escapeHtml(d.brand)} · ${escapeHtml(d.category)}</p>
       <h3><a href="#/deal/${d.id}">${nameHtml}</a></h3>
       <p class="tag">${tagHtml}</p>
-      <p class="muted" style="font-size:0.78rem;margin:0 0 6px">Sold by ${escapeHtml(d.sellerName || "SubSaverPH")}</p>
       <p class="stock-line ${soldOut ? "is-sold-out" : ""}">${escapeHtml(stockLabel(d))}</p>
       <div class="price">
         <div>
@@ -707,7 +706,6 @@ function viewDeal() {
           <div class="detail-info">
             <p class="cat">${escapeHtml(d.brand)} · ${escapeHtml(d.category)} · <span class="${soldOut ? "is-sold-out" : ""}">${escapeHtml(stockLabel(d))}</span></p>
             <h1>${escapeHtml(d.name)}</h1>
-            <p class="muted" style="margin-top:-4px">Sold by <strong>${escapeHtml(d.sellerName || "SubSaverPH")}</strong></p>
             <p class="detail-tagline">${escapeHtml(d.tagline)}</p>
             <p class="detail-meta">★ ${d.rating} · ${Number(d.reviews || 0).toLocaleString()} ${escapeHtml(t("reviews"))}</p>
 

@@ -4,127 +4,102 @@
       "code": "SG7D-DEMO-AAAA-0001",
       "status": "sold",
       "addedAt": "2026-07-14T00:00:00Z",
-      "soldAt": "2026-07-14T06:21:40.237589Z",
-      "sellerId": "platform"
+      "soldAt": "2026-07-14T06:21:40.237589Z"
     },
     {
       "code": "SG7D-DEMO-BBBB-0002",
       "status": "sold",
       "addedAt": "2026-07-14T00:00:00Z",
-      "soldAt": "2026-07-14T06:33:17.661014Z",
-      "sellerId": "platform"
+      "soldAt": "2026-07-14T06:33:17.661014Z"
     },
     {
       "code": "SG7D-DEMO-CCCC-0003",
       "status": "sold",
       "addedAt": "2026-07-14T00:00:00Z",
-      "soldAt": "2026-07-14T07:07:06.527946Z",
-      "sellerId": "platform"
+      "soldAt": "2026-07-14T07:07:06.527946Z"
     },
     {
       "code": "veswfvhrthe",
       "status": "sold",
       "addedAt": "2026-07-14T06:32:32.481835Z",
-      "soldAt": "2026-07-14T07:19:09.848139Z",
-      "sellerId": "platform"
+      "soldAt": "2026-07-14T07:19:09.848139Z"
     },
     {
       "code": "hxfthesrgerg",
       "status": "sold",
       "addedAt": "2026-07-14T06:32:32.481835Z",
-      "soldAt": "2026-07-14T07:40:19.438199Z",
-      "sellerId": "platform"
+      "soldAt": "2026-07-14T07:40:19.438199Z"
     },
     {
       "code": "HuyhxBria@hotmail.com",
       "status": "sold",
       "addedAt": "2026-07-14T12:17:02.191413Z",
-      "soldAt": "2026-07-14T12:45:48.827694Z",
-      "sellerId": "platform"
+      "soldAt": "2026-07-14T12:45:48.827694Z"
     },
     {
       "code": "GROKsuper123#",
       "status": "sold",
       "addedAt": "2026-07-14T12:17:02.191413Z",
-      "soldAt": "2026-07-14T12:47:51.646551Z",
-      "sellerId": "platform"
+      "soldAt": "2026-07-14T12:47:51.646551Z"
     },
     {
       "code": "Username: HuyhxBria@hotmail.com Password:GROKsuper123#",
       "status": "sold",
       "addedAt": "2026-07-14T12:46:59.548660Z",
-      "soldAt": "2026-07-14T12:48:08.676181Z",
-      "sellerId": "platform"
+      "soldAt": "2026-07-14T12:48:08.676181Z"
     },
     {
       "code": "gmgtymtyj",
       "status": "sold",
       "addedAt": "2026-07-15T05:27:58.196746Z",
-      "soldAt": "2026-07-15T05:28:19.841632Z",
-      "sellerId": "platform"
+      "soldAt": "2026-07-15T05:28:19.841632Z"
     },
     {
       "code": "herhneh",
       "status": "sold",
       "addedAt": "2026-07-15T05:34:20.814456Z",
-      "soldAt": "2026-07-15T07:21:14.173937Z",
-      "sellerId": "platform"
+      "soldAt": "2026-07-15T07:21:14.173937Z"
     },
     {
       "code": "brebeber",
       "status": "sold",
       "addedAt": "2026-07-15T07:20:56.169134Z",
-      "soldAt": "2026-07-15T07:21:14.173937Z",
-      "sellerId": "platform"
+      "soldAt": "2026-07-15T07:21:14.173937Z"
     },
     {
       "code": "hzedrbzrs",
       "status": "sold",
       "addedAt": "2026-07-15T07:48:17.027008Z",
-      "soldAt": "2026-07-15T07:49:15.298199Z",
-      "sellerId": "platform"
+      "soldAt": "2026-07-15T07:49:15.298199Z"
     },
     {
       "code": "dawcfac",
       "status": "sold",
       "addedAt": "2026-07-15T07:49:09.590963Z",
-      "soldAt": "2026-07-15T07:49:15.298199Z",
-      "sellerId": "platform"
+      "soldAt": "2026-07-15T07:49:15.298199Z"
     },
     {
       "code": "dawdawccacaca",
       "status": "sold",
       "addedAt": "2026-07-16T14:09:19.716227Z",
-      "soldAt": "2026-07-16T14:13:25.071637Z",
-      "sellerId": "platform"
+      "soldAt": "2026-07-16T14:13:25.071637Z"
     },
     {
       "code": "SG7D-TEST-0001",
       "status": "sold",
       "addedAt": "2026-07-17T00:31:35.197998Z",
-      "soldAt": "2026-07-17T00:31:41.889815Z",
-      "sellerId": "platform"
+      "soldAt": "2026-07-17T00:31:41.889815Z"
     },
     {
       "code": "SG7D-TEST-0002",
       "status": "sold",
       "addedAt": "2026-07-17T00:31:35.197998Z",
-      "soldAt": "2026-07-17T00:34:51.121947Z",
-      "sellerId": "platform"
+      "soldAt": "2026-07-17T00:34:51.121947Z"
     },
     {
       "code": "SG7D-TEST-0003",
-      "status": "sold",
-      "addedAt": "2026-07-17T00:31:35.197998Z",
-      "soldAt": "2026-07-17T05:17:45.794727Z",
-      "sellerId": "platform"
-    },
-    {
-      "code": "Username: hvowrvh@gmail.com Password: 123455678",
-      "status": "sold",
-      "addedAt": "2026-07-17T09:48:33.472644Z",
-      "soldAt": "2026-07-17T09:48:56.670474Z",
-      "sellerId": "platform"
+      "status": "available",
+      "addedAt": "2026-07-17T00:31:35.197998Z"
     }
   ],
   "supergrok-1m": [
@@ -132,35 +107,29 @@
       "code": "SG1M-DEMO-XXXX-1001",
       "status": "sold",
       "addedAt": "2026-07-14T00:00:00Z",
-      "soldAt": "2026-07-14T06:54:12.989682Z",
-      "sellerId": "platform"
+      "soldAt": "2026-07-14T06:54:12.989682Z"
     },
     {
       "code": "SG1M-DEMO-YYYY-1002",
       "status": "sold",
       "addedAt": "2026-07-14T00:00:00Z",
-      "soldAt": "2026-07-14T11:04:46.000781Z",
-      "sellerId": "platform"
+      "soldAt": "2026-07-14T11:04:46.000781Z"
     },
     {
       "code": "SG1M-TEST-0001",
       "status": "sold",
       "addedAt": "2026-07-17T00:31:35.197998Z",
-      "soldAt": "2026-07-17T00:34:51.178867Z",
-      "sellerId": "platform"
+      "soldAt": "2026-07-17T00:34:51.178867Z"
     },
     {
       "code": "SG1M-TEST-0002",
-      "status": "sold",
-      "addedAt": "2026-07-17T00:31:35.197998Z",
-      "soldAt": "2026-07-17T09:56:30.539380Z",
-      "sellerId": "platform"
+      "status": "available",
+      "addedAt": "2026-07-17T00:31:35.197998Z"
     },
     {
       "code": "SG1M-TEST-0003",
       "status": "available",
-      "addedAt": "2026-07-17T00:31:35.197998Z",
-      "sellerId": "platform"
+      "addedAt": "2026-07-17T00:31:35.197998Z"
     }
   ]
 }

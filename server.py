@@ -46,8 +46,6 @@ AUTH_FILE = STORE / "auth.json"
 INVENTORY_FILE = STORE / "inventory.json"
 ORDERS_FILE = STORE / "orders.json"
 
-import marketplace as mkt
-
 app = Flask(__name__, static_folder=None)
 # Stable secret so admin sessions survive restarts (set SECRET_KEY on Render)
 app.secret_key = os.environ.get("SECRET_KEY") or "subsaverph-change-me-in-production"
@@ -167,27 +165,6 @@ def ensure_store() -> None:
         pending_file = STORE / "pending_payments.json"
         if not pending_file.exists():
             pending_file.write_text("{}", encoding="utf-8")
-        mkt.ensure_marketplace_files()
-        # One-time-ish migration: sellerId / listingStatus / fee settings
-        try:
-            deals = read_json(DEALS_FILE, [])
-            inv = read_json(INVENTORY_FILE, {})
-            settings = read_json(SETTINGS_FILE, {})
-            if not isinstance(deals, list):
-                deals = []
-            if not isinstance(inv, dict):
-                inv = {}
-            if not isinstance(settings, dict):
-                settings = {}
-            new_deals, new_inv, new_settings, changed = mkt.migrate_marketplace(
-                deals, inv, settings
-            )
-            if changed:
-                write_json(DEALS_FILE, new_deals)
-                write_json(INVENTORY_FILE, new_inv)
-                write_json(SETTINGS_FILE, new_settings)
-        except Exception:
-            pass
     except OSError:
         pass
 
@@ -204,20 +181,11 @@ def write_json(path: Path, data) -> None:
     path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
-def load_deals(include_inactive: bool = False, public_only: bool = False):
+def load_deals(include_inactive: bool = False):
     deals = read_json(DEALS_FILE, [])
-    if not isinstance(deals, list):
-        return []
-    if include_inactive and not public_only:
+    if include_inactive:
         return deals
-    out = []
-    for d in deals:
-        if not d.get("active", True) and not include_inactive:
-            continue
-        if public_only and not mkt.is_listing_public(d):
-            continue
-        out.append(d)
-    return out
+    return [d for d in deals if d.get("active", True)]
 
 
 def save_deals(deals) -> None:
@@ -254,15 +222,10 @@ def save_orders(orders: list) -> None:
     write_json(ORDERS_FILE, orders)
 
 
-def stock_count(product_id: str, seller_id: str | None = None) -> int:
+def stock_count(product_id: str) -> int:
     inv = load_inventory()
-    if seller_id is None:
-        # Prefer deal's sellerId when available
-        for d in load_deals(include_inactive=True):
-            if d.get("id") == product_id:
-                seller_id = d.get("sellerId") or mkt.PLATFORM_SELLER_ID
-                break
-    return mkt.stock_count_for(inv, product_id, seller_id)
+    codes = inv.get(product_id) or []
+    return sum(1 for c in codes if c.get("status", "available") == "available")
 
 
 def parse_credential_entry(entry) -> dict:
@@ -334,27 +297,12 @@ def parse_credential_entry(entry) -> dict:
     return {"username": "", "password": "", "raw": text, "code": text}
 
 
-def reserve_codes(
-    product_id: str, qty: int, seller_id: str | None = None, order_id: str | None = None
-) -> list[dict]:
-    """Take qty available codes for product (seller-scoped). Mutates inventory."""
-    if seller_id is None:
-        for d in load_deals(include_inactive=True):
-            if d.get("id") == product_id:
-                seller_id = d.get("sellerId") or mkt.PLATFORM_SELLER_ID
-                break
-        seller_id = seller_id or mkt.PLATFORM_SELLER_ID
+def reserve_codes(product_id: str, qty: int) -> list[dict]:
+    """Take qty available codes for product. Mutates inventory. Returns credential dicts."""
     with _STORE_LOCK:
         inv = load_inventory()
         codes = inv.get(product_id) or []
-
-        def matches(c: dict) -> bool:
-            if c.get("status", "available") != "available":
-                return False
-            row_sid = c.get("sellerId") or mkt.PLATFORM_SELLER_ID
-            return row_sid == seller_id
-
-        available = [c for c in codes if matches(c)]
+        available = [c for c in codes if c.get("status", "available") == "available"]
         if len(available) < qty:
             raise ValueError(
                 f"Not enough stock for {product_id}. Need {qty}, have {len(available)}."
@@ -364,11 +312,10 @@ def reserve_codes(
         for c in codes:
             if need <= 0:
                 break
-            if matches(c):
+            if c.get("status", "available") == "available":
                 c["status"] = "sold"
                 c["soldAt"] = __import__("datetime").datetime.utcnow().isoformat() + "Z"
-                if order_id:
-                    c["orderId"] = order_id
+                # Prefer structured fields on the inventory row
                 if c.get("username") or c.get("password"):
                     cred = parse_credential_entry(c)
                 else:
@@ -677,13 +624,9 @@ def nowpayments_ip_info():
 
 @app.get("/api/deals")
 def api_deals():
-    deals = load_deals(include_inactive=False, public_only=True)
+    deals = load_deals(include_inactive=False)
     for d in deals:
-        sid = d.get("sellerId") or mkt.PLATFORM_SELLER_ID
-        d["stockLeft"] = stock_count(d.get("id", ""), sid)
-        d["sellerName"] = d.get("sellerName") or mkt.seller_public_name(
-            sid, (load_settings().get("siteName") or "SubSaverPH")
-        )
+        d["stockLeft"] = stock_count(d.get("id", ""))
     return jsonify({"deals": deals})
 
 
@@ -694,13 +637,10 @@ def api_settings():
 
 @app.get("/api/catalog")
 def api_catalog():
-    deals = load_deals(include_inactive=False, public_only=True)
-    site = load_settings().get("siteName") or "SubSaverPH"
+    deals = load_deals(include_inactive=False)
     # Attach stock counts (not the actual codes)
     for d in deals:
-        sid = d.get("sellerId") or mkt.PLATFORM_SELLER_ID
-        d["stockLeft"] = stock_count(d.get("id", ""), sid)
-        d["sellerName"] = d.get("sellerName") or mkt.seller_public_name(sid, site)
+        d["stockLeft"] = stock_count(d.get("id", ""))
     brands = sorted({d.get("brand", "") for d in deals if d.get("brand")})
     categories = sorted({d.get("category", "") for d in deals if d.get("category")})
     return jsonify(
@@ -824,7 +764,7 @@ def validate_cart_items(items: list) -> tuple[list, dict]:
     """Validate cart; return (normalized items, deals_by_id). Does not reserve codes."""
     if not items:
         raise ValueError("Cart is empty")
-    deals_by_id = {d["id"]: d for d in load_deals(include_inactive=False, public_only=True)}
+    deals_by_id = {d["id"]: d for d in load_deals(include_inactive=False)}
     normalized = []
     for item in items:
         pid = item.get("id")
@@ -834,8 +774,7 @@ def validate_cart_items(items: list) -> tuple[list, dict]:
         deal = deals_by_id.get(pid)
         if not deal:
             raise ValueError(f"Product not found: {pid}")
-        sid = deal.get("sellerId") or mkt.PLATFORM_SELLER_ID
-        left = stock_count(pid, sid)
+        left = stock_count(pid)
         if left < qty:
             raise ValueError(f"Out of stock: {deal.get('name')}. Only {left} left.")
         normalized.append({"id": pid, "qty": qty, "deal": deal})
@@ -921,18 +860,12 @@ def fulfill_order(
                 return existing
 
     normalized, _ = validate_cart_items(items)
-    settings = load_settings()
-    site_name = settings.get("siteName") or "SubSaverPH"
-    fee_pct = mkt.fee_percent_from_settings(settings)
-    order_id = "PH" + uuid.uuid4().hex[:10].upper()
     line_results = []
     for row in normalized:
         deal = row["deal"]
         qty = row["qty"]
         pid = row["id"]
-        sid = deal.get("sellerId") or mkt.PLATFORM_SELLER_ID
-        sname = deal.get("sellerName") or mkt.seller_public_name(sid, site_name)
-        creds = reserve_codes(pid, qty, seller_id=sid, order_id=order_id)
+        creds = reserve_codes(pid, qty)
         # codes: display strings for email/back-compat; credentials: structured for UI
         code_strings = []
         for cr in creds:
@@ -962,14 +895,10 @@ def fulfill_order(
                 "finePrint": deal.get("finePrint"),
                 "codes": code_strings,
                 "credentials": creds,
-                "sellerId": sid,
-                "sellerName": sname,
             }
         )
 
-    line_results, breakdown, fee_total, net_total = mkt.build_order_fee_fields(
-        line_results, fee_pct, site_name
-    )
+    order_id = "PH" + uuid.uuid4().hex[:10].upper()
     order = {
         "id": order_id,
         "email": email,
@@ -986,19 +915,10 @@ def fulfill_order(
         "delivery": "instant",
         "message": "Payment confirmed. Codes delivered instantly.",
         "emailSent": False,
-        "feePercent": fee_pct,
-        "platformFeeTotal": fee_total,
-        "sellerNetTotal": net_total,
-        "sellerBreakdown": breakdown,
     }
-    with _STORE_LOCK:
-        orders = load_orders()
-        orders.insert(0, order)
-        save_orders(orders[:500])
-        try:
-            mkt.append_ledger_for_order(order)
-        except Exception:
-            pass
+    orders = load_orders()
+    orders.insert(0, order)
+    save_orders(orders[:500])
 
     # Email invoice + codes (SMTP or Resend). Does not block order if mail fails.
     _email_invoice_for_order(order)
@@ -3143,7 +3063,7 @@ def stripe_webhook():
 def api_search():
     """Public product search: /api/search?q=netflix"""
     q = (request.args.get("q") or "").strip().lower()
-    deals = load_deals(include_inactive=False, public_only=True)
+    deals = load_deals(include_inactive=False)
     if not q:
         return jsonify({"q": q, "count": 0, "results": []})
 
@@ -3254,11 +3174,6 @@ def admin_create_deal():
     deal_id = (data.get("id") or "").strip() or slugify(data.get("name", "deal"))
     if any(d.get("id") == deal_id for d in deals):
         deal_id = f"{deal_id}-{uuid.uuid4().hex[:4]}"
-    data = {**data, "sellerId": mkt.PLATFORM_SELLER_ID}
-    if not data.get("listingStatus"):
-        data["listingStatus"] = "live"
-    if not data.get("sellerName"):
-        data["sellerName"] = load_settings().get("siteName") or "SubSaverPH"
     deal = normalize_deal(data, deal_id)
     deals.append(deal)
     save_deals(deals)
@@ -3355,11 +3270,6 @@ def admin_add_codes(product_id: str):
     inv = load_inventory()
     existing = inv.get(product_id) or []
     existing_set = {c.get("code") for c in existing}
-    seller_id = mkt.PLATFORM_SELLER_ID
-    for d in load_deals(include_inactive=True):
-        if d.get("id") == product_id:
-            seller_id = d.get("sellerId") or mkt.PLATFORM_SELLER_ID
-            break
     added = 0
     for code in lines:
         if code in existing_set:
@@ -3368,7 +3278,6 @@ def admin_add_codes(product_id: str):
             {
                 "code": code,
                 "status": "available",
-                "sellerId": seller_id,
                 "addedAt": __import__("datetime").datetime.utcnow().isoformat() + "Z",
             }
         )
@@ -3630,461 +3539,7 @@ def normalize_deal(data: dict, deal_id: str) -> dict:
         "importantNotes": (data.get("importantNotes") or "").strip(),
         "extraDetails": lines(data.get("extraDetails")),
         "active": bool(data.get("active", True)),
-        "sellerId": (data.get("sellerId") or mkt.PLATFORM_SELLER_ID).strip()
-        or mkt.PLATFORM_SELLER_ID,
-        "listingStatus": (data.get("listingStatus") or "live").strip().lower() or "live",
-        "sellerName": (data.get("sellerName") or "").strip(),
     }
-
-
-# ---------- marketplace: seller auth & APIs ----------
-
-
-@app.post("/api/seller/register")
-def seller_register():
-    if not mkt.rate_limit_seller_auth():
-        return jsonify({"error": "Too many attempts. Try again later."}), 429
-    settings = load_settings()
-    if settings.get("marketplaceEnabled") is False:
-        return jsonify({"error": "Seller registration is closed"}), 403
-    data = request.get_json(silent=True) or {}
-    try:
-        seller = mkt.create_seller(
-            email=data.get("email") or "",
-            password=data.get("password") or "",
-            display_name=data.get("displayName") or data.get("name") or "",
-            phone=data.get("phone") or "",
-            payout_method=data.get("payoutMethod") or "gcash",
-            payout_details=data.get("payoutDetails") or "",
-        )
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 400
-    session["seller_id"] = seller["id"]
-    session["seller_email"] = seller["email"]
-    return jsonify({"ok": True, "seller": seller}), 201
-
-
-@app.post("/api/seller/login")
-def seller_login():
-    if not mkt.rate_limit_seller_auth():
-        return jsonify({"error": "Too many attempts. Try again later."}), 429
-    data = request.get_json(silent=True) or {}
-    s = mkt.verify_seller_login(data.get("email") or "", data.get("password") or "")
-    if not s:
-        return jsonify({"error": "Invalid email or password"}), 401
-    if s.get("status") == "suspended":
-        return jsonify({"error": "Account suspended. Contact support."}), 403
-    session["seller_id"] = s["id"]
-    session["seller_email"] = s["email"]
-    return jsonify({"ok": True, "seller": mkt.public_seller_dict(s)})
-
-
-@app.post("/api/seller/logout")
-def seller_logout():
-    session.pop("seller_id", None)
-    session.pop("seller_email", None)
-    return jsonify({"ok": True})
-
-
-@app.get("/api/seller/me")
-@mkt.require_seller
-def seller_me():
-    s = mkt.get_seller(session.get("seller_id"))
-    if not s:
-        return jsonify({"error": "Unauthorized"}), 401
-    bal = mkt.seller_balances(s["id"])
-    return jsonify(
-        {
-            "authenticated": True,
-            "seller": mkt.public_seller_dict(s),
-            "balances": {
-                "held": bal["held"],
-                "released": bal["released"],
-                "paid": bal["paid"],
-                "currency": bal["currency"],
-            },
-        }
-    )
-
-
-@app.post("/api/seller/password")
-@mkt.require_seller
-def seller_password():
-    data = request.get_json(silent=True) or {}
-    current = data.get("current") or ""
-    new_pw = data.get("newPassword") or ""
-    if len(new_pw) < 6:
-        return jsonify({"error": "New password must be at least 6 characters"}), 400
-    sellers = mkt.load_sellers()
-    sid = session.get("seller_id")
-    for i, s in enumerate(sellers):
-        if s.get("id") != sid:
-            continue
-        if not check_password_hash(s.get("passwordHash") or "", current):
-            return jsonify({"error": "Current password is wrong"}), 400
-        s["passwordHash"] = generate_password_hash(new_pw)
-        sellers[i] = s
-        mkt.save_sellers(sellers)
-        return jsonify({"ok": True})
-    return jsonify({"error": "Not found"}), 404
-
-
-@app.put("/api/seller/profile")
-@mkt.require_seller
-def seller_profile():
-    data = request.get_json(silent=True) or {}
-    sellers = mkt.load_sellers()
-    sid = session.get("seller_id")
-    for i, s in enumerate(sellers):
-        if s.get("id") != sid:
-            continue
-        if data.get("displayName") is not None:
-            s["displayName"] = str(data.get("displayName") or "").strip()[:80]
-        if data.get("phone") is not None:
-            s["phone"] = str(data.get("phone") or "").strip()[:40]
-        if data.get("payoutMethod") is not None:
-            s["payoutMethod"] = str(data.get("payoutMethod") or "gcash").strip().lower()[:20]
-        if data.get("payoutDetails") is not None:
-            s["payoutDetails"] = str(data.get("payoutDetails") or "").strip()[:200]
-        sellers[i] = s
-        mkt.save_sellers(sellers)
-        # refresh sellerName on live deals
-        if s.get("status") == "approved":
-            deals = load_deals(include_inactive=True)
-            changed = False
-            for d in deals:
-                if d.get("sellerId") == sid:
-                    d["sellerName"] = s.get("displayName") or d.get("sellerName")
-                    changed = True
-            if changed:
-                save_deals(deals)
-        return jsonify({"ok": True, "seller": mkt.public_seller_dict(s)})
-    return jsonify({"error": "Not found"}), 404
-
-
-@app.get("/api/seller/deals")
-@mkt.require_seller
-def seller_list_deals():
-    sid = session.get("seller_id")
-    deals = [d for d in load_deals(include_inactive=True) if d.get("sellerId") == sid]
-    inv = load_inventory()
-    for d in deals:
-        d["stockLeft"] = mkt.stock_count_for(inv, d.get("id", ""), sid)
-    return jsonify({"deals": deals})
-
-
-@app.post("/api/seller/deals")
-@mkt.require_approved_seller
-def seller_create_deal():
-    sid = session.get("seller_id")
-    s = mkt.get_seller(sid)
-    data = request.get_json(silent=True) or {}
-    deals = load_deals(include_inactive=True)
-    deal_id = (data.get("id") or "").strip() or slugify(data.get("name", "deal"))
-    deal_id = f"{deal_id}-{uuid.uuid4().hex[:4]}"
-    data = {
-        **data,
-        "sellerId": sid,
-        "sellerName": (s or {}).get("displayName") or "Seller",
-        "listingStatus": "pending",
-        "active": True,
-    }
-    deal = normalize_deal(data, deal_id)
-    deals.append(deal)
-    save_deals(deals)
-    return jsonify({"ok": True, "deal": deal}), 201
-
-
-@app.put("/api/seller/deals/<deal_id>")
-@mkt.require_approved_seller
-def seller_update_deal(deal_id: str):
-    sid = session.get("seller_id")
-    data = request.get_json(silent=True) or {}
-    deals = load_deals(include_inactive=True)
-    for i, d in enumerate(deals):
-        if d.get("id") != deal_id:
-            continue
-        if d.get("sellerId") != sid:
-            return jsonify({"error": "Not your listing"}), 403
-        # Sellers cannot reassign ownership or force live
-        merged = {**d, **data, "sellerId": sid, "id": deal_id}
-        prev_status = d.get("listingStatus")
-        # Material edits re-queue for approval if was live
-        material = any(
-            data.get(k) is not None and str(data.get(k)) != str(d.get(k))
-            for k in ("name", "price", "description", "brand", "category")
-        )
-        if prev_status == "live" and material:
-            merged["listingStatus"] = "pending"
-        elif data.get("listingStatus") in ("draft", "paused", "pending"):
-            merged["listingStatus"] = data.get("listingStatus")
-        else:
-            merged["listingStatus"] = prev_status or "pending"
-        s = mkt.get_seller(sid)
-        merged["sellerName"] = (s or {}).get("displayName") or d.get("sellerName")
-        updated = normalize_deal(merged, deal_id)
-        deals[i] = updated
-        save_deals(deals)
-        return jsonify({"ok": True, "deal": updated})
-    return jsonify({"error": "Deal not found"}), 404
-
-
-@app.get("/api/seller/inventory")
-@mkt.require_seller
-def seller_inventory():
-    sid = session.get("seller_id")
-    inv = load_inventory()
-    summary = []
-    for d in load_deals(include_inactive=True):
-        if d.get("sellerId") != sid:
-            continue
-        pid = d.get("id")
-        codes = inv.get(pid) or []
-        mine = [c for c in codes if (c.get("sellerId") or mkt.PLATFORM_SELLER_ID) == sid]
-        summary.append(
-            {
-                "productId": pid,
-                "name": d.get("name"),
-                "available": sum(1 for c in mine if c.get("status", "available") == "available"),
-                "sold": sum(1 for c in mine if c.get("status") == "sold"),
-                "total": len(mine),
-            }
-        )
-    return jsonify({"summary": summary})
-
-
-@app.post("/api/seller/inventory/<product_id>")
-@mkt.require_approved_seller
-def seller_add_codes(product_id: str):
-    sid = session.get("seller_id")
-    deals = load_deals(include_inactive=True)
-    deal = next((d for d in deals if d.get("id") == product_id), None)
-    if not deal or deal.get("sellerId") != sid:
-        return jsonify({"error": "Not your product"}), 403
-    data = request.get_json(silent=True) or {}
-    raw = data.get("codes")
-    if isinstance(raw, str):
-        lines = [ln.strip() for ln in raw.splitlines() if ln.strip()]
-    elif isinstance(raw, list):
-        lines = [str(x).strip() for x in raw if str(x).strip()]
-    else:
-        return jsonify({"error": "Provide codes as text (one per line) or array"}), 400
-    inv = load_inventory()
-    existing = inv.get(product_id) or []
-    existing_set = {c.get("code") for c in existing}
-    added = 0
-    for code in lines:
-        if code in existing_set:
-            continue
-        existing.append(
-            {
-                "code": code,
-                "status": "available",
-                "sellerId": sid,
-                "addedAt": __import__("datetime").datetime.utcnow().isoformat() + "Z",
-            }
-        )
-        existing_set.add(code)
-        added += 1
-    inv[product_id] = existing
-    save_inventory(inv)
-    return jsonify(
-        {
-            "ok": True,
-            "added": added,
-            "available": sum(
-                1
-                for c in existing
-                if c.get("status") == "available"
-                and (c.get("sellerId") or mkt.PLATFORM_SELLER_ID) == sid
-            ),
-            "total": sum(
-                1 for c in existing if (c.get("sellerId") or mkt.PLATFORM_SELLER_ID) == sid
-            ),
-        }
-    )
-
-
-@app.get("/api/seller/orders")
-@mkt.require_seller
-def seller_orders():
-    sid = session.get("seller_id")
-    out = []
-    for o in load_orders()[:300]:
-        mine = [it for it in (o.get("items") or []) if it.get("sellerId") == sid]
-        if not mine:
-            continue
-        out.append(
-            {
-                "id": o.get("id"),
-                "email": o.get("email"),
-                "createdAt": o.get("createdAt"),
-                "status": o.get("status"),
-                "currency": o.get("currency"),
-                "items": mine,
-                "platformFeeTotal": sum(float(it.get("platformFee") or 0) for it in mine),
-                "sellerNetTotal": sum(float(it.get("sellerNet") or 0) for it in mine),
-            }
-        )
-    return jsonify({"orders": out[:100]})
-
-
-@app.get("/api/seller/payouts")
-@mkt.require_seller
-def seller_payouts():
-    sid = session.get("seller_id")
-    bal = mkt.seller_balances(sid)
-    return jsonify(
-        {
-            "balances": {
-                "held": bal["held"],
-                "released": bal["released"],
-                "paid": bal["paid"],
-                "currency": bal["currency"],
-            },
-            "payouts": bal["rows"][:200],
-        }
-    )
-
-
-# ---------- admin marketplace ----------
-
-
-@app.get("/api/admin/sellers")
-@require_admin
-def admin_sellers():
-    sellers = []
-    for s in mkt.load_sellers():
-        bal = mkt.seller_balances(s["id"])
-        pub = mkt.public_seller_dict(s)
-        pub["balances"] = {
-            "held": bal["held"],
-            "released": bal["released"],
-            "paid": bal["paid"],
-        }
-        pub["notes"] = s.get("notes") or ""
-        sellers.append(pub)
-    return jsonify({"sellers": sellers})
-
-
-@app.put("/api/admin/sellers/<seller_id>")
-@require_admin
-def admin_update_seller(seller_id: str):
-    data = request.get_json(silent=True) or {}
-    sellers = mkt.load_sellers()
-    for i, s in enumerate(sellers):
-        if s.get("id") != seller_id:
-            continue
-        if data.get("status") in ("pending", "approved", "suspended", "rejected"):
-            prev = s.get("status")
-            s["status"] = data["status"]
-            if data["status"] == "approved" and prev != "approved":
-                s["approvedAt"] = mkt.utc_now()
-            # Pause listings if suspended/rejected
-            if data["status"] in ("suspended", "rejected"):
-                deals = load_deals(include_inactive=True)
-                for d in deals:
-                    if d.get("sellerId") == seller_id and d.get("listingStatus") == "live":
-                        d["listingStatus"] = "paused"
-                save_deals(deals)
-        if data.get("notes") is not None:
-            s["notes"] = str(data.get("notes") or "")[:500]
-        if data.get("displayName") is not None:
-            s["displayName"] = str(data.get("displayName") or "").strip()[:80]
-        sellers[i] = s
-        mkt.save_sellers(sellers)
-        return jsonify({"ok": True, "seller": mkt.public_seller_dict(s)})
-    return jsonify({"error": "Seller not found"}), 404
-
-
-@app.get("/api/admin/listings/pending")
-@require_admin
-def admin_pending_listings():
-    deals = [
-        d
-        for d in load_deals(include_inactive=True)
-        if (d.get("listingStatus") or "") == "pending"
-    ]
-    return jsonify({"deals": deals})
-
-
-@app.put("/api/admin/deals/<deal_id>/listing")
-@require_admin
-def admin_set_listing_status(deal_id: str):
-    data = request.get_json(silent=True) or {}
-    status = (data.get("listingStatus") or data.get("status") or "").strip().lower()
-    if status not in ("draft", "pending", "live", "rejected", "paused"):
-        return jsonify({"error": "Invalid listingStatus"}), 400
-    deals = load_deals(include_inactive=True)
-    for i, d in enumerate(deals):
-        if d.get("id") != deal_id:
-            continue
-        d = dict(d)
-        d["listingStatus"] = status
-        if status == "live":
-            d["active"] = True
-        deals[i] = d
-        save_deals(deals)
-        return jsonify({"ok": True, "deal": d})
-    return jsonify({"error": "Deal not found"}), 404
-
-
-@app.get("/api/admin/payouts")
-@require_admin
-def admin_payouts():
-    status = (request.args.get("status") or "").strip().lower()
-    rows = mkt.load_ledger()
-    if status:
-        rows = [r for r in rows if r.get("status") == status]
-    return jsonify({"payouts": rows[:500]})
-
-
-@app.post("/api/admin/payouts/<payout_id>/release")
-@require_admin
-def admin_payout_release(payout_id: str):
-    data = request.get_json(silent=True) or {}
-    try:
-        row = mkt.update_ledger_status(
-            payout_id,
-            "released",
-            admin_user=session.get("admin_user") or "admin",
-            note=data.get("note") or "",
-        )
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 400
-    return jsonify({"ok": True, "payout": row})
-
-
-@app.post("/api/admin/payouts/<payout_id>/paid")
-@require_admin
-def admin_payout_paid(payout_id: str):
-    data = request.get_json(silent=True) or {}
-    try:
-        row = mkt.update_ledger_status(
-            payout_id,
-            "paid",
-            admin_user=session.get("admin_user") or "admin",
-            note=data.get("note") or "",
-        )
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 400
-    return jsonify({"ok": True, "payout": row})
-
-
-@app.post("/api/admin/payouts/<payout_id>/cancel")
-@require_admin
-def admin_payout_cancel(payout_id: str):
-    data = request.get_json(silent=True) or {}
-    try:
-        row = mkt.update_ledger_status(
-            payout_id,
-            "cancelled",
-            admin_user=session.get("admin_user") or "admin",
-            note=data.get("note") or "Cancelled (e.g. refund)",
-        )
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 400
-    return jsonify({"ok": True, "payout": row})
 
 
 # ---------- static pages ----------
@@ -4093,17 +3548,6 @@ def admin_payout_cancel(payout_id: str):
 @app.get("/")
 def public_index():
     return _serve_html("index.html")
-
-
-@app.get("/seller")
-@app.get("/seller/")
-def seller_page():
-    return _serve_html("index.html", ROOT / "seller")
-
-
-@app.get("/seller/<path:path>")
-def seller_static(path: str):
-    return send_from_directory(ROOT / "seller", path)
 
 
 @app.get("/admin")
