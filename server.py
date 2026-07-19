@@ -146,7 +146,7 @@ def ensure_store() -> None:
                         "tagline": "Premium plans. Lower cost.",
                         "heroEyebrow": "SubSaverPH · Subscription access",
                         "heroTitle": "Premium\nplans.\nLower\ncost.",
-                        "heroLead": "SuperGrok, Canva, CapCut, Netflix, and YouTube — prepaid discounts.",
+                        "heroLead": "Prepaid access to premium subscriptions at outlet rates. Checkout in any currency.",
                         "footerText": "Discounted prepaid subscriptions.",
                         "defaultCurrency": "PHP",
                         "missionTitle": "Stack subscriptions without stacking full price",
@@ -3950,6 +3950,11 @@ def public_static(path: str):
     ) or lower in ("favicon.ico", "logo.png", "og-image.png"):
         resp.headers["Cache-Control"] = "public, max-age=86400"
         resp.headers["Access-Control-Allow-Origin"] = "*"
+    elif lower.endswith(".js") or lower.endswith(".css"):
+        # Avoid serving mixed old/new JS after deploys (breaks SPA: blank products / dead buttons)
+        resp.headers["Cache-Control"] = "public, max-age=120, must-revalidate"
+        if lower.endswith(".js") and not mime:
+            resp.headers["Content-Type"] = "text/javascript; charset=utf-8"
     return resp
 
 
