@@ -547,7 +547,7 @@ function applySiteChrome() {
   setText("#footerDisclaimer", c("footer_disclaimer", "footerDisclaimer"));
   const year = new Date().getFullYear();
   setText("#footerCopyright", `© ${year} ${c("footer_copyright", "footerCopyright")}`);
-  document.querySelectorAll(".footer-meta li span[data-i18n-meta]").forEach((span) => {
+  document.querySelectorAll(".footer-facts li span[data-i18n-meta], .footer-meta li span[data-i18n-meta]").forEach((span) => {
     span.textContent = t(span.getAttribute("data-i18n-meta"));
   });
   // Footer: all support links go to the Support page (email options live there)

@@ -95,8 +95,9 @@ html.is-translating .prefs-panel {
 
 /* RTL languages (Arabic, Hebrew, Urdu, Persian) */
 html[dir="rtl"] .nav-inner,
-html[dir="rtl"] .footer-inner,
-html[dir="rtl"] .footer-company-grid,
+html[dir="rtl"] .footer-top,
+html[dir="rtl"] .footer-nav,
+html[dir="rtl"] .footer-facts,
 html[dir="rtl"] .drawer-foot .row,
 html[dir="rtl"] .cart-line {
   direction: rtl;
@@ -2930,143 +2931,162 @@ html[data-theme="light"] .cred-value {
   letter-spacing: 0.04em;
 }
 
-/* FOOTER */
+/* FOOTER — neat single shell */
 .footer {
   border-top: 1px solid var(--line);
-  padding: var(--space-5) 0 var(--space-3);
+  padding: 48px 0 28px;
+  margin-top: 48px;
 }
 
-.footer-inner {
+.footer-shell {
   width: min(var(--max), calc(100% - 40px));
   margin: 0 auto;
-  display: grid;
-  grid-template-columns: 1.5fr 1fr 1fr 1fr;
+  display: flex;
+  flex-direction: column;
   gap: 28px;
 }
 
-.footer h4 {
-  font-size: 0.65rem;
+.footer-top {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.35fr) minmax(280px, 1fr);
+  gap: 36px 48px;
+  align-items: start;
+}
+
+.footer-brand {
+  min-width: 0;
+}
+
+.footer-logo {
+  display: inline-flex;
+  margin-bottom: 14px;
+}
+
+.footer-blurb {
+  margin: 0 0 12px;
+  color: var(--text);
+  font-size: 0.95rem;
+  line-height: 1.55;
+  font-weight: 550;
+  max-width: 42ch;
+}
+
+.footer-company-blurb {
+  margin: 0;
+  color: var(--mute);
+  font-size: 0.86rem;
+  line-height: 1.6;
+  max-width: 48ch;
+}
+
+.footer-nav {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px 28px;
+}
+
+.footer-col h4 {
+  font-size: 0.68rem;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--mute-2);
-  margin: 0 0 12px;
+  margin: 0 0 14px;
+  font-weight: 650;
 }
 
-.footer a {
+.footer-col a {
   display: block;
-  margin: 7px 0;
+  margin: 0 0 10px;
   color: var(--mute);
   font-size: 0.9rem;
+  text-decoration: none;
+  line-height: 1.35;
 }
 
-.footer a:hover {
+.footer-col a:last-child {
+  margin-bottom: 0;
+}
+
+.footer-col a:hover {
   color: var(--text);
 }
 
-.footer p {
-  color: var(--mute);
-  font-size: 0.9rem;
-  max-width: 36ch;
-}
-
-.footer-company {
-  width: min(var(--max), calc(100% - 40px));
-  margin: 40px auto 0;
-  padding-top: 28px;
-  border-top: 1px solid var(--line);
-}
-
-.footer-company h4 {
-  font-size: 0.65rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--mute-2);
-  margin: 0 0 16px;
-}
-
-.footer-company-grid {
-  display: grid;
-  grid-template-columns: 1.4fr 1fr;
-  gap: 28px 40px;
-}
-
-.footer-company p {
-  color: var(--mute);
-  font-size: 0.9rem;
-  line-height: 1.6;
-  margin: 0 0 12px;
-  max-width: none;
-}
-
-.footer-meta {
+.footer-facts {
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding: 16px 0 0;
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
-.footer-meta li {
-  display: grid;
-  grid-template-columns: 120px 1fr;
-  gap: 12px;
-  padding: 8px 0;
-  border-bottom: 1px solid var(--line);
-  font-size: 0.88rem;
-  color: var(--text);
+.footer-facts li {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: min(160px, 100%);
+  flex: 1 1 140px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.02);
 }
 
-.footer-meta li span {
+.footer-facts li span {
   color: var(--mute-2);
-  font-size: 0.68rem;
+  font-size: 0.65rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  align-self: center;
+  font-weight: 650;
 }
 
-.footer-meta li em {
+.footer-facts li em {
   font-style: normal;
   color: var(--text);
+  font-size: 0.86rem;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.footer-facts a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.footer-facts a:hover {
+  text-decoration: underline;
 }
 
 .footer-disclaimer {
-  margin: 18px 0 0 !important;
-  font-size: 0.8rem !important;
-  color: var(--mute-2) !important;
-  max-width: 90ch !important;
+  margin: 0;
+  padding: 0;
+  font-size: 0.78rem;
+  line-height: 1.55;
+  color: var(--mute-2);
+  max-width: 92ch;
 }
 
 .footer-bar {
-  width: min(var(--max), calc(100% - 40px));
-  margin: 28px auto 0;
-  padding-top: 20px;
+  margin: 0;
+  padding-top: 18px;
   border-top: 1px solid var(--line);
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-  font-size: 0.68rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
   color: var(--mute-2);
 }
 
+/* Legacy hooks (if any JS still targets these) */
+.footer-inner,
+.footer-company,
+.footer-company-inner,
+.footer-company-grid,
+.footer-meta,
 .footer-legal-links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 18px;
-}
-
-.footer-legal-links a {
-  display: inline;
-  margin: 0;
-  color: var(--mute);
-  font-size: 0.68rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
-.footer-legal-links a:hover {
-  color: var(--text);
+  /* kept empty for safety — layout uses footer-shell */
 }
 
 /* Legal pages (About / Terms / Privacy) */
@@ -3170,14 +3190,19 @@ html[data-theme="light"] .cred-value {
   .detail,
   .layout,
   .checkout,
-  .footer-inner,
-  .footer-company-grid {
+  .footer-top {
     grid-template-columns: 1fr;
+    gap: 28px;
   }
 
-  .footer-meta li {
-    grid-template-columns: 1fr;
-    gap: 4px;
+  .footer-nav {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+  }
+
+  .footer-facts li {
+    flex: 1 1 calc(50% - 10px);
+    min-width: 0;
   }
 
   .filters {
@@ -3671,10 +3696,6 @@ html[data-theme="light"] .cred-value {
   transition: color var(--dur) var(--ease);
 }
 
-.footer-bar {
-  margin-top: 40px;
-}
-
 /* Light theme: ensure every surface + text stays readable */
 html[data-theme="light"] body,
 html[data-theme="light"] main,
@@ -3732,8 +3753,9 @@ html[data-theme="light"] .price,
 html[data-theme="light"] .tagline,
 html[data-theme="light"] .stock-line,
 html[data-theme="light"] .cat,
-html[data-theme="light"] .footer-meta li,
+html[data-theme="light"] .footer-facts li,
 html[data-theme="light"] .footer-disclaimer,
+html[data-theme="light"] .footer-company-blurb,
 html[data-theme="light"] .legal-body p,
 html[data-theme="light"] .legal-body li,
 html[data-theme="light"] .legal-body h2,
@@ -3754,6 +3776,7 @@ html[data-theme="light"] .suggest-text em,
 html[data-theme="light"] .suggest-price,
 html[data-theme="light"] .fx-option span,
 html[data-theme="light"] .pay-method-box em,
+html[data-theme="light"] .footer-facts li span,
 html[data-theme="light"] .footer-meta li span,
 html[data-theme="light"] .prefs-hint,
 html[data-theme="light"] .legal-updated {
@@ -3778,6 +3801,7 @@ html[data-theme="light"] .search-meta strong,
 html[data-theme="light"] .mono,
 html[data-theme="light"] .mono-box,
 html[data-theme="light"] .brand-tile .mono,
+html[data-theme="light"] .footer-facts li em,
 html[data-theme="light"] .footer-meta li em,
 html[data-theme="light"] .legal-body h2,
 html[data-theme="light"] .legal-body a,
@@ -4253,26 +4277,12 @@ html[data-theme="light"] .pill.on {
 
 .footer {
   border-top: 1px solid var(--line);
-  background: linear-gradient(180deg, transparent, rgba(4, 6, 20, 0.6));
-  margin-top: 40px;
+  background: linear-gradient(180deg, transparent, rgba(4, 6, 20, 0.55));
 }
 
-.footer-inner {
-  gap: 32px;
-  padding-top: 8px;
-}
-
-.footer h4 {
-  color: var(--mute-2);
-  letter-spacing: 0.16em;
-}
-
-.footer-company {
-  border-top-color: var(--line);
-}
-
-.footer-meta li {
-  border-bottom-color: var(--line);
+.footer-facts li {
+  background: rgba(255, 255, 255, 0.025);
+  border-color: var(--line);
 }
 
 .pay-method-box {
@@ -4798,10 +4808,36 @@ html[data-theme="light"] .footer {
   user-select: all;
   -webkit-user-select: all;
 }
-.footer-meta a {
+.footer-meta a,
+.footer-facts a {
   color: inherit;
   text-decoration: underline;
   text-underline-offset: 3px;
+}
+
+html[data-theme="light"] .footer-facts li {
+  background: #fff;
+  border-color: var(--line);
+}
+
+@media (max-width: 560px) {
+  .footer {
+    padding: 36px 0 22px;
+  }
+  .footer-shell {
+    width: min(var(--max), calc(100% - 28px));
+    gap: 22px;
+  }
+  .footer-nav {
+    grid-template-columns: 1fr 1fr;
+    gap: 20px 16px;
+  }
+  .footer-col:last-child {
+    grid-column: 1 / -1;
+  }
+  .footer-facts li {
+    flex: 1 1 100%;
+  }
 }
 
 /* Light theme tweaks */
