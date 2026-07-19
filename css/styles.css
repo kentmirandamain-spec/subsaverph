@@ -2991,6 +2991,12 @@ html[data-theme="light"] .cred-value {
   margin-left: auto;
 }
 
+.footer-nav-1 {
+  grid-template-columns: 1fr;
+  max-width: 200px;
+  margin-left: auto;
+}
+
 .footer-col h4 {
   font-size: 0.68rem;
   letter-spacing: 0.14em;
@@ -3202,11 +3208,16 @@ html[data-theme="light"] .cred-value {
   }
 
   .footer-nav,
-  .footer-nav-2 {
+  .footer-nav-2,
+  .footer-nav-1 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 16px;
     max-width: none;
     margin-left: 0;
+  }
+
+  .footer-nav-1 {
+    grid-template-columns: 1fr;
   }
 
   .footer-facts li {
@@ -4838,8 +4849,9 @@ html[data-theme="light"] .footer-facts li {
     gap: 22px;
   }
   .footer-nav,
-  .footer-nav-2 {
-    grid-template-columns: 1fr 1fr;
+  .footer-nav-2,
+  .footer-nav-1 {
+    grid-template-columns: 1fr;
     gap: 20px 16px;
     max-width: none;
     margin-left: 0;
