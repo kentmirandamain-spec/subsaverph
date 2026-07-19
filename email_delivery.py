@@ -220,20 +220,16 @@ def build_invoice_content(order: dict[str, Any]) -> tuple[str, str, str]:
         lines.append(f"Price:    {_format_money(price, base)} each")
         if it.get("description"):
             lines.append(f"Details:  {it.get('description')}")
-        if it.get("howToRedeem"):
-            lines.append("How to use:")
-            for hl in str(it.get("howToRedeem")).splitlines():
-                if hl.strip():
-                    lines.append(f"  - {hl.strip()}")
-        if it.get("importantNotes"):
-            lines.append("Important:")
-            for hl in str(it.get("importantNotes")).splitlines():
-                if hl.strip():
-                    lines.append(f"  - {hl.strip()}")
+        feats = it.get("includes") or []
+        if isinstance(feats, list) and feats:
+            lines.append("Features included:")
+            for f in feats:
+                if str(f).strip():
+                    lines.append(f"  • {str(f).strip()}")
         creds = _item_credentials(it)
         if creds:
             for i, cr in enumerate(creds, 1):
-                label = f"Login #{i}" if len(creds) > 1 else "Login"
+                label = f"Login #{i}" if len(creds) > 1 else "Login credentials"
                 lines.append(f"  --- {label} ---")
                 if cr.get("username") or cr.get("password"):
                     lines.append(f"  Username: {cr.get('username') or '—'}")
@@ -242,13 +238,25 @@ def build_invoice_content(order: dict[str, Any]) -> tuple[str, str, str]:
                     lines.append(f"  Access code: {cr.get('code') or cr.get('raw')}")
         else:
             lines.append("  Login: (contact support — nothing assigned)")
+        if it.get("howToRedeem"):
+            lines.append("Instructions (how to use):")
+            for hl in str(it.get("howToRedeem")).splitlines():
+                if hl.strip():
+                    lines.append(f"  {hl.strip()}")
+        if it.get("importantNotes"):
+            lines.append("Rules & important notes:")
+            for hl in str(it.get("importantNotes")).splitlines():
+                if hl.strip():
+                    lines.append(f"  • {hl.strip()}")
+        if it.get("finePrint"):
+            lines.append(f"Fine print: {it.get('finePrint')}")
         lines.append("")
     lines.extend(
         [
             "-" * 44,
-            "IMPORTANT",
+            "GENERAL RULES",
             "- Do not change username, password, billing address, or subscription.",
-            "- Breaking these rules voids refunds (except defective / not delivered product).",
+            "- Breaking product rules voids refunds (except defective / not delivered).",
             "- Save this email. Use logins only as provided.",
             "",
             f"Support: reply to this email and include Order ID {order_id_raw or payment_id_raw}.",
@@ -308,22 +316,41 @@ def build_invoice_content(order: dict[str, Any]) -> tuple[str, str, str]:
             extra_html += f'<div style="color:#999;font-size:13px;margin-top:4px">Validity: {escape(str(it.get("validity")))}</div>'
         if it.get("description"):
             extra_html += f'<div style="color:#aaa;font-size:13px;margin-top:8px;line-height:1.5">{escape(str(it.get("description")))}</div>'
+        if it.get("delivery"):
+            extra_html += f'<div style="color:#999;font-size:12px;margin-top:8px">Delivery: {escape(str(it.get("delivery")))}</div>'
+
+        feats = it.get("includes") or []
+        if isinstance(feats, list) and any(str(f).strip() for f in feats):
+            lis = "".join(
+                f'<li style="margin:0 0 4px;color:#ddd">{escape(str(f).strip())}</li>'
+                for f in feats
+                if str(f).strip()
+            )
+            extra_html += (
+                '<div style="margin-top:12px;padding:12px;border:1px solid #2a2a2a;background:#0d0d0d">'
+                '<div style="font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:#888;margin-bottom:8px">Features included</div>'
+                f'<ul style="margin:0;padding-left:18px;font-size:13px;line-height:1.45">{lis}</ul>'
+                "</div>"
+            )
+
         if it.get("howToRedeem"):
             extra_html += (
-                '<div style="margin-top:10px">'
-                '<div style="font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:#888">How to use</div>'
-                f'<div style="color:#ccc;font-size:13px;margin-top:4px;white-space:pre-wrap;line-height:1.5">{escape(str(it.get("howToRedeem")))}</div>'
+                '<div style="margin-top:12px;padding:12px;border:1px solid #2a2a2a;background:#0d0d0d">'
+                '<div style="font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:#888">Instructions — how to use</div>'
+                f'<div style="color:#ccc;font-size:13px;margin-top:6px;white-space:pre-wrap;line-height:1.55">{escape(str(it.get("howToRedeem")))}</div>'
                 "</div>"
             )
         if it.get("importantNotes"):
             extra_html += (
-                '<div style="margin-top:10px">'
-                '<div style="font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:#888">Important notes</div>'
-                f'<div style="color:#ccc;font-size:13px;margin-top:4px;white-space:pre-wrap;line-height:1.5">{escape(str(it.get("importantNotes")))}</div>'
+                '<div style="margin-top:12px;padding:12px;border:1px solid #3a2a1a;background:#14100a">'
+                '<div style="font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:#c9a227">Rules</div>'
+                f'<div style="color:#e8dcc8;font-size:13px;margin-top:6px;white-space:pre-wrap;line-height:1.55">{escape(str(it.get("importantNotes")))}</div>'
                 "</div>"
             )
-        if it.get("delivery"):
-            extra_html += f'<div style="color:#999;font-size:12px;margin-top:8px">Delivery: {escape(str(it.get("delivery")))}</div>'
+        if it.get("finePrint"):
+            extra_html += (
+                f'<div style="color:#777;font-size:12px;margin-top:10px;line-height:1.45">{escape(str(it.get("finePrint")))}</div>'
+            )
 
         item_rows.append(
             f"""
@@ -331,11 +358,11 @@ def build_invoice_content(order: dict[str, Any]) -> tuple[str, str, str]:
               <td style="padding:18px 0;border-bottom:1px solid #222;vertical-align:top">
                 <div style="font-weight:700;color:#fff;font-size:16px">{escape(str(it.get("name") or "Plan"))}</div>
                 <div style="color:#999;font-size:13px;margin-top:4px">{meta_line}</div>
-                {extra_html}
                 <div style="margin-top:14px">
-                  <div style="font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:#fff;font-weight:600;margin-bottom:2px">Login details</div>
+                  <div style="font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:#fff;font-weight:600;margin-bottom:2px">Login credentials</div>
                   {"".join(login_blocks)}
                 </div>
+                {extra_html}
               </td>
             </tr>"""
         )

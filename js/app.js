@@ -1605,64 +1605,115 @@ function viewSuccess() {
     return `<div class="success"><div class="empty"><h2>No order</h2><a class="btn solid" href="#/deals">Shop</a></div></div>`;
   }
 
-  /** Build credential cards from credentials[] or parse codes[] */
-  const credCards = (order.items || [])
+  /** Build full delivery packet: credentials + features + instructions + rules */
+  const deliveryPackets = (order.items || [])
     .map((item) => {
       let creds = Array.isArray(item.credentials) ? item.credentials : [];
       if (!creds.length && Array.isArray(item.codes)) {
         creds = item.codes.map((c) => parseCredentialClient(c));
       }
+      let credHtml = "";
       if (!creds.length) {
-        return `<div class="cred-card">
-          <div class="cred-product">${escapeHtml(item.monogram || "")} ${escapeHtml(item.name || "Product")}</div>
-          <p class="muted" style="margin:8px 0 0">No login on file — contact support with order ID.</p>
-        </div>`;
-      }
-      return creds
-        .map((cr, idx) => {
-          const user = cr.username || cr.user || "";
-          const pass = cr.password || cr.pass || "";
-          const code = cr.code || (!user && !pass ? cr.raw || "" : "");
-          const title =
-            (order.items || []).length > 1 || creds.length > 1
-              ? `${item.name || "Product"}${creds.length > 1 ? ` #${idx + 1}` : ""}`
-              : item.name || "Your access";
-          if (user || pass) {
-            return `
+        credHtml = `<p class="muted" style="margin:8px 0 0">No login on file — contact support with order ID.</p>`;
+      } else {
+        credHtml = creds
+          .map((cr, idx) => {
+            const user = cr.username || cr.user || "";
+            const pass = cr.password || cr.pass || "";
+            const code = cr.code || (!user && !pass ? cr.raw || "" : "");
+            const title =
+              creds.length > 1 ? `Login #${idx + 1}` : "Your login";
+            if (user || pass) {
+              return `
             <div class="cred-card" data-cred-card>
-              <div class="cred-product">${escapeHtml(item.monogram || "")} ${escapeHtml(title)}</div>
+              <div class="cred-product">${escapeHtml(title)}</div>
               <div class="cred-field">
                 <label>Username / Email</label>
                 <div class="cred-value-row">
                   <code class="cred-value" data-copy-text>${escapeHtml(user || "—")}</code>
-                  <button type="button" class="btn sm cred-copy" data-copy="${escapeHtml(user)}" ${user ? "" : "disabled"}>Copy</button>
+                  <button type="button" class="btn sm cred-copy" data-copy="${escapeAttr(user)}" ${user ? "" : "disabled"}>Copy</button>
                 </div>
               </div>
               <div class="cred-field">
                 <label>Password</label>
                 <div class="cred-value-row">
                   <code class="cred-value" data-copy-text>${escapeHtml(pass || "—")}</code>
-                  <button type="button" class="btn sm cred-copy" data-copy="${escapeHtml(pass)}" ${pass ? "" : "disabled"}>Copy</button>
+                  <button type="button" class="btn sm cred-copy" data-copy="${escapeAttr(pass)}" ${pass ? "" : "disabled"}>Copy</button>
                 </div>
               </div>
-              <button type="button" class="btn solid sm full cred-copy-both" data-copy-user="${escapeHtml(user)}" data-copy-pass="${escapeHtml(pass)}" style="margin-top:12px">
+              <button type="button" class="btn solid sm full cred-copy-both" data-copy-user="${escapeAttr(user)}" data-copy-pass="${escapeAttr(pass)}" style="margin-top:12px">
                 Copy username + password
               </button>
             </div>`;
-          }
-          return `
+            }
+            return `
             <div class="cred-card" data-cred-card>
-              <div class="cred-product">${escapeHtml(item.monogram || "")} ${escapeHtml(title)}</div>
+              <div class="cred-product">${escapeHtml(title)}</div>
               <div class="cred-field">
                 <label>Access code</label>
                 <div class="cred-value-row">
                   <code class="cred-value" data-copy-text>${escapeHtml(code || "—")}</code>
-                  <button type="button" class="btn sm cred-copy" data-copy="${escapeHtml(code)}" ${code ? "" : "disabled"}>Copy</button>
+                  <button type="button" class="btn sm cred-copy" data-copy="${escapeAttr(code)}" ${code ? "" : "disabled"}>Copy</button>
                 </div>
               </div>
             </div>`;
-        })
-        .join("");
+          })
+          .join("");
+      }
+
+      const features = Array.isArray(item.includes)
+        ? item.includes.filter((x) => String(x || "").trim())
+        : [];
+      const featuresHtml = features.length
+        ? `<div class="delivery-block">
+            <h3 class="delivery-block-title">Features included</h3>
+            <ul class="delivery-features">${features.map((f) => `<li>${escapeHtml(f)}</li>`).join("")}</ul>
+          </div>`
+        : "";
+
+      const instructions = String(item.howToRedeem || "").trim();
+      const instructionsHtml = instructions
+        ? `<div class="delivery-block">
+            <h3 class="delivery-block-title">Instructions — how to use</h3>
+            <div class="delivery-pre">${escapeHtml(instructions)}</div>
+          </div>`
+        : "";
+
+      const rules = String(item.importantNotes || "").trim();
+      const fine = String(item.finePrint || "").trim();
+      const rulesHtml =
+        rules || fine
+          ? `<div class="delivery-block delivery-block-rules">
+            <h3 class="delivery-block-title">Rules</h3>
+            ${rules ? `<div class="delivery-pre">${escapeHtml(rules)}</div>` : ""}
+            ${fine ? `<p class="muted delivery-fine">${escapeHtml(fine)}</p>` : ""}
+          </div>`
+          : "";
+
+      const metaBits = [
+        item.accountType ? `Account: ${item.accountType}` : "",
+        item.validity ? `Validity: ${item.validity}` : "",
+        item.duration || "",
+        item.delivery || "",
+      ].filter(Boolean);
+
+      return `
+        <article class="delivery-packet">
+          <header class="delivery-packet-head">
+            <span class="mono-box sm">${escapeHtml(item.monogram || "•")}</span>
+            <div>
+              <h2 class="delivery-packet-title">${escapeHtml(item.name || "Product")}</h2>
+              ${metaBits.length ? `<p class="muted delivery-meta">${escapeHtml(metaBits.join(" · "))}</p>` : ""}
+            </div>
+          </header>
+          <div class="delivery-block">
+            <h3 class="delivery-block-title">Login credentials</h3>
+            <div class="cred-list">${credHtml}</div>
+          </div>
+          ${featuresHtml}
+          ${instructionsHtml}
+          ${rulesHtml}
+        </article>`;
     })
     .join("");
 
@@ -1680,15 +1731,15 @@ function viewSuccess() {
         <p class="muted">Order <strong class="success-order-id">${escapeHtml(order.id)}</strong><br/>${emailNote}</p>
         <p style="margin-top:12px;font-weight:600">${escapeHtml(order.currency || getCurrencyCode())} · ${escapeHtml(order.paymentMode || "instant")} · Instant digital delivery</p>
 
-        <div class="cred-panel" role="region" aria-label="Your product login">
+        <div class="cred-panel delivery-panel" role="region" aria-label="Your product delivery">
           <div class="cred-panel-head">
-            <h2>Your login</h2>
-            <p class="muted">Username and password for each product — tap Copy to paste into the app.</p>
+            <h2>Your access package</h2>
+            <p class="muted">Login credentials, features, instructions, and rules for each product.</p>
           </div>
-          <div class="cred-list">${credCards}</div>
+          <div class="delivery-list">${deliveryPackets}</div>
         </div>
 
-        <p class="muted" style="font-size:0.8rem;margin-top:16px">Save these credentials now. Redeem / sign in on the official service. Not affiliated with listed brands.</p>
+        <p class="muted" style="font-size:0.8rem;margin-top:16px">Save these credentials now. Follow the instructions and rules for each product. Not affiliated with listed brands.</p>
         <div class="support-inline">
           <p class="muted" style="margin:0;font-size:0.9rem">Problem with this order?</p>
           <button type="button" class="btn solid" data-go-support-order="${escapeAttr(order.id || "")}" data-go-support-pay="${escapeAttr(order.providerRef || order.stripeSessionId || "")}">Contact support</button>

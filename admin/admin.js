@@ -498,18 +498,24 @@ function dealModal(deal) {
         </div>
         <label>Tagline<input name="tagline" value="${escapeAttr(deal.tagline || "")}" /></label>
         <label>Description<textarea name="description" rows="4">${escapeHtml(deal.description || "")}</textarea></label>
-        <label>Includes (one per line)<textarea name="includes" rows="4">${escapeHtml(includes)}</textarea></label>
-        <label>Fine print<textarea name="finePrint" rows="2">${escapeHtml(deal.finePrint || "")}</textarea></label>
+        <label>Fine print (storefront + delivery footer)<textarea name="finePrint" rows="2">${escapeHtml(deal.finePrint || "")}</textarea></label>
 
-        <h3 class="settings-h" style="margin-top:16px">More product details (storefront)</h3>
-        <p class="muted" style="margin-top:0">Extra fields shown on the product page. Leave blank to hide.</p>
+        <h3 class="settings-h" style="margin-top:16px">After purchase delivery (shown on success page + email)</h3>
+        <p class="muted" style="margin-top:0">Buyers receive <strong>login credentials</strong> plus the sections below after payment succeeds. Edit these carefully — this is what customers keep.</p>
+        <label>Features included (one per line)
+          <textarea name="includes" rows="5" placeholder="SuperGrok model access&#10;Higher rate limits&#10;Priority responses">${escapeHtml(includes)}</textarea>
+        </label>
         <div class="grid2">
           <label>Account type<input name="accountType" value="${escapeAttr(deal.accountType || "")}" placeholder="e.g. Shared login / Private / Redeem code" /></label>
           <label>Validity / access length<input name="validity" value="${escapeAttr(deal.validity || "")}" placeholder="e.g. 7 days from delivery" /></label>
         </div>
-        <label>How to redeem / use<textarea name="howToRedeem" rows="4" placeholder="Step-by-step for the customer after purchase">${escapeHtml(deal.howToRedeem || "")}</textarea></label>
-        <label>Important notes<textarea name="importantNotes" rows="3" placeholder="Warnings, region limits, device limits…">${escapeHtml(deal.importantNotes || "")}</textarea></label>
-        <label>Extra detail lines (one per line)<textarea name="extraDetails" rows="4" placeholder="Works on mobile&#10;Change password after login&#10;Region: Global">${escapeHtml(extraDetails)}</textarea></label>
+        <label>Instructions — how to use (step-by-step)
+          <textarea name="howToRedeem" rows="6" placeholder="1. Open the official app or website&#10;2. Sign in with the username and password below&#10;3. Do not change the password&#10;4. Enjoy your plan for the full duration">${escapeHtml(deal.howToRedeem || "")}</textarea>
+        </label>
+        <label>Rules (must-follow after purchase)
+          <textarea name="importantNotes" rows="6" placeholder="Do not change username, password, or billing&#10;Do not share the account publicly&#10;One device / personal use only&#10;Breaking rules voids refunds">${escapeHtml(deal.importantNotes || "")}</textarea>
+        </label>
+        <label>Extra storefront detail lines (one per line)<textarea name="extraDetails" rows="3" placeholder="Works on mobile&#10;Region: Global">${escapeHtml(extraDetails)}</textarea></label>
 
         <div class="grid2">
           <label>Rating<input name="rating" type="number" step="0.1" value="${escapeAttr(deal.rating ?? 4.5)}" /></label>

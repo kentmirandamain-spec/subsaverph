@@ -875,6 +875,12 @@ def fulfill_order(
                 )
             else:
                 code_strings.append(cr.get("raw") or cr.get("code") or "")
+        includes = deal.get("includes") or []
+        if isinstance(includes, str):
+            includes = [x.strip() for x in includes.split("\n") if x.strip()]
+        elif not isinstance(includes, list):
+            includes = []
+        includes = [str(x).strip() for x in includes if str(x).strip()]
         line_results.append(
             {
                 "id": pid,
@@ -888,11 +894,12 @@ def fulfill_order(
                 "duration": deal.get("duration"),
                 "delivery": deal.get("delivery"),
                 "description": deal.get("description"),
+                "includes": includes,
                 "accountType": deal.get("accountType"),
                 "validity": deal.get("validity"),
-                "howToRedeem": deal.get("howToRedeem"),
-                "importantNotes": deal.get("importantNotes"),
-                "finePrint": deal.get("finePrint"),
+                "howToRedeem": deal.get("howToRedeem") or "",
+                "importantNotes": deal.get("importantNotes") or "",
+                "finePrint": deal.get("finePrint") or "",
                 "codes": code_strings,
                 "credentials": creds,
             }
