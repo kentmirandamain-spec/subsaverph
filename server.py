@@ -398,6 +398,70 @@ NOWPAYMENTS_IPN_IPS = [
 _SUPPORT_HITS: dict[str, list[float]] = {}
 
 
+# ---------- AI support chatbot (SpaceXAI / xAI) ----------
+
+_CHAT_HITS: dict[str, list[float]] = {}
+
+
+@app.get("/api/chat/status")
+def api_chat_status():
+    try:
+        from chatbot import chat_configured
+    except Exception:
+        return jsonify({"ok": True, "enabled": True, "aiConfigured": False})
+    return jsonify(
+        {
+            "ok": True,
+            "enabled": True,
+            "aiConfigured": chat_configured(),
+            "provider": "spacexai" if chat_configured() else "fallback",
+        }
+    )
+
+
+@app.post("/api/chat")
+def api_chat():
+    """
+    Storefront AI assistant.
+    Body: { "messages": [{ "role": "user"|"assistant", "content": "..." }] }
+    or { "message": "..." } for a single turn.
+    """
+    try:
+        from chatbot import call_xai_chat
+    except Exception as e:
+        return jsonify({"ok": False, "error": f"Chatbot module error: {e}"}), 500
+
+    ip = (request.headers.get("CF-Connecting-IP") or request.remote_addr or "unknown").strip()
+    now = __import__("time").time()
+    window = 300.0
+    max_hits = 40
+    hits = [t for t in _CHAT_HITS.get(ip, []) if now - t < window]
+    if len(hits) >= max_hits:
+        _CHAT_HITS[ip] = hits
+        return jsonify({"ok": False, "error": "Too many chat messages. Please wait a few minutes."}), 429
+    hits.append(now)
+    _CHAT_HITS[ip] = hits
+
+    data = request.get_json(silent=True) or {}
+    messages = data.get("messages")
+    if not messages and data.get("message"):
+        messages = [{"role": "user", "content": str(data.get("message"))}]
+    if not isinstance(messages, list) or not messages:
+        return jsonify({"ok": False, "error": "Provide message or messages[]"}), 400
+
+    # Attach stockLeft for better answers
+    deals = load_deals(include_inactive=False)
+    for d in deals:
+        try:
+            d["stockLeft"] = stock_count(d.get("id", ""))
+        except Exception:
+            pass
+
+    result = call_xai_chat(messages, deals=deals, settings=load_settings())
+    status = 200 if result.get("ok") or result.get("reply") else 502
+    return jsonify(result), status
+
+
 @app.post("/api/support/contact")
 def api_support_contact():
     """

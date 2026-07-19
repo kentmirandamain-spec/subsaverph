@@ -2522,6 +2522,13 @@ async function init() {
   bindGlobalSearch();
   bindPrefsPanel(); // ensure language list filled after catalog
 
+  try {
+    const { mountChatbot } = await import("./chatbot.js?v=chat1");
+    mountChatbot();
+  } catch {
+    /* chatbot optional */
+  }
+
   // Logo + Home nav (and any #/home links) → always go home
   document.addEventListener("click", (e) => {
     const homeLink = e.target.closest('a.logo, a[href="#/home"], a[href="#/"], a[href="#"]');
