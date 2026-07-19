@@ -45,7 +45,7 @@ class ChatbotTests(unittest.TestCase):
         self.assertIn("Do NOT log out", prompt)
         self.assertIn("Login on mobile app", prompt)
         self.assertIn("not affiliated", prompt.lower())
-        self.assertIn("store & faq only", prompt.lower())
+        self.assertIn("customer support", prompt.lower())
         self.assertIn("out of scope", prompt.lower())
 
     def test_call_without_api_key_uses_fallback(self):
@@ -56,7 +56,7 @@ class ChatbotTests(unittest.TestCase):
                     [{"role": "user", "content": "How do refunds work?"}]
                 )
         self.assertTrue(out.get("ok"))
-        self.assertEqual(out.get("provider"), "fallback")
+        self.assertIn(out.get("provider"), ("assistant", "fallback"))
         self.assertIn("refund", out.get("reply", "").lower())
 
     def test_offtopic_fallback_refuses(self):
@@ -66,8 +66,30 @@ class ChatbotTests(unittest.TestCase):
             )
         self.assertTrue(out.get("ok"))
         reply = out.get("reply", "").lower()
-        self.assertIn("only answer", reply)
-        self.assertIn("store", reply)
+        self.assertTrue("customer" in reply or "store" in reply or "subsaverph" in reply)
+        self.assertNotIn("def sort", reply)
+
+    def test_product_catalog_assist(self):
+        deals = [
+            {
+                "id": "supergrok-1m",
+                "name": "SuperGrok 1 Month",
+                "brand": "xAI",
+                "price": 399,
+                "priceBase": "PHP",
+                "duration": "1 month",
+                "active": True,
+                "stockLeft": 3,
+                "includes": ["SuperGrok access"],
+            }
+        ]
+        reply = chatbot._customer_assist_reply(
+            "How much is SuperGrok?",
+            deals=deals,
+            settings={"supportEmail": "support@subsaverph.com"},
+        )
+        self.assertIn("SuperGrok", reply)
+        self.assertIn("399", reply)
 
 
 if __name__ == "__main__":

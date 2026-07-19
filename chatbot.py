@@ -85,44 +85,43 @@ def system_prompt(deals: list[dict], settings: dict | None = None) -> str:
     faq_extra = (settings.get("chatbotFaq") or settings.get("supportFaq") or "")[:1200]
     catalog = build_catalog_brief(deals)
 
-    return f"""You are the official store support chatbot for {site} ({tagline}).
+    return f"""You are the official customer support assistant for {site} ({tagline}).
 
-## SCOPE — STORE & FAQ ONLY
-You ONLY answer questions about this store and shopping FAQ, including:
-- Products, prices, stock, features, brands (SuperGrok, Canva, CapCut, Netflix, YouTube, etc.)
-- How checkout / payment works (card, GCash, Maya, GrabPay, ShopeePay, PayPal, crypto when shown on site)
-- What happens after payment (delivery package: login credentials, features, instructions, rules)
-- Product rules (especially CapCut logout / device limits)
-- Refunds, support, Order ID, contact email
-- How to use the website (cart, currency, support form)
-- About the company / terms / privacy at a high level from the facts below
+## Mission
+Help customers finish shopping and solve store problems. Be proactive, clear, and kind.
+Answer ALL customer questions about this store, products, payment, delivery, rules, refunds, and FAQ.
 
-## OUT OF SCOPE — DO NOT ANSWER
-If the user asks about anything unrelated to SubSaverPH shopping (homework, coding projects, news, politics, medical/legal advice, random trivia, other brands not sold here, etc.):
-1. Politely refuse to answer that topic.
-2. Say you only help with SubSaverPH store and FAQ.
-3. Offer 2–3 example store questions they can ask instead.
-4. For human help, point to Support (#/support) or {support} with Order ID when relevant.
+## You help with (always try to answer)
+- Product recommendations, prices, stock, features, duration
+- Brands: SuperGrok, Canva, CapCut, Netflix, YouTube Premium, etc.
+- Checkout & payment (card, GCash, Maya, GrabPay, ShopeePay, PayPal, crypto when shown)
+- After payment: login credentials, instructions, features, rules on success page/email
+- Account / product rules (especially CapCut)
+- Refunds, Order ID, how to contact support
+- Using the website: cart, currency, deals, support form
+- About company / terms / privacy at a high level
 
-Never role-play as a general assistant. Never answer off-topic even if the user insists.
+## Out of scope
+Only refuse topics unrelated to SubSaverPH shopping (homework, coding unrelated to the store, news, medical/legal advice). When refusing, still offer 2 store questions they can ask and point to Support ({support}) for order issues.
 
 ## Style
-- Clear, friendly, concise (short paragraphs or bullets).
-- Match the user's language (English, Filipino/Taglish, etc.).
-- Prefer the catalog and policy facts below over guesses.
+- Friendly customer service tone; short paragraphs or bullets
+- Match language (English, Filipino/Taglish)
+- Use catalog facts below; if stockLeft is 0 say sold out and suggest similar live products
+- End with a helpful next step when useful (e.g. open Deals, Support with Order ID)
 
 ## Hard rules
-- Never invent login credentials or claim payment succeeded without the customer already having checkout confirmation / Order ID.
-- Never invent live order status — ask for Order ID and send them to Support if they need human follow-up.
-- Refunds: generally non-refundable once credentials are delivered, except defective or not delivered.
-- CapCut: Do NOT log out. Max 2 devices. 3rd device/session can lose access (not refundable). Login on CapCut mobile first; for PC scan QR after mobile login.
-- Not affiliated with xAI, Canva, CapCut, Netflix, YouTube, or Google.
-- Human support: {support} · Support page #/support · https://subsaverph.com/
+- Never invent login credentials or claim payment succeeded without customer already having Order ID / success page
+- Never invent live order status — ask Order ID → Support page or {support}
+- Refunds: generally non-refundable once credentials delivered, except defective or not delivered
+- CapCut: Do NOT log out. Max 2 devices. 3rd can lose access (not refundable). Mobile login first; PC via QR after mobile login
+- Not affiliated with xAI, Canva, CapCut, Netflix, YouTube, Google
+- Human support: {support} · /support · https://subsaverph.com/
 
 ## About {site}
 {about or "(see website)"}
 
-## Checkout / policy notes
+## Checkout / policy
 {terms_snip or "Digital goods limited refunds; contact support with Order ID."}
 
 ## Extra FAQ (admin)
@@ -137,21 +136,27 @@ _STORE_KEYWORDS = (
     "capcut",
     "cap cut",
     "supergrok",
+    "super grok",
     "grok",
     "canva",
     "netflix",
     "youtube",
+    "yt premium",
     "premium",
     "refund",
     "money back",
     "chargeback",
     "pay",
     "gcash",
+    "g-cash",
     "maya",
+    "paymaya",
     "checkout",
     "card",
     "paypal",
     "crypto",
+    "grab",
+    "shopee",
     "order",
     "login",
     "password",
@@ -159,9 +164,11 @@ _STORE_KEYWORDS = (
     "code",
     "deliver",
     "price",
+    "magkano",
     "product",
     "deal",
     "stock",
+    "sold",
     "cart",
     "support",
     "subsaver",
@@ -172,76 +179,322 @@ _STORE_KEYWORDS = (
     "instruction",
     "rule",
     "faq",
+    "help",
     "how to",
     "paano",
     "bili",
     "bayad",
     "order id",
+    "hello",
+    "hi ",
+    "hey",
+    "good day",
+    "kumusta",
+    "available",
+    "buy",
+    "purchase",
+    "subscription",
+    "access",
+    "email",
+    "contact",
 )
 
 
-def _looks_like_store_question(user_text: str) -> bool:
+def _is_clearly_offtopic(user_text: str) -> bool:
     t = (user_text or "").lower()
-    if not t.strip():
+    # Programming / homework / general AI tasks (not store "access code")
+    if re.search(
+        r"\b(python|javascript|java|algorithm|homework|essay|poem|recipe|"
+        r"write (me )?(a |an )?(function|script|code|program)|sort(ing)? algorithm|"
+        r"leetcode|compile|debug this)\b",
+        t,
+    ):
+        return True
+    return False
+
+
+def _looks_like_store_question(user_text: str, deals: list[dict] | None = None) -> bool:
+    t = (user_text or "").lower().strip()
+    if not t:
         return False
-    return any(k in t for k in _STORE_KEYWORDS)
+    if _is_clearly_offtopic(t):
+        return False
+    if any(k in t for k in _STORE_KEYWORDS):
+        return True
+    # Match product names from catalog
+    for d in deals or []:
+        name = str(d.get("name") or "").lower()
+        brand = str(d.get("brand") or "").lower()
+        pid = str(d.get("id") or "").lower()
+        if name and name in t:
+            return True
+        if brand and len(brand) > 2 and brand in t:
+            return True
+        if pid and pid.replace("-", " ") in t:
+            return True
+    # Short greetings
+    if t in ("hi", "hello", "hey", "help", "help me", "assist", "assistance"):
+        return True
+    return False
 
 
-def _offtopic_reply() -> str:
+def _offtopic_reply(support: str = "support@subsaverph.com") -> str:
     return (
-        "I only answer **SubSaverPH store and FAQ** questions (products, prices, checkout, delivery, "
-        "account rules, refunds, support).\n\n"
-        "Try asking something like:\n"
-        "• What are the CapCut account rules?\n"
-        "• How do I get my login after payment?\n"
+        "I’m here to help with **SubSaverPH customer questions** — products, prices, checkout, "
+        "delivery after payment, account rules, and refunds.\n\n"
+        "Try asking:\n"
+        "• What CapCut plans do you have and what are the rules?\n"
+        "• How do I get my login after I pay?\n"
         "• How do refunds work?\n"
-        "• What products do you sell?\n\n"
-        "For other topics I can’t help — for order issues, open **Support** with your Order ID."
+        "• Is SuperGrok available and how much is it?\n\n"
+        f"For a human agent, open **Support** or email {support} with your **Order ID**."
     )
 
 
-def _fallback_reply(user_text: str) -> str:
+def _match_products(user_text: str, deals: list[dict]) -> list[dict]:
     t = (user_text or "").lower()
-    if not _looks_like_store_question(t):
-        return _offtopic_reply()
-    if any(k in t for k in ("capcut", "cap cut")):
-        return (
-            "For CapCut accounts:\n"
-            "• Log in on the **CapCut mobile app** with the credentials you received after payment.\n"
-            "• For PC: stay logged in on mobile, open CapCut on PC, and **scan the QR code** with the mobile app.\n"
-            "• **Do not log out** — you may not get back into the account.\n"
-            "• **Max 2 devices**. A 3rd login can remove access and is **not refundable**.\n\n"
-            "Need more help? Open Support and include your Order ID."
+    hits = []
+    for d in deals or []:
+        if not d.get("active", True):
+            continue
+        blob = " ".join(
+            str(d.get(k) or "")
+            for k in ("id", "name", "brand", "category", "tagline", "description")
+        ).lower()
+        score = 0
+        for token in re.findall(r"[a-z0-9+]{3,}", t):
+            if token in blob:
+                score += 2 if token in str(d.get("name") or "").lower() else 1
+        if "super grok" in t or "supergrok" in t or re.search(r"\bgrok\b", t):
+            if "grok" in blob or "xai" in blob:
+                score += 5
+        if "capcut" in t or "cap cut" in t:
+            if "capcut" in blob:
+                score += 5
+        if "canva" in t and "canva" in blob:
+            score += 5
+        if "netflix" in t and "netflix" in blob:
+            score += 5
+        if ("youtube" in t or "yt premium" in t) and "youtube" in blob:
+            score += 5
+        if score:
+            hits.append((score, d))
+    hits.sort(key=lambda x: -x[0])
+    return [d for _, d in hits[:5]]
+
+
+def _format_product_line(d: dict) -> str:
+    price = d.get("price")
+    base = (d.get("priceBase") or "PHP").upper()
+    dur = d.get("duration") or d.get("period") or ""
+    left = d.get("stockLeft")
+    if left is not None:
+        stock = "in stock" if int(left or 0) > 0 else "sold out"
+    else:
+        stock = str(d.get("stock") or "see site")
+    return f"• **{d.get('name')}** — {price} {base}" + (f" · {dur}" if dur else "") + f" · {stock}"
+
+
+def _customer_assist_reply(
+    user_text: str,
+    *,
+    deals: list[dict] | None = None,
+    settings: dict | None = None,
+) -> str:
+    """Local FAQ / catalog assistant — works without XAI_API_KEY."""
+    deals = deals or []
+    settings = settings or {}
+    support = settings.get("supportEmail") or "support@subsaverph.com"
+    t = (user_text or "").lower().strip()
+
+    if not _looks_like_store_question(t, deals):
+        return _offtopic_reply(support)
+
+    if t in ("hi", "hello", "hey", "help", "help me", "assist", "assistance", "kumusta") or t.startswith(
+        ("hi ", "hello ", "hey ")
+    ):
+        live = [d for d in deals if d.get("active", True)][:6]
+        lines = [
+            "Hi! I’m the **SubSaverPH customer assistant**. I can help with products, payment, delivery, rules, and refunds.",
+            "",
+            "Popular questions:",
+            "• CapCut rules after purchase",
+            "• How login delivery works after payment",
+            "• Refund policy",
+            "• What’s in stock and how much",
+            "",
+        ]
+        if live:
+            lines.append("Some plans on the site:")
+            lines.extend(_format_product_line(d) for d in live)
+            lines.append("")
+        lines.append(f"Ask me anything about the store — or contact **{support}** with your Order ID for human help.")
+        return "\n".join(lines)
+
+    # CapCut — prices vs rules
+    if "capcut" in t or "cap cut" in t:
+        matched = _match_products(t, deals) or [
+            d
+            for d in deals
+            if d.get("active", True) and "capcut" in str(d.get("brand") or "").lower() + str(d.get("id") or "").lower()
+        ]
+        wants_price = any(
+            k in t for k in ("price", "magkano", "how much", "cost", "stock", "available", "buy", "plan")
         )
-    if any(k in t for k in ("refund", "money back", "chargeback")):
-        return (
-            "Refunds: digital access is generally **non-refundable** once login details are delivered, "
-            "except when the product is **defective** or **not delivered**. "
-            "Contact Support with your **Order ID**. Logging out or using extra devices (e.g. CapCut 3rd device) is not refundable."
+        wants_rules = any(
+            k in t for k in ("rule", "logout", "log out", "device", "instruction", "how to use", "qr", "pc")
         )
-    if any(k in t for k in ("pay", "gcash", "maya", "checkout", "card", "paypal", "crypto")):
+        parts: list[str] = []
+        if wants_price or not wants_rules:
+            parts.append("**CapCut plans**")
+            if matched:
+                parts.extend(_format_product_line(d) for d in matched)
+            else:
+                parts.append("Open **Deals** and filter CapCut for current prices.")
+            parts.append("")
+        if wants_rules or not wants_price:
+            parts.extend(
+                [
+                    "**CapCut rules & how to use (after payment)**",
+                    "1. Log in on the **CapCut mobile app** with the credentials from your delivery package.",
+                    "2. For **PC**: stay logged in on mobile → open CapCut on PC → **scan the QR** with mobile.",
+                    "3. **Do not log out** — you may lose access permanently.",
+                    "4. **Max 2 devices** — a 3rd login can remove access (**not refundable**).",
+                    "5. Don’t change password, email, or billing.",
+                    "",
+                ]
+            )
+        parts.append(f"Need help after payment? Support with Order ID → {support}")
+        return "\n".join(parts)
+
+    if any(k in t for k in ("refund", "money back", "chargeback", "return")):
         return (
-            "Checkout accepts the payment methods shown on the site (card / e-wallets / PayPal / crypto when enabled). "
-            "After payment succeeds, your **login credentials**, features, instructions, and rules appear on the success page "
-            "and are emailed when email is configured."
+            "**Refunds**\n"
+            "• Digital access is generally **non-refundable** once login details are delivered.\n"
+            "• Exceptions: product is **defective** or **not delivered**.\n"
+            "• CapCut: logout or using more than 2 devices is **not** a refund reason.\n\n"
+            f"Contact Support with your **Order ID**: {support} or the Support page on the site."
         )
-    if any(k in t for k in ("order", "login", "password", "credential", "code", "deliver")):
+
+    if any(
+        k in t
+        for k in (
+            "pay",
+            "gcash",
+            "g-cash",
+            "maya",
+            "paymaya",
+            "checkout",
+            "card",
+            "paypal",
+            "crypto",
+            "grab",
+            "shopee",
+            "bayad",
+        )
+    ):
         return (
-            "After a successful payment you receive an **access package**: username/password (or code), "
-            "features, how-to-use instructions, and product rules. "
-            "If something is missing, go to Support with your Order ID: support@subsaverph.com"
+            "**Payment & checkout**\n"
+            "1. Add a plan to your **cart** from Deals.\n"
+            "2. Open **Checkout** and enter your email.\n"
+            "3. Choose a payment method shown on the site (card, GCash, Maya, GrabPay, ShopeePay, PayPal, crypto — when enabled).\n"
+            "4. Complete payment. On success you get your **access package** on the page (and by email when configured).\n\n"
+            "Tip: keep the success page open until you copy username/password.\n"
+            f"Payment charged but no code? Email {support} with Order ID / payment proof."
         )
-    if any(k in t for k in ("supergrok", "grok", "canva", "netflix", "youtube", "price", "product", "deal", "stock")):
+
+    if any(
+        k in t
+        for k in (
+            "login",
+            "password",
+            "credential",
+            "deliver",
+            "code",
+            "after payment",
+            "after pay",
+            "success",
+            "email",
+        )
+    ):
         return (
-            "Browse **Deals** for current prices and stock. Each product page lists features and fine print. "
-            "After you buy, delivery includes login + instructions + rules.\n\n"
-            "Ask about a specific product (e.g. CapCut, SuperGrok) for more detail."
+            "**After payment — what you receive**\n"
+            "On the **success page** (and email when configured) you get an access package:\n"
+            "• Login **username / password** (or access code)\n"
+            "• **Features** included\n"
+            "• **Instructions** how to use\n"
+            "• **Rules** you must follow\n\n"
+            "Save credentials immediately. Follow product rules (especially CapCut: no logout, max 2 devices).\n"
+            f"Missing login after a successful pay? Contact **{support}** with your **Order ID**."
         )
+
+    # Product catalog answers
+    matched = _match_products(t, deals)
+    if matched or any(
+        k in t
+        for k in (
+            "product",
+            "deal",
+            "price",
+            "magkano",
+            "stock",
+            "available",
+            "sell",
+            "subscription",
+            "buy",
+            "bili",
+            "list",
+        )
+    ):
+        show = matched or [d for d in deals if d.get("active", True)][:8]
+        if not show:
+            return (
+                "I don’t see live products in the catalog right now. Please open **Deals** on the site "
+                f"or email {support}."
+            )
+        lines = ["**Here’s what I can tell you from our catalog:**", ""]
+        for d in show:
+            lines.append(_format_product_line(d))
+            feats = d.get("includes") or []
+            if isinstance(feats, list) and feats:
+                lines.append("  Features: " + ", ".join(str(x) for x in feats[:5]))
+            howto = (d.get("howToRedeem") or "").strip()
+            if howto and matched:
+                first = howto.splitlines()[0].strip()
+                if first:
+                    lines.append(f"  Start: {first}")
+            lines.append("")
+        lines.append("Open a product page for full details, then **Add to cart** → **Checkout**.")
+        lines.append(f"Need help choosing? Tell me your budget or which app (CapCut, SuperGrok, Canva…).")
+        return "\n".join(lines)
+
+    if any(k in t for k in ("support", "contact", "human", "agent", "email")):
+        return (
+            "**Human support**\n"
+            f"• Email: **{support}** (include Order ID)\n"
+            "• Website: open **Support** and send a message\n"
+            "• Chat here for store FAQ anytime\n\n"
+            "Order issues are fastest with Order ID + what went wrong (login failed, no code, wrong product)."
+        )
+
     return (
-        "I’m the SubSaverPH store helper (FAQ only).\n\n"
-        "Ask about products, CapCut rules, payments, delivery after payment, or refunds — "
-        "or open **Support** with your Order ID."
+        "I can help with **SubSaverPH customer questions**:\n"
+        "• Products & prices\n"
+        "• Payment / GCash / checkout\n"
+        "• Login delivery after payment\n"
+        "• CapCut & other product rules\n"
+        "• Refunds & Order ID support\n\n"
+        f"Ask me one of those — or email **{support}** for a human agent."
     )
+
+
+def _fallback_reply(
+    user_text: str,
+    *,
+    deals: list[dict] | None = None,
+    settings: dict | None = None,
+) -> str:
+    return _customer_assist_reply(user_text, deals=deals, settings=settings)
 
 
 def _extract_responses_text(data: dict) -> str:
@@ -371,33 +624,25 @@ def call_xai_chat(
     deals = deals or []
     settings = settings or {}
 
+    # Always-on customer assistant from catalog/FAQ (works without API key)
+    local_reply = _customer_assist_reply(last_user, deals=deals, settings=settings)
+
     if not chat_configured():
         return {
             "ok": True,
-            "reply": _fallback_reply(last_user),
-            "provider": "fallback",
+            "reply": local_reply,
+            "provider": "assistant",
             "model": None,
-            "detail": "XAI_API_KEY not set — limited tips only. Set key for answers to all questions.",
+            "mode": "customer-faq",
+            "detail": "Catalog/FAQ assistant (set XAI_API_KEY for Grok AI answers)",
         }
 
     errors: list[str] = []
 
-    # 1) Responses API + tools (best for "answer anything")
-    try:
-        result = _call_responses_api(clean, deals=deals, settings=settings)
-        result["reply"] = re.sub(r"\s+\n", "\n", result["reply"]).strip()
-        return result
-    except urllib.error.HTTPError as e:
-        err_body = e.read().decode("utf-8", errors="replace")[:400]
-        errors.append(f"responses HTTP {e.code}: {err_body}")
-    except Exception as e:
-        errors.append(f"responses: {e}")
-
-    # 2) Classic chat completions fallback
+    # 1) Chat completions first (reliable store support)
     try:
         result = _call_chat_completions(clean, deals=deals, settings=settings)
         result["reply"] = re.sub(r"\s+\n", "\n", result["reply"]).strip()
-        result["detail"] = "Fell back to chat.completions (" + "; ".join(errors)[:200] + ")"
         return result
     except urllib.error.HTTPError as e:
         err_body = e.read().decode("utf-8", errors="replace")[:400]
@@ -405,11 +650,23 @@ def call_xai_chat(
     except Exception as e:
         errors.append(f"chat: {e}")
 
+    # 2) Responses API optional
+    try:
+        result = _call_responses_api(clean, deals=deals, settings=settings)
+        result["reply"] = re.sub(r"\s+\n", "\n", result["reply"]).strip()
+        result["detail"] = "Used responses API (" + "; ".join(errors)[:160] + ")"
+        return result
+    except urllib.error.HTTPError as e:
+        err_body = e.read().decode("utf-8", errors="replace")[:400]
+        errors.append(f"responses HTTP {e.code}: {err_body}")
+    except Exception as e:
+        errors.append(f"responses: {e}")
+
     return {
-        "ok": False,
-        "error": "AI provider unavailable",
+        "ok": True,
+        "reply": local_reply
+        + "\n\n_(AI is temporarily unavailable — answered from store FAQ. For urgent issues use Support.)_",
+        "provider": "assistant",
+        "mode": "customer-faq-fallback",
         "detail": " | ".join(errors)[:500],
-        "provider": "xai",
-        "reply": _fallback_reply(last_user)
-        + "\n\n_(Full AI is temporarily unavailable. Please try again or use Support.)_",
     }

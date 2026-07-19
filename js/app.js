@@ -2565,8 +2565,16 @@ async function init() {
   bindPrefsPanel(); // ensure language list filled after catalog
 
   try {
-    const { mountChatbot } = await import("./chatbot.js?v=chat3");
+    const { mountChatbot } = await import("./chatbot.js?v=help1");
     mountChatbot();
+    window.__ssphOpenChat = async () => {
+      try {
+        const m = await import("./chatbot.js?v=help1");
+        m.openChatbot?.();
+      } catch {
+        /* ignore */
+      }
+    };
   } catch {
     /* chatbot optional */
   }
