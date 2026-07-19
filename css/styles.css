@@ -2985,6 +2985,12 @@ html[data-theme="light"] .cred-value {
   gap: 20px 28px;
 }
 
+.footer-nav-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  max-width: 360px;
+  margin-left: auto;
+}
+
 .footer-col h4 {
   font-size: 0.68rem;
   letter-spacing: 0.14em;
@@ -3195,9 +3201,12 @@ html[data-theme="light"] .cred-value {
     gap: 28px;
   }
 
-  .footer-nav {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+  .footer-nav,
+  .footer-nav-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 16px;
+    max-width: none;
+    margin-left: 0;
   }
 
   .footer-facts li {
@@ -4828,12 +4837,12 @@ html[data-theme="light"] .footer-facts li {
     width: min(var(--max), calc(100% - 28px));
     gap: 22px;
   }
-  .footer-nav {
+  .footer-nav,
+  .footer-nav-2 {
     grid-template-columns: 1fr 1fr;
     gap: 20px 16px;
-  }
-  .footer-col:last-child {
-    grid-column: 1 / -1;
+    max-width: none;
+    margin-left: 0;
   }
   .footer-facts li {
     flex: 1 1 100%;
