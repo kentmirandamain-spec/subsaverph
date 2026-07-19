@@ -662,11 +662,23 @@ def call_xai_chat(
     except Exception as e:
         errors.append(f"responses: {e}")
 
+    # Detect billing / permission issues for a clearer customer-facing note
+    joined = " | ".join(errors)
+    low = joined.lower()
+    if "spending limit" in low or "credits" in low or "permission-denied" in low:
+        note = (
+            "\n\n_(Smarter AI is offline until the store owner adds xAI API credits at console.x.ai "
+            "— answered from store FAQ. For urgent issues use Support.)_"
+        )
+    else:
+        note = (
+            "\n\n_(Smarter AI is temporarily unavailable — answered from store FAQ. "
+            "For urgent issues use Support.)_"
+        )
     return {
         "ok": True,
-        "reply": local_reply
-        + "\n\n_(AI is temporarily unavailable — answered from store FAQ. For urgent issues use Support.)_",
+        "reply": local_reply + note,
         "provider": "assistant",
         "mode": "customer-faq-fallback",
-        "detail": " | ".join(errors)[:500],
+        "detail": joined[:500],
     }
