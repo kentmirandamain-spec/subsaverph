@@ -138,6 +138,23 @@ def ensure_store() -> None:
                 ),
                 encoding="utf-8",
             )
+        # Recovery: set ADMIN_RESET_PASSWORD on the host, redeploy/restart, then remove the env var
+        reset_pw = (os.environ.get("ADMIN_RESET_PASSWORD") or "").strip()
+        if reset_pw and len(reset_pw) >= 6:
+            try:
+                auth_obj = {}
+                if AUTH_FILE.exists():
+                    auth_obj = json.loads(AUTH_FILE.read_text(encoding="utf-8") or "{}")
+                if not isinstance(auth_obj, dict):
+                    auth_obj = {}
+                auth_obj["username"] = (auth_obj.get("username") or "admin").strip() or "admin"
+                auth_obj["password_hash"] = generate_password_hash(reset_pw)
+                AUTH_FILE.write_text(
+                    json.dumps(auth_obj, indent=2) + "\n",
+                    encoding="utf-8",
+                )
+            except (OSError, json.JSONDecodeError, TypeError):
+                pass
         if not SETTINGS_FILE.exists():
             SETTINGS_FILE.write_text(
                 json.dumps(

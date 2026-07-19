@@ -17,7 +17,7 @@ Or double-click **`start-live.bat`**.
 ## Host login
 
 - **Username:** `admin`
-- **Password:** `MirandaKent_7`
+- **Password:** `subsaverph`
 
 Change the password under **Account** in the admin panel.
 
