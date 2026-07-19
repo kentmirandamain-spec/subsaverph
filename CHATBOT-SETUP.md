@@ -44,8 +44,9 @@ GROQ_MODEL=llama-3.3-70b-versatile
 ```
 USE_CLOUD_CHAT=1
 GEMINI_API_KEY=...
-GEMINI_MODEL=gemini-2.0-flash
+GEMINI_MODEL=gemini-3.1-flash-lite
 ```
+
 
 ### xAI Grok (paid credits)
 

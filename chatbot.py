@@ -628,7 +628,7 @@ def _call_gemini(
     )
     if not key:
         raise RuntimeError("GEMINI_API_KEY not set")
-    model = (os.environ.get("GEMINI_MODEL") or "gemini-2.0-flash").strip()
+    model = (os.environ.get("GEMINI_MODEL") or "gemini-3.1-flash-lite").strip()
     # Convert to Gemini contents format
     sys = system_prompt(deals, settings)
     contents = []
