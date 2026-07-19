@@ -1,51 +1,65 @@
-# SubSaverPH AI Chatbot (SpaceXAI)
+# SubSaverPH Free Help Chat
 
-Floating chat on the storefront answers product, CapCut rules, payment, and delivery questions.
+Floating **Help** chat for customers. **Free by default** — no paid AI credits required.
 
-## Provider
+## How it works
 
-- **SpaceXAI** via xAI API (`https://api.x.ai/v1`)
-- Default model: **`grok-4.5`**
-- Key: **`XAI_API_KEY`** (server-side only — never put this in the browser)
-- **Store & FAQ only** — products, checkout, delivery, rules, refunds, support. Off-topic questions are refused.
-- Tools default **off** (`XAI_CHAT_TOOLS=0`). Optional admin FAQ text: settings key `chatbotFaq`.
+| Mode | When | Cost |
+|------|------|------|
+| **Free local assistant** (default) | Always | **$0** |
+| Optional Groq cloud | `USE_CLOUD_CHAT=1` + `GROQ_API_KEY` | Free tier |
+| Optional Gemini cloud | `USE_CLOUD_CHAT=1` + `GEMINI_API_KEY` | Free tier |
+| Optional Grok (xAI) | `USE_CLOUD_CHAT=1` + `XAI_API_KEY` + credits | Paid |
 
-## Render / server env (live site https://subsaverph.com)
+Default answers use your live **catalog + store FAQ** (products, CapCut rules, payment, delivery, refunds).
 
-1. Get a key: https://console.x.ai → API keys  
-2. Render Dashboard → your **subsaverph** service → **Environment**  
-3. Add:
+## Default (recommended) — free, no keys
 
-| Key | Value |
-|-----|--------|
-| `XAI_API_KEY` | `xai-...` (your secret key) |
-| `XAI_MODEL` | `grok-4.5` (optional) |
+Nothing required. Deploy and use Help chat.
 
-4. **Save** → service redeploys  
-5. Check: open the site → Help chat → header should mention Grok / AI when configured  
-6. Or: `GET https://subsaverph.com/api/chat/status` → `"aiConfigured": true`
-
-### Local `.env`
+Optional hard-force free:
 
 ```
+FREE_CHAT_ONLY=1
+```
+
+## Optional free cloud LLMs (smarter wording)
+
+### Groq (free tier)
+
+1. https://console.groq.com → API key  
+2. Env:
+
+```
+USE_CLOUD_CHAT=1
+GROQ_API_KEY=gsk_...
+GROQ_MODEL=llama-3.3-70b-versatile
+```
+
+### Google Gemini (free tier)
+
+1. https://aistudio.google.com/apikey  
+2. Env:
+
+```
+USE_CLOUD_CHAT=1
+GEMINI_API_KEY=...
+GEMINI_MODEL=gemini-2.0-flash
+```
+
+### xAI Grok (paid credits)
+
+```
+USE_CLOUD_CHAT=1
 XAI_API_KEY=xai-...
 XAI_MODEL=grok-4.5
 ```
 
-Copy from `.env.example`, never commit `.env`.
-
-| Mode | When |
-|------|------|
-| **AI store FAQ** | `XAI_API_KEY` set — Grok answers shop questions only |
-| **Fallback tips** | No key / API down — CapCut, refunds, payments, delivery tips only |
-
 ## API
 
-- `GET /api/chat/status` — `{ aiConfigured, provider }`
-- `POST /api/chat` — `{ messages: [{ role, content }] }` or `{ message: "..." }`
+- `GET /api/chat/status` → `{ free, provider, cloudConfigured }`
+- `POST /api/chat` → `{ messages: [...] }` or `{ message: "..." }`
 
-## Files
+## Scope
 
-- `chatbot.py` — system prompt + xAI call
-- `js/chatbot.js` — floating widget
-- `server.py` — `/api/chat` routes
+Store customer questions only (products, checkout, delivery, rules, refunds, support).

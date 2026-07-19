@@ -1,14 +1,14 @@
 """
-SubSaverPH AI chatbot via SpaceXAI (xAI API).
+SubSaverPH free customer Help chat (store FAQ + optional free cloud LLMs).
+
+Always free by default: built-in store assistant (catalog + FAQ). No paid API required.
+
+Optional free/cheap cloud LLMs (if keys are set):
+  GROQ_API_KEY     — free tier at https://console.groq.com  (OpenAI-compatible)
+  GEMINI_API_KEY   — free tier at https://aistudio.google.com (or GOOGLE_API_KEY)
+  XAI_API_KEY      — paid/credits SpaceXAI Grok (optional upgrade)
 
 Store-only: products, checkout, delivery, rules, refunds, FAQ.
-Does NOT answer general off-topic questions.
-
-Env:
-  XAI_API_KEY   — required for full AI store replies
-  XAI_MODEL     — optional, default grok-4.5
-  XAI_BASE_URL  — optional, default https://api.x.ai/v1
-  XAI_CHAT_TOOLS — optional, default 0 (tools off; store FAQ does not need web search)
 """
 
 from __future__ import annotations
@@ -26,7 +26,16 @@ DEFAULT_BASE = "https://api.x.ai/v1"
 
 
 def chat_configured() -> bool:
-    return bool((os.environ.get("XAI_API_KEY") or "").strip())
+    """Always true — free local assistant is always available."""
+    return True
+
+
+def cloud_llm_configured() -> bool:
+    return bool(
+        (os.environ.get("GROQ_API_KEY") or "").strip()
+        or (os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY") or "").strip()
+        or (os.environ.get("XAI_API_KEY") or "").strip()
+    )
 
 
 def _model() -> str:
@@ -41,6 +50,22 @@ def _tools_enabled() -> bool:
     # Default OFF — store FAQ bot should not browse the open web
     v = (os.environ.get("XAI_CHAT_TOOLS") or "0").strip().lower()
     return v in ("1", "true", "yes", "on")
+
+
+def _prefer_cloud() -> bool:
+    """
+    Use cloud LLM only when explicitly enabled.
+    Default is free local assistant (no paid credits).
+    Set USE_CLOUD_CHAT=1 and a provider key (GROQ / GEMINI / XAI) to enable cloud.
+    """
+    v = (os.environ.get("USE_CLOUD_CHAT") or "0").strip().lower()
+    if v not in ("1", "true", "yes", "on"):
+        return False
+    # Legacy: FREE_CHAT_ONLY=1 still forces free
+    free_only = (os.environ.get("FREE_CHAT_ONLY") or "0").strip().lower()
+    if free_only in ("1", "true", "yes", "on"):
+        return False
+    return cloud_llm_configured()
 
 
 def build_catalog_brief(deals: list[dict]) -> str:
@@ -523,43 +548,153 @@ def _extract_responses_text(data: dict) -> str:
     return "\n".join(c for c in chunks if c).strip()
 
 
-def _http_json(url: str, payload: dict, timeout: int = 90) -> dict:
+def _http_json(
+    url: str,
+    payload: dict,
+    *,
+    bearer: str | None = None,
+    timeout: int = 90,
+    extra_headers: dict | None = None,
+) -> dict:
     body = json.dumps(payload).encode("utf-8")
-    req = urllib.request.Request(
-        url,
-        data=body,
-        method="POST",
-        headers={
-            "Authorization": f"Bearer {(os.environ.get('XAI_API_KEY') or '').strip()}",
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-            "User-Agent": "SubSaverPH-Chatbot/1.1",
-        },
-    )
+    headers = {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "User-Agent": "SubSaverPH-Chatbot/2.0",
+    }
+    if bearer:
+        headers["Authorization"] = f"Bearer {bearer}"
+    if extra_headers:
+        headers.update(extra_headers)
+    req = urllib.request.Request(url, data=body, method="POST", headers=headers)
     with urllib.request.urlopen(req, timeout=timeout) as resp:
         return json.loads(resp.read().decode("utf-8", errors="replace"))
 
 
-def _call_responses_api(
-    messages: list[dict[str, str]],
+def _openai_compat_chat(
     *,
+    url: str,
+    api_key: str,
+    model: str,
+    messages: list[dict[str, str]],
     deals: list[dict],
     settings: dict,
+    provider: str,
 ) -> dict[str, Any]:
-    """Prefer Responses API + built-in tools so Grok can answer anything (incl. web)."""
+    payload = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": system_prompt(deals, settings)},
+            *messages,
+        ],
+        "temperature": 0.35,
+        "max_tokens": 900,
+    }
+    data = _http_json(url, payload, bearer=api_key, timeout=60)
+    reply = data["choices"][0]["message"]["content"]
+    return {
+        "ok": True,
+        "reply": str(reply or "").strip(),
+        "model": data.get("model") or model,
+        "provider": provider,
+        "mode": "chat.completions",
+    }
+
+
+def _call_groq(
+    messages: list[dict[str, str]], *, deals: list[dict], settings: dict
+) -> dict[str, Any]:
+    key = (os.environ.get("GROQ_API_KEY") or "").strip()
+    if not key:
+        raise RuntimeError("GROQ_API_KEY not set")
+    model = (os.environ.get("GROQ_MODEL") or "llama-3.3-70b-versatile").strip()
+    return _openai_compat_chat(
+        url="https://api.groq.com/openai/v1/chat/completions",
+        api_key=key,
+        model=model,
+        messages=messages,
+        deals=deals,
+        settings=settings,
+        provider="groq",
+    )
+
+
+def _call_gemini(
+    messages: list[dict[str, str]], *, deals: list[dict], settings: dict
+) -> dict[str, Any]:
+    key = (
+        (os.environ.get("GEMINI_API_KEY") or "").strip()
+        or (os.environ.get("GOOGLE_API_KEY") or "").strip()
+    )
+    if not key:
+        raise RuntimeError("GEMINI_API_KEY not set")
+    model = (os.environ.get("GEMINI_MODEL") or "gemini-2.0-flash").strip()
+    # Convert to Gemini contents format
+    sys = system_prompt(deals, settings)
+    contents = []
+    for m in messages:
+        role = "user" if m["role"] == "user" else "model"
+        contents.append({"role": role, "parts": [{"text": m["content"]}]})
+    url = (
+        f"https://generativelanguage.googleapis.com/v1beta/models/"
+        f"{model}:generateContent?key={key}"
+    )
+    payload = {
+        "systemInstruction": {"parts": [{"text": sys}]},
+        "contents": contents,
+        "generationConfig": {"temperature": 0.35, "maxOutputTokens": 900},
+    }
+    data = _http_json(url, payload, timeout=60)
+    parts = (
+        ((data.get("candidates") or [{}])[0].get("content") or {}).get("parts") or []
+    )
+    reply = "".join(str(p.get("text") or "") for p in parts if isinstance(p, dict))
+    if not reply.strip():
+        raise ValueError(f"Empty Gemini reply: {str(data)[:200]}")
+    return {
+        "ok": True,
+        "reply": reply.strip(),
+        "model": model,
+        "provider": "gemini",
+        "mode": "generateContent",
+    }
+
+
+def _call_xai_chat_completions(
+    messages: list[dict[str, str]], *, deals: list[dict], settings: dict
+) -> dict[str, Any]:
+    key = (os.environ.get("XAI_API_KEY") or "").strip()
+    if not key:
+        raise RuntimeError("XAI_API_KEY not set")
+    return _openai_compat_chat(
+        url=f"{_base_url()}/chat/completions",
+        api_key=key,
+        model=_model(),
+        messages=messages,
+        deals=deals,
+        settings=settings,
+        provider="xai",
+    )
+
+
+def _call_xai_responses(
+    messages: list[dict[str, str]], *, deals: list[dict], settings: dict
+) -> dict[str, Any]:
+    key = (os.environ.get("XAI_API_KEY") or "").strip()
+    if not key:
+        raise RuntimeError("XAI_API_KEY not set")
     payload: dict[str, Any] = {
         "model": _model(),
         "instructions": system_prompt(deals, settings),
         "input": messages,
         "temperature": 0.35,
-        "max_output_tokens": 1200,
+        "max_output_tokens": 900,
     }
     if _tools_enabled():
-        payload["tools"] = [
-            {"type": "web_search"},
-            {"type": "code_interpreter"},
-        ]
-    data = _http_json(f"{_base_url()}/responses", payload, timeout=120)
+        payload["tools"] = [{"type": "web_search"}, {"type": "code_interpreter"}]
+    data = _http_json(
+        f"{_base_url()}/responses", payload, bearer=key, timeout=90
+    )
     reply = _extract_responses_text(data)
     if not reply:
         raise ValueError(f"Empty responses output: {str(data)[:240]}")
@@ -572,32 +707,6 @@ def _call_responses_api(
     }
 
 
-def _call_chat_completions(
-    messages: list[dict[str, str]],
-    *,
-    deals: list[dict],
-    settings: dict,
-) -> dict[str, Any]:
-    payload = {
-        "model": _model(),
-        "messages": [
-            {"role": "system", "content": system_prompt(deals, settings)},
-            *messages,
-        ],
-        "temperature": 0.35,
-        "max_tokens": 1200,
-    }
-    data = _http_json(f"{_base_url()}/chat/completions", payload, timeout=90)
-    reply = data["choices"][0]["message"]["content"]
-    return {
-        "ok": True,
-        "reply": str(reply or "").strip(),
-        "model": data.get("model") or _model(),
-        "provider": "xai",
-        "mode": "chat.completions",
-    }
-
-
 def call_xai_chat(
     messages: list[dict[str, str]],
     *,
@@ -605,8 +714,9 @@ def call_xai_chat(
     settings: dict | None = None,
 ) -> dict[str, Any]:
     """
-    messages: list of {role: user|assistant, content: str} (no system — we inject it).
-    Returns { ok, reply, model?, provider, detail? }
+    Free store customer chat.
+    1) Free local catalog/FAQ assistant (always)
+    2) Optional free cloud: Groq → Gemini → xAI (if keys + credits work)
     """
     clean: list[dict[str, str]] = []
     for m in messages or []:
@@ -618,67 +728,57 @@ def call_xai_chat(
     if not clean:
         return {"ok": False, "error": "Message required", "provider": None}
 
-    # Keep a longer conversation window
-    clean = clean[-24:]
+    clean = clean[-16:]
     last_user = next((m["content"] for m in reversed(clean) if m["role"] == "user"), "")
     deals = deals or []
     settings = settings or {}
 
-    # Always-on customer assistant from catalog/FAQ (works without API key)
-    local_reply = _customer_assist_reply(last_user, deals=deals, settings=settings)
+    # Free built-in assistant — always works, no credits
+    free_reply = _customer_assist_reply(last_user, deals=deals, settings=settings)
 
-    if not chat_configured():
+    if not _prefer_cloud():
         return {
             "ok": True,
-            "reply": local_reply,
-            "provider": "assistant",
-            "model": None,
-            "mode": "customer-faq",
-            "detail": "Catalog/FAQ assistant (set XAI_API_KEY for Grok AI answers)",
+            "reply": free_reply,
+            "provider": "free",
+            "model": "subsaverph-faq",
+            "mode": "free-local",
+            "detail": "Free store assistant (no paid API)",
         }
 
     errors: list[str] = []
+    # Prefer free cloud tiers first, then paid xAI
+    attempts = [
+        ("groq", lambda: _call_groq(clean, deals=deals, settings=settings)),
+        ("gemini", lambda: _call_gemini(clean, deals=deals, settings=settings)),
+        ("xai-chat", lambda: _call_xai_chat_completions(clean, deals=deals, settings=settings)),
+        ("xai-responses", lambda: _call_xai_responses(clean, deals=deals, settings=settings)),
+    ]
+    for name, fn in attempts:
+        try:
+            result = fn()
+            result["reply"] = re.sub(r"\s+\n", "\n", result["reply"]).strip()
+            if not result["reply"]:
+                raise ValueError("empty reply")
+            return result
+        except urllib.error.HTTPError as e:
+            body = e.read().decode("utf-8", errors="replace")[:220]
+            errors.append(f"{name} HTTP {e.code}: {body}")
+        except Exception as e:
+            # Skip providers that are simply not configured
+            msg = str(e)
+            if "not set" in msg:
+                continue
+            errors.append(f"{name}: {msg[:160]}")
 
-    # 1) Chat completions first (reliable store support)
-    try:
-        result = _call_chat_completions(clean, deals=deals, settings=settings)
-        result["reply"] = re.sub(r"\s+\n", "\n", result["reply"]).strip()
-        return result
-    except urllib.error.HTTPError as e:
-        err_body = e.read().decode("utf-8", errors="replace")[:400]
-        errors.append(f"chat HTTP {e.code}: {err_body}")
-    except Exception as e:
-        errors.append(f"chat: {e}")
-
-    # 2) Responses API optional
-    try:
-        result = _call_responses_api(clean, deals=deals, settings=settings)
-        result["reply"] = re.sub(r"\s+\n", "\n", result["reply"]).strip()
-        result["detail"] = "Used responses API (" + "; ".join(errors)[:160] + ")"
-        return result
-    except urllib.error.HTTPError as e:
-        err_body = e.read().decode("utf-8", errors="replace")[:400]
-        errors.append(f"responses HTTP {e.code}: {err_body}")
-    except Exception as e:
-        errors.append(f"responses: {e}")
-
-    # Detect billing / permission issues for a clearer customer-facing note
-    joined = " | ".join(errors)
-    low = joined.lower()
-    if "spending limit" in low or "credits" in low or "permission-denied" in low:
-        note = (
-            "\n\n_(Smarter AI is offline until the store owner adds xAI API credits at console.x.ai "
-            "— answered from store FAQ. For urgent issues use Support.)_"
-        )
-    else:
-        note = (
-            "\n\n_(Smarter AI is temporarily unavailable — answered from store FAQ. "
-            "For urgent issues use Support.)_"
-        )
+    # Silent free fallback — no scary "AI unavailable" for customers
     return {
         "ok": True,
-        "reply": local_reply + note,
-        "provider": "assistant",
-        "mode": "customer-faq-fallback",
-        "detail": joined[:500],
+        "reply": free_reply,
+        "provider": "free",
+        "model": "subsaverph-faq",
+        "mode": "free-local",
+        "detail": ("cloud failed → free local: " + " | ".join(errors))[:500]
+        if errors
+        else "free local",
     }

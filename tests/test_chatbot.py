@@ -56,7 +56,7 @@ class ChatbotTests(unittest.TestCase):
                     [{"role": "user", "content": "How do refunds work?"}]
                 )
         self.assertTrue(out.get("ok"))
-        self.assertIn(out.get("provider"), ("assistant", "fallback"))
+        self.assertIn(out.get("provider"), ("free", "assistant", "fallback"))
         self.assertIn("refund", out.get("reply", "").lower())
 
     def test_offtopic_fallback_refuses(self):

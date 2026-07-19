@@ -2565,11 +2565,11 @@ async function init() {
   bindPrefsPanel(); // ensure language list filled after catalog
 
   try {
-    const { mountChatbot } = await import("./chatbot.js?v=help1");
+    const { mountChatbot } = await import("./chatbot.js?v=free1");
     mountChatbot();
     window.__ssphOpenChat = async () => {
       try {
-        const m = await import("./chatbot.js?v=help1");
+        const m = await import("./chatbot.js?v=free1");
         m.openChatbot?.();
       } catch {
         /* ignore */

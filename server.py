@@ -406,17 +406,51 @@ _CHAT_HITS: dict[str, list[float]] = {}
 @app.get("/api/chat/status")
 def api_chat_status():
     try:
-        from chatbot import chat_configured
+        from chatbot import chat_configured, cloud_llm_configured
+        import os
+
+        cloud = cloud_llm_configured()
+        use_cloud = (os.environ.get("USE_CLOUD_CHAT") or "0").strip().lower() in (
+            "1",
+            "true",
+            "yes",
+            "on",
+        )
+        free_only = (os.environ.get("FREE_CHAT_ONLY") or "0").strip().lower() in (
+            "1",
+            "true",
+            "yes",
+            "on",
+        )
+        provider = "free"
+        if cloud and use_cloud and not free_only:
+            if (os.environ.get("GROQ_API_KEY") or "").strip():
+                provider = "groq"
+            elif (os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY") or "").strip():
+                provider = "gemini"
+            elif (os.environ.get("XAI_API_KEY") or "").strip():
+                provider = "spacexai"
+        return jsonify(
+            {
+                "ok": True,
+                "enabled": True,
+                "aiConfigured": chat_configured(),  # always true (free local)
+                "free": True,
+                "cloudConfigured": bool(cloud and use_cloud and not free_only),
+                "provider": provider,
+            }
+        )
     except Exception:
-        return jsonify({"ok": True, "enabled": True, "aiConfigured": False})
-    return jsonify(
-        {
-            "ok": True,
-            "enabled": True,
-            "aiConfigured": chat_configured(),
-            "provider": "spacexai" if chat_configured() else "fallback",
-        }
-    )
+        return jsonify(
+            {
+                "ok": True,
+                "enabled": True,
+                "aiConfigured": True,
+                "free": True,
+                "cloudConfigured": False,
+                "provider": "free",
+            }
+        )
 
 
 @app.post("/api/chat")

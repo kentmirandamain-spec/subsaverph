@@ -51,8 +51,8 @@ export function mountChatbot() {
     <section class="ssph-chat-panel" id="ssphChatPanel" hidden aria-label="Customer help chat">
       <header class="ssph-chat-head">
         <div>
-          <strong>Customer Help</strong>
-          <p class="ssph-chat-sub" id="ssphChatSub">Products · payment · delivery · rules · refunds</p>
+          <strong>Free Help Chat</strong>
+          <p class="ssph-chat-sub" id="ssphChatSub">Free store assistant · products, payment, delivery, rules</p>
         </div>
         <button type="button" class="ssph-chat-close" id="ssphChatClose" aria-label="Close chat">✕</button>
       </header>
@@ -62,7 +62,7 @@ export function mountChatbot() {
           placeholder="Ask about products, payment, login…" required />
         <button type="submit" class="btn solid sm" id="ssphChatSend">Send</button>
       </form>
-      <p class="ssph-chat-foot">Store assistant · <a href="#/support">Human support</a></p>
+      <p class="ssph-chat-foot">Free store assistant · <a href="#/support">Human support</a></p>
     </section>
   `;
   document.body.appendChild(root);
@@ -83,7 +83,7 @@ export function mountChatbot() {
     if (!messages.length) {
       list.innerHTML = `
         <div class="ssph-chat-bubble bot">
-          Hi! I’m here to help with your SubSaverPH order and shopping questions — products, prices, payment, login after pay, CapCut rules, and refunds.
+          Hi! I’m your <strong>free</strong> SubSaverPH help chat. Ask about products, prices, payment, login after pay, CapCut rules, and refunds — no sign-up needed.
         </div>
         <div class="ssph-chat-suggestions">
           <button type="button" data-suggest="Hi, I need help choosing a product">Need help</button>
@@ -161,10 +161,14 @@ export function mountChatbot() {
         "Sorry, I could not answer right now. Please use Support with your Order ID.";
       messages.push({ role: "assistant", content: reply });
       saveHistory(messages);
-      if (data.provider === "assistant" || data.provider === "fallback") {
-        sub.textContent = "Customer assistant · products, payment, delivery, rules";
+      if (data.provider === "free" || data.provider === "assistant" || data.provider === "fallback") {
+        sub.textContent = "Free store assistant · products, payment, delivery, rules";
+      } else if (data.provider === "groq") {
+        sub.textContent = "Free cloud AI (Groq) · store help";
+      } else if (data.provider === "gemini") {
+        sub.textContent = "Free cloud AI (Gemini) · store help";
       } else if (data.provider === "xai" || data.provider === "spacexai") {
-        sub.textContent = "Customer assistant · Powered by SpaceXAI (Grok)";
+        sub.textContent = "Cloud AI (Grok) · store help";
       }
       renderMessages();
     } catch (err) {
@@ -186,8 +190,11 @@ export function mountChatbot() {
   fetch("/api/chat/status", { credentials: "same-origin" })
     .then((r) => r.json())
     .then((d) => {
-      if (d.aiConfigured) sub.textContent = "Customer assistant · Powered by SpaceXAI (Grok)";
-      else sub.textContent = "Customer assistant · products, payment, delivery, rules";
+      if (d.provider === "groq") sub.textContent = "Free cloud AI (Groq) · store help";
+      else if (d.provider === "gemini") sub.textContent = "Free cloud AI (Gemini) · store help";
+      else if (d.provider === "spacexai" || d.provider === "xai")
+        sub.textContent = "Cloud AI (Grok) · store help";
+      else sub.textContent = "Free store assistant · products, payment, delivery, rules";
     })
     .catch(() => {});
 
