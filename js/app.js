@@ -512,24 +512,16 @@ function applySiteChrome() {
   document.querySelectorAll(".footer-meta li span[data-i18n-meta]").forEach((span) => {
     span.textContent = t(span.getAttribute("data-i18n-meta"));
   });
-  // Footer: Email support always points at Gmail compose (native link, works on Windows)
-  const gmailHref = gmailComposeUrl();
+  // Footer: all support links go to the Support page (email options live there)
   const supportLabel = document.querySelector("#footerSupportLabel");
   if (supportLabel) {
-    supportLabel.innerHTML = `<a href="${escapeAttr(gmailHref)}" class="js-email-support" data-support-email target="_blank" rel="noopener noreferrer">${escapeHtml(support)}</a>`;
+    supportLabel.innerHTML = `<a href="#/support" class="js-go-support">${escapeHtml(support)}</a>`;
   }
-  document.querySelectorAll("a[data-support-email], a.js-email-support").forEach((a) => {
-    a.setAttribute("href", gmailHref);
-    a.setAttribute("target", "_blank");
-    a.setAttribute("rel", "noopener noreferrer");
-    a.classList.add("js-email-support");
-    a.classList.remove("js-go-support");
-  });
-  // Support form page links only
-  document.querySelectorAll("a[data-support-link]").forEach((a) => {
-    if (a.classList.contains("js-email-support") || a.hasAttribute("data-support-email")) return;
+  document.querySelectorAll("a[data-support-email], a[data-support-link], a.js-go-support").forEach((a) => {
     a.setAttribute("href", "#/support");
+    a.removeAttribute("target");
     a.classList.add("js-go-support");
+    a.classList.remove("js-email-support");
   });
 }
 
@@ -1061,29 +1053,43 @@ function viewSupport() {
   } catch {
     /* ignore */
   }
+  const gmailHref = gmailComposeUrl({
+    subject: draft.subject || "SubSaverPH support request",
+    body: draft.message || "",
+    orderId: draft.orderId || "",
+  });
+  const mailtoHref = mailtoSupportUrl({
+    subject: draft.subject || "SubSaverPH support request",
+    body: draft.message || "",
+    orderId: draft.orderId || "",
+  });
   return `
     <div class="page">
       <div class="page-inner support-page">
-        <p class="eyebrow">Help</p>
-        <h1 class="page-title">Customer support</h1>
+        <p class="eyebrow">Help center</p>
+        <h1 class="page-title">Support</h1>
         <p class="muted" style="max-width:36rem;line-height:1.55">
-          Having a problem with your order, login, or delivery? Email us in Gmail, or use the form below.
+          Need help with an order, login, or delivery? Email us from this page.
         </p>
 
         <div class="support-card" style="margin-bottom:18px">
           <p class="eyebrow" style="margin:0 0 10px">Email support</p>
-          <p class="muted" style="margin:0 0 14px;line-height:1.5;font-size:0.95rem">
-            Opens Gmail with a message ready to send to
-            <strong style="color:var(--text)">${escapeHtml(email)}</strong>.
+          <p style="margin:0 0 6px;font-size:1.05rem;font-weight:600;word-break:break-all">${escapeHtml(email)}</p>
+          <p class="muted" style="margin:0 0 16px;line-height:1.5;font-size:0.9rem">
+            Choose how you want to email us. Include your Order ID if you have one.
           </p>
-          <div class="cta" style="margin:0">
-            <a class="btn solid js-email-support" href="${escapeAttr(gmailComposeUrl({ subject: draft.subject || "SubSaverPH support request", body: draft.message || "", orderId: draft.orderId || "" }))}" target="_blank" rel="noopener noreferrer">Open in Gmail</a>
-            <button type="button" class="btn" data-copy-support-email>Copy ${escapeHtml(email)}</button>
+          <div class="cta" style="margin:0;flex-wrap:wrap">
+            <a class="btn solid" href="${escapeAttr(gmailHref)}" target="_blank" rel="noopener noreferrer">Email with Gmail</a>
+            <a class="btn" href="${escapeAttr(mailtoHref)}">Open email app</a>
+            <button type="button" class="btn" data-copy-support-email>Copy email address</button>
           </div>
         </div>
 
         <form class="support-card support-form" id="supportForm" novalidate>
-          <p class="eyebrow" style="margin:0 0 12px">Or send from this page</p>
+          <p class="eyebrow" style="margin:0 0 12px">Or message us here</p>
+          <p class="muted" style="margin:0 0 14px;font-size:0.9rem;line-height:1.45;text-transform:none;letter-spacing:0">
+            No email app? Send a message below — we reply to the address you enter.
+          </p>
           <label>Your name
             <input name="name" type="text" autocomplete="name" placeholder="Your name" />
           </label>
@@ -1104,9 +1110,6 @@ function viewSupport() {
           <div class="cta" style="margin-top:8px">
             <button type="submit" class="btn solid" id="supportFormSubmit">Send message</button>
           </div>
-          <p class="muted" style="margin:14px 0 0;font-size:0.85rem;line-height:1.45">
-            No Gmail? Use this form — we still get your message.
-          </p>
         </form>
 
         <div class="note" style="margin-top:22px">
@@ -1431,8 +1434,7 @@ function checkoutTermsModalHtml(cart, totals) {
               <p class="muted" style="margin:0;text-transform:none;letter-spacing:0;font-weight:400;font-size:0.9rem">
                 ${escapeHtml(supportText)}
                 <br/>
-                <button type="button" class="btn ghost js-email-support" style="margin:6px 0 0;padding:6px 12px;font-size:0.85rem">Email support (Gmail)</button>
-                · <a href="#/support" class="js-go-support">Support form</a>
+                <a href="#/support" class="btn ghost js-go-support" style="margin:6px 0 0;padding:6px 12px;font-size:0.85rem">Contact support</a>
                 · <a href="#/terms">Terms of Use</a>
                 · <a href="#/privacy">Privacy Policy</a>
               </p>
@@ -1620,8 +1622,8 @@ function viewSuccess() {
         <p class="muted" style="font-size:0.8rem;margin-top:16px">Save these credentials now. Redeem / sign in on the official service. Not affiliated with listed brands.</p>
         <div class="support-inline">
           <p class="muted" style="margin:0;font-size:0.9rem">Problem with this order?</p>
-          <button type="button" class="btn solid js-email-support" data-go-support-order="${escapeAttr(order.id || "")}" data-go-support-pay="${escapeAttr(order.providerRef || order.stripeSessionId || "")}">Email support (Gmail)</button>
-          <a class="btn ghost js-go-support" href="#/support">Support form</a>
+          <button type="button" class="btn solid" data-go-support-order="${escapeAttr(order.id || "")}" data-go-support-pay="${escapeAttr(order.providerRef || order.stripeSessionId || "")}">Contact support</button>
+          <a class="btn ghost js-go-support" href="#/support">Support page</a>
         </div>
         <div class="cta" style="justify-content:center;margin-top:22px">
           <a class="btn solid" href="#/deals">More deals</a>
@@ -1888,49 +1890,23 @@ function render() {
 }
 
 function bind() {
-  // Email support → open Gmail (with order details when present)
+  // Order help → Support page with draft prefilled
   $$("[data-go-support-order]").forEach((btn) => {
     btn.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
       const oid = btn.getAttribute("data-go-support-order") || "";
       const pay = btn.getAttribute("data-go-support-pay") || "";
-      openSupportMail({
+      goSupportPage({
         orderId: oid,
         subject: oid ? `Order help ${oid}` : "Order help",
-        body: oid
-          ? `Hi SubSaverPH Support,\n\nOrder ID: ${oid}\nPayment ID: ${pay || "—"}\n\nProblem:\n\nThank you.`
-          : "Hi SubSaverPH Support,\n\nOrder ID (if any):\nProblem:\n\nThank you.",
+        message: oid
+          ? `Order ID: ${oid}\nPayment ID: ${pay || "—"}\n\nProblem:\n`
+          : "",
       });
     });
   });
-  // In-app email buttons only (footer is handled by body delegate once)
   const appRoot = $("#app") || document;
-  $$(".js-email-support, a[data-support-email]", appRoot).forEach((el) => {
-    if (el.hasAttribute("data-go-support-order")) return;
-    el.addEventListener("click", (e) => {
-      // Gmail <a href> → native open (Windows-safe). Buttons → JS open.
-      const href = (el.getAttribute && el.getAttribute("href")) || el.href || "";
-      const isGmailAnchor =
-        el.tagName === "A" &&
-        href &&
-        !href.startsWith("#") &&
-        (href.includes("mail.google.com") || href.startsWith("mailto:"));
-      if (isGmailAnchor) {
-        try {
-          el.setAttribute("href", gmailComposeUrl());
-          el.setAttribute("target", "_blank");
-          el.setAttribute("rel", "noopener noreferrer");
-        } catch {
-          /* ignore */
-        }
-        return; // do not preventDefault
-      }
-      e.preventDefault();
-      e.stopPropagation();
-      openSupportMail();
-    });
-  });
   $$("[data-copy-support-email]", appRoot).forEach((btn) => {
     btn.addEventListener("click", async (e) => {
       e.preventDefault();
@@ -1944,9 +1920,8 @@ function bind() {
       }
     });
   });
-  // Support form page (not Gmail) — only in-app; footer uses body delegate
+  // Any Support link inside the app → Support page
   $$("a.js-go-support, button.js-go-support, a[href='#/support'], a[href='#/contact']", appRoot).forEach((a) => {
-    if (a.classList.contains("js-email-support") || a.hasAttribute("data-support-email")) return;
     a.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -2509,48 +2484,19 @@ async function init() {
   });
   window.addEventListener("rates:loaded", () => render());
 
-  // Footer + any support CTA outside/inside #app (delegated, survives re-renders)
+  // Footer + any Support CTA → Support page (email options are on that page)
   document.body.addEventListener("click", (e) => {
     if (e.target.closest("[data-go-support-order]")) return;
     if (e.target.closest("[data-copy-support-email]")) return;
     if (e.target.closest("#supportForm")) return;
-
-    const emailBtn = e.target.closest(
-      "a.js-email-support, button.js-email-support, a[data-support-email]"
-    );
-    if (emailBtn) {
-      e.stopPropagation();
-      const href =
-        (emailBtn.getAttribute && emailBtn.getAttribute("href")) || emailBtn.href || "";
-      const isGmailAnchor =
-        emailBtn.tagName === "A" &&
-        href &&
-        !href.startsWith("#") &&
-        (href.includes("mail.google.com") || href.startsWith("mailto:"));
-      if (isGmailAnchor) {
-        // Native <a target=_blank> — do not preventDefault (fixes Windows)
-        try {
-          emailBtn.setAttribute("href", gmailComposeUrl());
-          emailBtn.setAttribute("target", "_blank");
-          emailBtn.setAttribute("rel", "noopener noreferrer");
-        } catch {
-          /* ignore */
-        }
-        return;
-      }
-      e.preventDefault();
-      openSupportMail();
-      return;
-    }
+    // Let Gmail / mailto links on the Support page work natively
+    const mailLink = e.target.closest('a[href*="mail.google.com"], a[href^="mailto:"]');
+    if (mailLink) return;
 
     const go = e.target.closest(
-      "a.js-go-support, button.js-go-support, a[href='#/support'], a[href='#/contact'], a[data-support-link]"
+      "a.js-go-support, button.js-go-support, a[href='#/support'], a[href='#/contact'], a[data-support-link], a[data-support-email]"
     );
     if (go) {
-      // Never steal clicks meant for Gmail links
-      if (go.classList.contains("js-email-support") || go.hasAttribute("data-support-email")) {
-        return;
-      }
       e.preventDefault();
       e.stopPropagation();
       goSupportPage();

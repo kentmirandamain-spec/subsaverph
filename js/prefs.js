@@ -90,7 +90,7 @@ const EN = {
   footer_privacy: "Privacy Policy",
   footer_how: "How it works",
   footer_all_deals: "All deals",
-  footer_contact: "Email support",
+  footer_contact: "Support",
   cta_search: "Open search",
   cta_browse: "Browse deals",
   eyebrow_platforms: "Platforms",
