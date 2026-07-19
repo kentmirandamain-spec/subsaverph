@@ -4,6 +4,42 @@
 
 (The old Render URL `https://subsaverph.onrender.com` should **301 redirect** to the custom domain.)
 
+## What the site already does for SEO
+
+| Feature | URL / detail |
+|---------|----------------|
+| Homepage meta + Open Graph | https://subsaverph.com/ |
+| Dynamic sitemap (pages + products) | https://subsaverph.com/sitemap.xml |
+| Robots | https://subsaverph.com/robots.txt |
+| Crawlable pages | `/deals`, `/faq`, `/support`, `/about`, `/how`, … |
+| Product pages for Google | `/product/supergrok-1m`, `/product/capcut-pro`, … |
+| FAQ + store structured data | JSON-LD on homepage |
+| Crawler HTML | Product pages include unique title, description, Product schema |
+
+---
+
+## After every deploy — do this in Google Search Console
+
+1. Open **https://search.google.com/search-console**
+2. Property: `https://subsaverph.com`
+3. **Sitemaps** → submit `sitemap.xml` (if not already)
+4. **URL inspection** → paste `https://subsaverph.com/` → **Request indexing**
+5. Also request indexing for:
+   - `https://subsaverph.com/deals`
+   - `https://subsaverph.com/faq`
+   - `https://subsaverph.com/product/supergrok-1m`
+   - `https://subsaverph.com/product/capcut-pro`
+6. Optional: **Bing Webmaster** → https://www.bing.com/webmasters → import from GSC
+
+Brand searches to try (after indexing):
+
+```text
+SubSaverPH
+SubSaverPH SuperGrok
+SubSaverPH CapCut
+site:subsaverph.com
+```
+
 ---
 
 ## Why Google still shows “onrender”

@@ -3699,21 +3699,190 @@ def robots_txt():
 
 @app.get("/sitemap.xml")
 def sitemap_xml():
-    """Serve sitemap with current PUBLIC_URL / request host as <loc>."""
-    base = public_base_url()
-    body = (ROOT / "sitemap.xml").read_text(encoding="utf-8")
-    body = re.sub(
-        r"<loc>\s*https?://[^<]+/</loc>",
-        f"<loc>{base}/</loc>",
-        body,
-        count=1,
-    )
-    body = body.replace("https://subsaverph.onrender.com", base)
-    # Bump lastmod so Google notices the domain change
-    today = __import__("datetime").date.today().isoformat()
-    body = re.sub(r"<lastmod>[^<]+</lastmod>", f"<lastmod>{today}</lastmod>", body)
+    """Dynamic sitemap: homepage, key pages, and each live product (crawlable URLs)."""
+    from html import escape as _esc
+    from datetime import date
+
+    base = public_base_url().rstrip("/")
+    today = date.today().isoformat()
+    urls: list[tuple[str, str, str]] = [
+        (f"{base}/", "1.0", "daily"),
+        (f"{base}/deals", "0.9", "daily"),
+        (f"{base}/search", "0.7", "weekly"),
+        (f"{base}/how", "0.6", "monthly"),
+        (f"{base}/about", "0.6", "monthly"),
+        (f"{base}/support", "0.7", "monthly"),
+        (f"{base}/faq", "0.8", "weekly"),
+        (f"{base}/terms", "0.3", "yearly"),
+        (f"{base}/privacy", "0.3", "yearly"),
+    ]
+    for d in load_deals(include_inactive=False):
+        pid = (d.get("id") or "").strip()
+        if not pid:
+            continue
+        urls.append((f"{base}/product/{_esc(pid)}", "0.8", "weekly"))
+
+    parts = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+    ]
+    for loc, pri, freq in urls:
+        parts.append("  <url>")
+        parts.append(f"    <loc>{loc}</loc>")
+        parts.append(f"    <lastmod>{today}</lastmod>")
+        parts.append(f"    <changefreq>{freq}</changefreq>")
+        parts.append(f"    <priority>{pri}</priority>")
+        parts.append("  </url>")
+    parts.append("</urlset>")
+    body = "\n".join(parts) + "\n"
     resp = make_response(body)
     resp.headers["Content-Type"] = "application/xml; charset=utf-8"
+    resp.headers["Cache-Control"] = "public, max-age=300"
+    return resp
+
+
+# Crawlable marketing paths → same SPA (with path→hash bridge in JS)
+_SEO_SPA_PATHS = frozenset(
+    {
+        "deals",
+        "search",
+        "how",
+        "about",
+        "support",
+        "faq",
+        "terms",
+        "privacy",
+        "checkout",
+        "contact",
+    }
+)
+
+
+@app.get("/deals")
+@app.get("/search")
+@app.get("/how")
+@app.get("/about")
+@app.get("/support")
+@app.get("/faq")
+@app.get("/terms")
+@app.get("/privacy")
+@app.get("/checkout")
+@app.get("/contact")
+def seo_spa_shell():
+    """Real paths for Google (not only hash routes)."""
+    return _serve_html("index.html")
+
+
+@app.get("/product/<deal_id>")
+def product_seo_page(deal_id: str):
+    """
+    Public product URL with unique title/description + Product schema.
+    Humans are redirected into the SPA; crawlers get full HTML content.
+    """
+    from html import escape as _esc
+
+    deal = next(
+        (d for d in load_deals(include_inactive=False) if d.get("id") == deal_id),
+        None,
+    )
+    base = public_base_url().rstrip("/")
+    if not deal:
+        # Soft land on deals
+        return redirect(f"{base}/deals", code=302)
+
+    name = str(deal.get("name") or "Plan")
+    brand = str(deal.get("brand") or "")
+    desc = str(
+        deal.get("description")
+        or deal.get("tagline")
+        or f"Buy {name} prepaid digital access at SubSaverPH Philippines."
+    )[:300]
+    price = deal.get("price") or 0
+    currency = (deal.get("priceBase") or "PHP").upper()
+    duration = str(deal.get("duration") or deal.get("period") or "")
+    includes = deal.get("includes") or []
+    if not isinstance(includes, list):
+        includes = []
+    url = f"{base}/product/{deal_id}"
+    spa_url = f"{base}/#/deal/{deal_id}"
+    title = f"{name} — discounted {brand or 'subscription'} PH | SubSaverPH"
+    li_html = "".join(f"<li>{_esc(str(x))}</li>" for x in includes[:12])
+    product_ld = {
+        "@context": "https://schema.org",
+        "@type": "Product",
+        "name": name,
+        "description": desc,
+        "brand": {"@type": "Brand", "name": brand or "SubSaverPH"},
+        "sku": deal_id,
+        "url": url,
+        "image": f"{base}/og-image.png",
+        "offers": {
+            "@type": "Offer",
+            "url": url,
+            "priceCurrency": currency,
+            "price": str(price),
+            "availability": "https://schema.org/InStock",
+            "seller": {"@type": "Organization", "name": "SubSaverPH"},
+        },
+    }
+    ld_json = json.dumps(product_ld, ensure_ascii=False)
+    html = f"""<!DOCTYPE html>
+<html lang="en-PH">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{_esc(title)}</title>
+  <meta name="description" content="{_esc(desc)}" />
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
+  <link rel="canonical" href="{_esc(url)}" />
+  <meta property="og:type" content="product" />
+  <meta property="og:url" content="{_esc(url)}" />
+  <meta property="og:title" content="{_esc(title)}" />
+  <meta property="og:description" content="{_esc(desc)}" />
+  <meta property="og:image" content="{base}/og-image.png" />
+  <meta property="og:site_name" content="SubSaverPH" />
+  <meta property="product:price:amount" content="{_esc(str(price))}" />
+  <meta property="product:price:currency" content="{_esc(currency)}" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="{_esc(title)}" />
+  <meta name="twitter:description" content="{_esc(desc)}" />
+  <link rel="icon" href="{base}/assets/favicon-48.png" type="image/png" sizes="48x48" />
+  <script type="application/ld+json">{ld_json}</script>
+  <link rel="stylesheet" href="/css/styles.css?v=seo1" />
+  <script>
+    // Send shoppers into the live SPA product view
+    (function () {{
+      var target = {json.dumps(spa_url)};
+      if (!/bot|crawl|spider|slurp|bingpreview|facebookexternalhit|embedly|quora|pinterest|whatsapp|telegram/i.test(navigator.userAgent||"")) {{
+        location.replace(target);
+      }}
+    }})();
+  </script>
+</head>
+<body class="galaxy">
+  <main class="page seo-bootstrap">
+    <div class="page-inner">
+      <p><a href="/">SubSaverPH</a> · <a href="/deals">All deals</a></p>
+      <h1>{_esc(name)}</h1>
+      <p><strong>{_esc(brand)}</strong> · {_esc(duration)} · {_esc(str(price))} {_esc(currency)}</p>
+      <p>{_esc(desc)}</p>
+      <h2>What's included</h2>
+      <ul>{li_html or "<li>Digital prepaid access after payment</li>"}</ul>
+      <h2>Buy online in the Philippines</h2>
+      <p>
+        SubSaverPH sells discounted prepaid digital subscriptions with instant digital delivery.
+        Pay with card, GCash, Maya, and other methods shown at checkout.
+      </p>
+      <p><a class="btn solid" href="{_esc(spa_url)}">Open product &amp; buy</a>
+         · <a href="/">Home</a> · <a href="/support">Support</a></p>
+      <p class="muted">Not affiliated with {_esc(brand) or "the brand"}. Product names are trademarks of their owners.</p>
+    </div>
+  </main>
+</body>
+</html>"""
+    resp = make_response(html)
+    resp.headers["Content-Type"] = "text/html; charset=utf-8"
+    resp.headers["X-Robots-Tag"] = "index, follow, max-image-preview:large, max-snippet:-1"
     resp.headers["Cache-Control"] = "public, max-age=300"
     return resp
 
@@ -3723,6 +3892,7 @@ def public_static(path: str):
     # Don't shadow API
     if path.startswith("api/"):
         return jsonify({"error": "Not found"}), 404
+    # SPA SEO shells already registered above; keep files available
     target = ROOT / path
     if not target.is_file():
         return jsonify({"error": "Not found"}), 404

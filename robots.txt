@@ -1,6 +1,13 @@
 # SubSaverPH — allow search engines (Google, Bing, etc.)
 User-agent: *
 Allow: /
+Allow: /deals
+Allow: /faq
+Allow: /support
+Allow: /about
+Allow: /how
+Allow: /search
+Allow: /product/
 Allow: /favicon.ico
 Allow: /favicon.png
 Allow: /logo.png
@@ -11,6 +18,8 @@ Allow: /site.webmanifest
 Disallow: /admin
 Disallow: /admin/
 Disallow: /api/
+Disallow: /seller
+Disallow: /seller/
 
 # Googlebot — favicons + logos must stay crawlable for SERP icon
 User-agent: Googlebot

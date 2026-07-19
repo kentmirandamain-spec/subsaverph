@@ -80,10 +80,18 @@
         "@id": "https://subsaverph.com/#website",
         "url": "https://subsaverph.com/",
         "name": "SubSaverPH",
-        "alternateName": ["Sub Saver PH", "SubSaver Philippines"],
+        "alternateName": ["Sub Saver PH", "SubSaver Philippines", "subsaverph"],
         "description": "Discounted prepaid digital subscriptions in the Philippines — SuperGrok, Canva, CapCut, Netflix, YouTube. Pay with card, GCash, or Maya.",
         "inLanguage": "en-PH",
-        "publisher": { "@id": "https://subsaverph.com/#org" }
+        "publisher": { "@id": "https://subsaverph.com/#org" },
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": {
+            "@type": "EntryPoint",
+            "urlTemplate": "https://subsaverph.com/search?q={search_term_string}"
+          },
+          "query-input": "required name=search_term_string"
+        }
       },
       {
         "@type": "Organization",
@@ -104,7 +112,14 @@
           "https://subsaverph.com/og-image.png"
         ],
         "description": "Philippines-based shop for discounted prepaid software and streaming subscriptions.",
-        "areaServed": { "@type": "Country", "name": "Philippines" }
+        "areaServed": { "@type": "Country", "name": "Philippines" },
+        "contactPoint": {
+          "@type": "ContactPoint",
+          "contactType": "customer support",
+          "email": "support@subsaverph.com",
+          "availableLanguage": ["English", "Filipino"]
+        },
+        "sameAs": []
       },
       {
         "@type": "OnlineStore",
@@ -120,9 +135,66 @@
         "image": "https://subsaverph.com/og-image.png",
         "description": "Buy discounted SuperGrok, Canva Pro, CapCut, Netflix, and YouTube Premium prepaid plans online in the Philippines.",
         "currenciesAccepted": "PHP, USD",
-        "paymentAccepted": "Credit Card, Debit Card, GCash, Maya",
-        "priceRange": "PHP",
-        "areaServed": "PH"
+        "paymentAccepted": "Credit Card, Debit Card, GCash, Maya, GrabPay, ShopeePay",
+        "priceRange": "₱",
+        "areaServed": "PH",
+        "hasOfferCatalog": {
+          "@type": "OfferCatalog",
+          "name": "SubSaverPH deals",
+          "itemListElement": [
+            { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "SuperGrok prepaid access" } },
+            { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Canva Pro prepaid" } },
+            { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "CapCut Pro prepaid" } },
+            { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Netflix prepaid" } },
+            { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "YouTube Premium prepaid" } }
+          ]
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "@id": "https://subsaverph.com/#faq",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What is SubSaverPH?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "SubSaverPH is an online Philippines storefront for discounted prepaid digital subscriptions such as SuperGrok, Canva, CapCut, Netflix, and YouTube Premium, with digital delivery after payment."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How do I pay on SubSaverPH?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Checkout may include card, GCash, Maya, GrabPay, ShopeePay, PayPal, or crypto depending on what is enabled. The amount is confirmed at payment."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "When do I receive my login or code?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "After successful payment you get an access package on the success page (username/password or code, features, instructions, and rules). Email delivery is sent when email is configured."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Are digital subscriptions refundable?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Digital goods are generally non-refundable once login details are delivered, except when the product is defective or not delivered. Contact support with your Order ID."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What are CapCut account rules on SubSaverPH?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Log in on the CapCut mobile app first. For PC, scan the QR after mobile login. Do not log out. Maximum 2 devices; a third login can lose access and is not refundable."
+            }
+          }
+        ]
       }
     ]
   }
@@ -262,10 +334,27 @@
           <li>Add a plan to your cart and choose your payment method.</li>
           <li>Complete checkout and receive your digital code on the success page (and by email when configured).</li>
         </ol>
+        <h2>FAQ</h2>
+        <h3>What is SubSaverPH?</h3>
+        <p>SubSaverPH is a Philippines online store for discounted prepaid digital subscriptions (SuperGrok, Canva, CapCut, Netflix, YouTube Premium) with digital delivery after payment.</p>
+        <h3>How do I pay?</h3>
+        <p>Use the methods shown at checkout — often card, GCash, Maya, GrabPay, ShopeePay, PayPal, or crypto when enabled.</p>
+        <h3>When do I get my login?</h3>
+        <p>Right after successful payment on the success page: credentials, features, instructions, and rules. Email is sent when configured.</p>
+        <h3>CapCut rules?</h3>
+        <p>Login on the CapCut mobile app first; for PC scan the QR after mobile login. Do not log out. Max 2 devices — a 3rd can lose access (not refundable).</p>
+        <h2>Browse</h2>
+        <p>
+          <a href="/deals">All deals</a> ·
+          <a href="/faq">FAQ</a> ·
+          <a href="/support">Support</a> ·
+          <a href="/product/supergrok-1m">SuperGrok 1 Month</a> ·
+          <a href="/product/capcut-pro">CapCut Pro</a>
+        </p>
         <h2>Contact</h2>
         <p>
           <!--email_off-->
-          Support: <a href="#/support">Contact support</a> (support@subsaverph.com).
+          Support: <a href="/support">Contact support</a> (support@subsaverph.com).
           <!--email_on-->
           Website: <a href="https://subsaverph.com/">https://subsaverph.com/</a>.
           Service area: Philippines (online).
@@ -366,7 +455,7 @@
   <div id="toast" class="toast" role="status"></div>
 
   <script src="data/deals.js"></script>
-  <script type="module" src="js/app.js?v=chatbot3"></script>
+  <script type="module" src="js/app.js?v=seo-paths1"></script>
   <!-- Live data loads from /api/catalog when server.py is running -->
 </body>
 </html>

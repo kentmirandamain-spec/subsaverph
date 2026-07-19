@@ -2508,7 +2508,49 @@ async function loadLiveCatalog() {
   }
 }
 
+/** Map crawlable paths (/deals, /product/x) into SPA hash routes for shoppers. */
+function bridgePathToHash() {
+  try {
+    const path = (location.pathname || "/").replace(/\/+$/, "") || "/";
+    if (path === "/" || path === "/index.html") return;
+    const product = path.match(/^\/product\/([^/]+)$/i);
+    if (product) {
+      const id = decodeURIComponent(product[1]);
+      const want = `#/deal/${id}`;
+      if (!location.hash || location.hash === "#" || location.hash === "#/") {
+        location.replace(want + (location.search || ""));
+      }
+      return;
+    }
+    const map = {
+      deals: "deals",
+      search: "search",
+      how: "how",
+      about: "about",
+      support: "support",
+      contact: "support",
+      faq: "support",
+      terms: "terms",
+      privacy: "privacy",
+      checkout: "checkout",
+    };
+    const key = path.replace(/^\//, "").toLowerCase();
+    if (!map[key]) return;
+    if (!location.hash || location.hash === "#" || location.hash === "#/") {
+      let h = `#/${map[key]}`;
+      if (key === "search" && location.search) {
+        const q = new URLSearchParams(location.search).get("q");
+        if (q) h = `#/search?q=${encodeURIComponent(q)}`;
+      }
+      location.replace(h);
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
 async function init() {
+  bridgePathToHash();
   initPrefs();
   applyI18n();
   bindPrefsPanel();
