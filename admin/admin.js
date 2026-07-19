@@ -277,167 +277,562 @@ const UI_STRING_DEFAULTS = {
   filter_all: "All",
 };
 
+/** Friendly labels for UI strings — grouped like the live website top → bottom. */
+const UI_STRING_GROUPS = [
+  {
+    title: "Top bar & menu",
+    where: "Header on every page",
+    keys: [
+      ["nav_home", "Menu · Home"],
+      ["nav_deals", "Menu · Deals"],
+      ["nav_search", "Menu · Search"],
+      ["nav_mission", "Menu · Mission"],
+      ["nav_checkout", "Menu · Checkout"],
+      ["nav_pay", "Menu · Pay"],
+      ["nav_cart", "Menu · Cart"],
+      ["nav_menu", "Mobile menu button"],
+      ["nav_prefs", "Menu · Settings"],
+      ["search_placeholder", "Search box placeholder"],
+      ["search_aria", "Search box accessibility label"],
+      ["search_product_ph", "Search page placeholder"],
+    ],
+  },
+  {
+    title: "Homepage labels",
+    where: "Home · buttons & small labels",
+    keys: [
+      ["cta_search", "Hero button · Open search"],
+      ["cta_browse", "Hero button · Browse deals"],
+      ["meta_plans", "Hero stat · plans label"],
+      ["meta_platforms", "Hero stat · platforms label"],
+      ["meta_currencies", "Hero stat · currencies label"],
+      ["eyebrow_platforms", "Platforms section eyebrow"],
+      ["eyebrow_catalog", "Catalog section eyebrow"],
+      ["view_all", "View all link"],
+      ["page_deals", "All deals page title"],
+      ["page_search", "Search page title"],
+      ["page_results", "Results page title"],
+      ["page_how", "How it works page title (default)"],
+    ],
+  },
+  {
+    title: "Search results",
+    where: "When customer searches",
+    keys: [
+      ["search_results_title", "Results heading"],
+      ["search_only_match", "Only products that match…"],
+      ["search_are_shown", "…are shown"],
+      ["products_found", "products found"],
+      ["product_found", "product found"],
+      ["clear_search", "Clear search button"],
+      ["no_products_matched", "No products matched"],
+      ["try_brands", "Empty search hint"],
+    ],
+  },
+  {
+    title: "Product cards & detail",
+    where: "Deal cards and product page",
+    keys: [
+      ["details", "Details button"],
+      ["add", "Add button"],
+      ["add_to_cart", "Add to cart"],
+      ["buy_now", "Buy now"],
+      ["sold_out", "Sold out badge"],
+      ["in_stock", "In stock label"],
+      ["only_left", "Only {n} left"],
+      ["n_in_stock", "{n} in stock"],
+      ["plan_not_found", "Plan not found"],
+      ["back", "Back link"],
+      ["all_deals", "All deals link"],
+      ["versus_retail", "Versus retail"],
+      ["no_codes_left", "No codes left"],
+      ["reviews", "reviews word"],
+      ["retail", "retail word"],
+      ["save", "Save badge"],
+      ["pick_another", "Sold-out help message"],
+    ],
+  },
+  {
+    title: "Cart drawer",
+    where: "Side cart panel",
+    keys: [
+      ["cart_title", "Cart title"],
+      ["cart_close", "Close cart"],
+      ["cart_subtotal", "Subtotal"],
+      ["cart_save", "You save"],
+      ["cart_total", "Total"],
+      ["cart_checkout", "Checkout button"],
+      ["cart_empty", "Empty cart message"],
+      ["cart_find", "Find a plan button"],
+    ],
+  },
+  {
+    title: "Footer link labels",
+    where: "Bottom of every page · column titles & links",
+    keys: [
+      ["footer_shop", "Column · Shop"],
+      ["footer_company", "Column · Company"],
+      ["footer_legal", "Column · Legal"],
+      ["footer_about_company", "About the company heading"],
+      ["footer_about", "Link · About"],
+      ["footer_terms", "Link · Terms"],
+      ["footer_privacy", "Link · Privacy"],
+      ["footer_how", "Link · How it works"],
+      ["footer_all_deals", "Link · All deals"],
+      ["footer_contact", "Link · Support"],
+      ["brand_meta", "Meta · Brand"],
+      ["service_area_meta", "Meta · Service area"],
+      ["website_meta", "Meta · Website"],
+      ["support_meta", "Meta · Support"],
+      ["business_type_meta", "Meta · Business type"],
+      ["company", "Company word"],
+      ["legal", "Legal word"],
+    ],
+  },
+  {
+    title: "Preferences & currency",
+    where: "Settings panel & Pay menu",
+    keys: [
+      ["prefs_title", "Preferences title"],
+      ["prefs_language", "Language label"],
+      ["prefs_theme", "Appearance label"],
+      ["prefs_theme_hint", "Theme hint"],
+      ["prefs_lang_hint", "Language hint"],
+      ["theme_dark", "Dark"],
+      ["theme_light", "Light"],
+      ["theme_system", "System"],
+      ["currency_search", "Currency search placeholder"],
+      ["pay_in", "pay in"],
+      ["live_fx", "Live FX"],
+      ["cached_fx", "Cached FX"],
+      ["offline_fx", "Offline FX"],
+      ["currencies_word", "currencies"],
+      ["toast_theme", "Theme toast"],
+      ["toast_lang", "Language toast"],
+      ["toast_pay", "Pay toast"],
+    ],
+  },
+  {
+    title: "Legal page labels",
+    where: "About / Terms / Privacy chrome",
+    keys: [
+      ["last_updated", "Last updated label"],
+      ["back_to_home", "Back to home link"],
+      ["protocol", "How-it-works default eyebrow"],
+    ],
+  },
+];
+
+function uiStringValue(ui, key) {
+  if (ui[key] != null && String(ui[key]).length) return ui[key];
+  return UI_STRING_DEFAULTS[key] || "";
+}
+
+function renderUiStringGroups(ui) {
+  const used = new Set();
+  const blocks = UI_STRING_GROUPS.map((g) => {
+    const fields = g.keys
+      .map(([key, label]) => {
+        used.add(key);
+        return `<label class="ui-string-field">
+          <span class="ui-string-label">${escapeHtml(label)}</span>
+          <input name="ui__${escapeAttr(key)}" value="${escapeAttr(uiStringValue(ui, key))}" />
+        </label>`;
+      })
+      .join("");
+    return `<div class="ui-string-group">
+      <h4 class="ui-string-group-title">${escapeHtml(g.title)}</h4>
+      <p class="field-where">${escapeHtml(g.where)}</p>
+      <div class="ui-strings-grid">${fields}</div>
+    </div>`;
+  }).join("");
+
+  const extraKeys = [...new Set([...Object.keys(UI_STRING_DEFAULTS), ...Object.keys(ui)])]
+    .filter((k) => !used.has(k))
+    .sort();
+  let extra = "";
+  if (extraKeys.length) {
+    extra = `<div class="ui-string-group">
+      <h4 class="ui-string-group-title">Other labels</h4>
+      <p class="field-where">Extra or custom keys</p>
+      <div class="ui-strings-grid">${extraKeys
+        .map(
+          (key) => `<label class="ui-string-field">
+          <span class="ui-string-label">${escapeHtml(key)}</span>
+          <input name="ui__${escapeAttr(key)}" value="${escapeAttr(uiStringValue(ui, key))}" />
+        </label>`
+        )
+        .join("")}</div>
+    </div>`;
+  }
+  return blocks + extra;
+}
+
+function fieldHint(where) {
+  return `<p class="field-where">${escapeHtml(where)}</p>`;
+}
+
 function settingsView() {
   const s = state.settings || {};
   const ui = s.uiStrings && typeof s.uiStrings === "object" ? s.uiStrings : {};
-  const uiKeys = [...new Set([...Object.keys(UI_STRING_DEFAULTS), ...Object.keys(ui)])].sort();
-  const uiFields = uiKeys
-    .map((key) => {
-      const val = ui[key] != null && String(ui[key]).length ? ui[key] : UI_STRING_DEFAULTS[key] || "";
-      return `<label class="ui-string-field"><code>${escapeHtml(key)}</code><input name="ui__${escapeAttr(key)}" value="${escapeAttr(val)}" /></label>`;
-    })
-    .join("");
 
   return `
     <div class="top"><h1>Site content</h1></div>
-    <p class="muted">Edit <strong>all</strong> storefront copy here. Product names, prices, features, and rules are under <strong>Products</strong>. Save once to update the live site.</p>
+    <p class="muted">Sections follow the website <strong>top → bottom</strong>, same order you see when browsing. Product names &amp; prices are under <strong>Products</strong>.</p>
+
+    <nav class="page-map" aria-label="Jump to section">
+      <span class="page-map-label">Jump to</span>
+      <a href="#sc-home">1 · Homepage</a>
+      <a href="#sc-how">2 · How it works</a>
+      <a href="#sc-about">3 · About</a>
+      <a href="#sc-support">4 · Support</a>
+      <a href="#sc-checkout">5 · Checkout rules</a>
+      <a href="#sc-success">6 · After payment</a>
+      <a href="#sc-footer">7 · Footer</a>
+      <a href="#sc-terms">8 · Terms</a>
+      <a href="#sc-privacy">9 · Privacy</a>
+      <a href="#sc-chat">10 · Help chat</a>
+      <a href="#sc-seo">11 · Google / SEO</a>
+      <a href="#sc-brand">12 · Brand &amp; contact</a>
+      <a href="#sc-ui">13 · Buttons &amp; labels</a>
+    </nav>
+
     <form class="panel" id="settingsForm">
-      <h3 class="settings-h">Brand &amp; contact</h3>
-      <div class="grid2">
-        <label>Site name<input name="siteName" value="${escapeAttr(s.siteName || "")}" /></label>
-        <label>Tagline<input name="tagline" value="${escapeAttr(s.tagline || "")}" /></label>
-        <label>Default currency<input name="defaultCurrency" value="${escapeAttr(s.defaultCurrency || "PHP")}" /></label>
-        <label>Public support email
-          <input name="supportEmail" value="${escapeAttr(s.supportEmail || "support@subsaverph.com")}" />
+
+      <!-- ========== 1. HOMEPAGE (top → bottom) ========== -->
+      <section class="settings-block" id="sc-home">
+        <h3 class="settings-h">1 · Homepage <span class="settings-page">as on subsaverph.com/#/home</span></h3>
+        <p class="muted settings-lead">Edit in the same order visitors scroll the home page.</p>
+
+        <div class="settings-sub">
+          <h4 class="settings-sub-h">Top announcement bar</h4>
+          ${fieldHint("Thin bar above the menu (optional — leave empty to hide)")}
+          <label>Announcement text
+            <input name="announcement" value="${escapeAttr(s.announcement || "")}" placeholder="Leave empty to hide" />
+          </label>
+        </div>
+
+        <div class="settings-sub">
+          <h4 class="settings-sub-h">Hero (big top section)</h4>
+          ${fieldHint("First thing customers see under the menu")}
+          <label>Small line above title (eyebrow)
+            <input name="heroEyebrow" value="${escapeAttr(s.heroEyebrow || "")}" />
+          </label>
+          <label>Big title (press Enter for new lines)
+            <textarea name="heroTitle" rows="4">${escapeHtml(s.heroTitle || "")}</textarea>
+          </label>
+          <label>Paragraph under the title
+            <textarea name="heroLead" rows="3">${escapeHtml(s.heroLead || "")}</textarea>
+          </label>
+        </div>
+
+        <div class="settings-sub">
+          <h4 class="settings-sub-h">Feature strip (4 boxes under hero)</h4>
+          ${fieldHint("Horizontal row: Secure checkout · FX pay · …")}
+          <div class="grid2">
+            <label>Box 1<input name="strip1" value="${escapeAttr(s.strip1 || "")}" /></label>
+            <label>Box 2<input name="strip2" value="${escapeAttr(s.strip2 || "")}" /></label>
+            <label>Box 3<input name="strip3" value="${escapeAttr(s.strip3 || "")}" /></label>
+            <label>Box 4<input name="strip4" value="${escapeAttr(s.strip4 || "")}" /></label>
+          </div>
+        </div>
+
+        <div class="settings-sub">
+          <h4 class="settings-sub-h">Platforms section</h4>
+          ${fieldHint("“Select a service” heading above brand chips")}
+          <label>Section title
+            <input name="platformsTitle" value="${escapeAttr(s.platformsTitle || "")}" />
+          </label>
+        </div>
+
+        <div class="settings-sub">
+          <h4 class="settings-sub-h">Catalog / deals section</h4>
+          ${fieldHint("“Highest savings” heading above product cards")}
+          <label>Section title
+            <input name="catalogTitle" value="${escapeAttr(s.catalogTitle || "")}" />
+          </label>
+        </div>
+
+        <div class="settings-sub">
+          <h4 class="settings-sub-h">Mission block</h4>
+          ${fieldHint("Near bottom of homepage before footer")}
+          <label>Mission title
+            <input name="missionTitle" value="${escapeAttr(s.missionTitle || "")}" />
+          </label>
+          <label>Mission text
+            <textarea name="missionText" rows="3">${escapeHtml(s.missionText || "")}</textarea>
+          </label>
+        </div>
+      </section>
+
+      <!-- ========== 2. HOW IT WORKS ========== -->
+      <section class="settings-block" id="sc-how">
+        <h3 class="settings-h">2 · How it works page <span class="settings-page">#/how</span></h3>
+        <p class="muted settings-lead">Same layout as the How it works page: title → steps 01–04 → notice box → button.</p>
+        <div class="grid2">
+          <label>Small line above title
+            <input name="howEyebrow" value="${escapeAttr(s.howEyebrow || "Protocol")}" />
+          </label>
+          <label>Page title
+            <input name="howTitle" value="${escapeAttr(s.howTitle || "How it works")}" />
+          </label>
+        </div>
+
+        <div class="settings-sub">
+          <h4 class="settings-sub-h">Step 01</h4>
+          <div class="grid2">
+            <label>Step title<input name="howStep1Title" value="${escapeAttr(s.howStep1Title || UI_STRING_DEFAULTS.how_step1_t)}" /></label>
+            <label>Step text<input name="howStep1Text" value="${escapeAttr(s.howStep1Text || UI_STRING_DEFAULTS.how_step1_p)}" /></label>
+          </div>
+        </div>
+        <div class="settings-sub">
+          <h4 class="settings-sub-h">Step 02</h4>
+          <div class="grid2">
+            <label>Step title<input name="howStep2Title" value="${escapeAttr(s.howStep2Title || UI_STRING_DEFAULTS.how_step2_t)}" /></label>
+            <label>Step text<input name="howStep2Text" value="${escapeAttr(s.howStep2Text || UI_STRING_DEFAULTS.how_step2_p)}" /></label>
+          </div>
+        </div>
+        <div class="settings-sub">
+          <h4 class="settings-sub-h">Step 03</h4>
+          <div class="grid2">
+            <label>Step title<input name="howStep3Title" value="${escapeAttr(s.howStep3Title || UI_STRING_DEFAULTS.how_step3_t)}" /></label>
+            <label>Step text<input name="howStep3Text" value="${escapeAttr(s.howStep3Text || UI_STRING_DEFAULTS.how_step3_p)}" /></label>
+          </div>
+        </div>
+        <div class="settings-sub">
+          <h4 class="settings-sub-h">Step 04</h4>
+          <div class="grid2">
+            <label>Step title<input name="howStep4Title" value="${escapeAttr(s.howStep4Title || UI_STRING_DEFAULTS.how_step4_t)}" /></label>
+            <label>Step text<input name="howStep4Text" value="${escapeAttr(s.howStep4Text || UI_STRING_DEFAULTS.how_step4_p)}" /></label>
+          </div>
+        </div>
+
+        <div class="settings-sub">
+          <h4 class="settings-sub-h">Notice box</h4>
+          ${fieldHint("Highlighted box under the four steps")}
+          <label>Notice title
+            <input name="howNoticeTitle" value="${escapeAttr(s.howNoticeTitle || UI_STRING_DEFAULTS.demo_notice)}" />
+          </label>
+          <label>Notice text
+            <textarea name="howNoticeText" rows="2">${escapeHtml(s.howNoticeText || UI_STRING_DEFAULTS.demo_notice_p)}</textarea>
+          </label>
+        </div>
+        <label>Bottom button text
+          <input name="howCtaLabel" value="${escapeAttr(s.howCtaLabel || UI_STRING_DEFAULTS.cta_browse)}" />
         </label>
-      </div>
-      <label>Owner inbox (form emails go here)
-        <input name="ownerInbox" type="email" value="${escapeAttr(s.ownerInbox || "")}" placeholder="you@outlook.com" />
-      </label>
-      <label>Website URL<input name="websiteUrl" value="${escapeAttr(s.websiteUrl || "")}" /></label>
-      <label>Announcement bar (optional)<input name="announcement" value="${escapeAttr(s.announcement || "")}" placeholder="Leave empty to hide" /></label>
+      </section>
 
-      <h3 class="settings-h">Google / search preview</h3>
-      <p class="muted" style="margin-top:0">Title &amp; description when people search for SubSaverPH. Re-request indexing in Search Console after changes.</p>
-      <label>SEO title
-        <input name="seoTitle" value="${escapeAttr(s.seoTitle || "")}" placeholder="SubSaverPH — Official Site | Philippines Digital Subscription Store" />
-      </label>
-      <label>SEO description (company only — no product names)
-        <textarea name="seoDescription" rows="3" placeholder="SubSaverPH is a Philippines-based online storefront for discounted prepaid digital subscriptions…">${escapeHtml(s.seoDescription || "")}</textarea>
-      </label>
-      <label>SEO keywords (comma-separated)
-        <input name="seoKeywords" value="${escapeAttr(s.seoKeywords || "")}" />
-      </label>
-      <div class="grid2">
-        <label>Share title (Facebook / Messenger)
-          <input name="seoOgTitle" value="${escapeAttr(s.seoOgTitle || "")}" />
+      <!-- ========== 3. ABOUT ========== -->
+      <section class="settings-block" id="sc-about">
+        <h3 class="settings-h">3 · About page <span class="settings-page">#/about</span></h3>
+        ${fieldHint("Full company story page")}
+        <div class="grid2">
+          <label>Page title<input name="aboutTitle" value="${escapeAttr(s.aboutTitle || "")}" /></label>
+          <label>Last updated line<input name="aboutUpdated" value="${escapeAttr(s.aboutUpdated || "")}" /></label>
+        </div>
+        <label>About body (full page text)
+          <textarea name="aboutBody" rows="12">${escapeHtml(s.aboutBody || "")}</textarea>
         </label>
-        <label>Share description
-          <input name="seoOgDescription" value="${escapeAttr(s.seoOgDescription || "")}" />
+      </section>
+
+      <!-- ========== 4. SUPPORT ========== -->
+      <section class="settings-block" id="sc-support">
+        <h3 class="settings-h">4 · Support page <span class="settings-page">#/support</span></h3>
+        <p class="muted settings-lead">Top banner → form → topics list.</p>
+        <label>Badge (small pill)
+          <input name="supportPageBadge" value="${escapeAttr(s.supportPageBadge || "Help center")}" />
         </label>
+        <label>Big page title
+          <input name="supportPageTitle" value="${escapeAttr(s.supportPageTitle || "We're here to help")}" />
+        </label>
+        <label>Subtitle under title
+          <textarea name="supportPageLead" rows="2">${escapeHtml(s.supportPageLead || "Order issues, login problems, missing codes — reach us by email or send a message below.")}</textarea>
+        </label>
+        <label>Form heading
+          <input name="supportFormTitle" value="${escapeAttr(s.supportFormTitle || "Send a message")}" />
+        </label>
+        <label>Form subtext
+          <textarea name="supportFormSub" rows="2">${escapeHtml(s.supportFormSub || "No email app needed — we get this in our inbox and reply by email.")}</textarea>
+        </label>
+        <label>Subject dropdown options (one topic per line)
+          <textarea name="supportSubjectOptions" rows="8">${escapeHtml(
+            s.supportSubjectOptions ||
+              "Login not working\nMissing code or credentials\nWrong product delivered\nPayment charged but no order\nAccount expired early\nRefund request\nOrder status question\nPayment / checkout problem\nOther"
+          )}</textarea>
+        </label>
+      </section>
+
+      <!-- ========== 5. CHECKOUT RULES ========== -->
+      <section class="settings-block" id="sc-checkout">
+        <h3 class="settings-h">5 · Checkout rules popup <span class="settings-page">before customer pays</span></h3>
+        ${fieldHint("Popup: eyebrow → title → what you buy → rules → checkbox → button")}
+        <label>Small line above title
+          <input name="checkoutTermsEyebrow" value="${escapeAttr(s.checkoutTermsEyebrow || "Before you pay")}" />
+        </label>
+        <label>Popup title
+          <input name="checkoutTermsTitle" value="${escapeAttr(s.checkoutTermsTitle || "Purchase details & rules")}" />
+        </label>
+        <label>What you are buying
+          <textarea name="checkoutWhatYouBuy" rows="5">${escapeHtml(s.checkoutWhatYouBuy || "")}</textarea>
+        </label>
+        <label>Rules &amp; regulations
+          <textarea name="checkoutRules" rows="10">${escapeHtml(s.checkoutRules || "")}</textarea>
+        </label>
+        <label>Support note at bottom of popup
+          <textarea name="checkoutSupportText" rows="3">${escapeHtml(s.checkoutSupportText || "")}</textarea>
+        </label>
+        <label>Accept checkbox text
+          <input name="checkoutAcceptLabel" value="${escapeAttr(s.checkoutAcceptLabel || "")}" />
+        </label>
+        <label>Confirm button text
+          <input name="checkoutConfirmLabel" value="${escapeAttr(s.checkoutConfirmLabel || "Accept & pay")}" />
+        </label>
+      </section>
+
+      <!-- ========== 6. SUCCESS ========== -->
+      <section class="settings-block" id="sc-success">
+        <h3 class="settings-h">6 · After payment (success page) <span class="settings-page">#/success</span></h3>
+        ${fieldHint("Shown after successful checkout with login package")}
+        <label>Success heading
+          <input name="successTitle" value="${escapeAttr(s.successTitle || "Order delivered")}" />
+        </label>
+        <label>Package box title
+          <input name="successPackageTitle" value="${escapeAttr(s.successPackageTitle || "Your access package")}" />
+        </label>
+        <label>Package box subtitle
+          <input name="successPackageSub" value="${escapeAttr(s.successPackageSub || "Login credentials, features, instructions, and rules for each product.")}" />
+        </label>
+        <label>Note under the package
+          <textarea name="successFooterNote" rows="2">${escapeHtml(s.successFooterNote || "Save these credentials now. Follow the instructions and rules for each product.")}</textarea>
+        </label>
+      </section>
+
+      <!-- ========== 7. FOOTER (every page) ========== -->
+      <section class="settings-block" id="sc-footer">
+        <h3 class="settings-h">7 · Footer <span class="settings-page">bottom of every page</span></h3>
+        <p class="muted settings-lead">Order matches the live footer: blurb → company about → details → disclaimer → copyright.</p>
+
+        <div class="settings-sub">
+          <h4 class="settings-sub-h">Left column blurb</h4>
+          ${fieldHint("Under the logo")}
+          <label>Footer blurb
+            <textarea name="footerText" rows="3">${escapeHtml(s.footerText || "")}</textarea>
+          </label>
+        </div>
+
+        <div class="settings-sub">
+          <h4 class="settings-sub-h">About the company block</h4>
+          ${fieldHint("Wide band above the disclaimer")}
+          <label>Company about blurb
+            <textarea name="footerCompanyBlurb" rows="4">${escapeHtml(s.footerCompanyBlurb || "")}</textarea>
+          </label>
+          <div class="grid2">
+            <label>Brand<input name="footerBrand" value="${escapeAttr(s.footerBrand || "")}" /></label>
+            <label>Service area<input name="footerServiceArea" value="${escapeAttr(s.footerServiceArea || "")}" /></label>
+            <label>Website<input name="footerWebsite" value="${escapeAttr(s.footerWebsite || "")}" /></label>
+            <label>Support email shown<input name="footerSupport" value="${escapeAttr(s.footerSupport || "")}" /></label>
+            <label>Business type<input name="footerBusinessType" value="${escapeAttr(s.footerBusinessType || "")}" /></label>
+            <label>Copyright line<input name="footerCopyright" value="${escapeAttr(s.footerCopyright || "")}" /></label>
+          </div>
+        </div>
+
+        <div class="settings-sub">
+          <h4 class="settings-sub-h">Disclaimer</h4>
+          ${fieldHint("Small legal text under company about")}
+          <label>Footer disclaimer
+            <textarea name="footerDisclaimer" rows="3">${escapeHtml(s.footerDisclaimer || "")}</textarea>
+          </label>
+        </div>
+      </section>
+
+      <!-- ========== 8. TERMS ========== -->
+      <section class="settings-block" id="sc-terms">
+        <h3 class="settings-h">8 · Terms of Use <span class="settings-page">#/terms</span></h3>
+        <div class="grid2">
+          <label>Page title<input name="termsTitle" value="${escapeAttr(s.termsTitle || "")}" /></label>
+          <label>Last updated<input name="termsUpdated" value="${escapeAttr(s.termsUpdated || "")}" /></label>
+        </div>
+        <label>Terms body
+          <textarea name="termsBody" rows="12">${escapeHtml(s.termsBody || "")}</textarea>
+        </label>
+      </section>
+
+      <!-- ========== 9. PRIVACY ========== -->
+      <section class="settings-block" id="sc-privacy">
+        <h3 class="settings-h">9 · Privacy Policy <span class="settings-page">#/privacy</span></h3>
+        <div class="grid2">
+          <label>Page title<input name="privacyTitle" value="${escapeAttr(s.privacyTitle || "")}" /></label>
+          <label>Last updated<input name="privacyUpdated" value="${escapeAttr(s.privacyUpdated || "")}" /></label>
+        </div>
+        <label>Privacy body
+          <textarea name="privacyBody" rows="12">${escapeHtml(s.privacyBody || "")}</textarea>
+        </label>
+      </section>
+
+      <!-- ========== 10. HELP CHAT ========== -->
+      <section class="settings-block" id="sc-chat">
+        <h3 class="settings-h">10 · Help chat bubble <span class="settings-page">bottom-right on the store</span></h3>
+        <label>Extra FAQ for the assistant
+          <textarea name="chatbotFaq" rows="4" placeholder="Optional facts the bot should know…">${escapeHtml(s.chatbotFaq || "")}</textarea>
+        </label>
+        <label>Welcome line (optional override)
+          <input name="chatWelcome" value="${escapeAttr(s.chatWelcome || "")}" placeholder="Leave empty for default welcome" />
+        </label>
+      </section>
+
+      <!-- ========== 11. SEO (not on page body) ========== -->
+      <section class="settings-block" id="sc-seo">
+        <h3 class="settings-h">11 · Google / search &amp; social <span class="settings-page">not shown as page text — search results only</span></h3>
+        <p class="muted settings-lead">Title &amp; description when people search Google or share a link. Prefer company wording (categories), not product brand lists.</p>
+        <label>Google title
+          <input name="seoTitle" value="${escapeAttr(s.seoTitle || "")}" />
+        </label>
+        <label>Google description
+          <textarea name="seoDescription" rows="3">${escapeHtml(s.seoDescription || "")}</textarea>
+        </label>
+        <label>Keywords (comma-separated)
+          <input name="seoKeywords" value="${escapeAttr(s.seoKeywords || "")}" />
+        </label>
+        <div class="grid2">
+          <label>Share title (Facebook / Messenger)
+            <input name="seoOgTitle" value="${escapeAttr(s.seoOgTitle || "")}" />
+          </label>
+          <label>Share description
+            <input name="seoOgDescription" value="${escapeAttr(s.seoOgDescription || "")}" />
+          </label>
+        </div>
+      </section>
+
+      <!-- ========== 12. BRAND ========== -->
+      <section class="settings-block" id="sc-brand">
+        <h3 class="settings-h">12 · Brand &amp; contact <span class="settings-page">site-wide settings</span></h3>
+        <div class="grid2">
+          <label>Site name<input name="siteName" value="${escapeAttr(s.siteName || "")}" /></label>
+          <label>Tagline<input name="tagline" value="${escapeAttr(s.tagline || "")}" /></label>
+          <label>Default currency<input name="defaultCurrency" value="${escapeAttr(s.defaultCurrency || "PHP")}" /></label>
+          <label>Public support email
+            <input name="supportEmail" value="${escapeAttr(s.supportEmail || "support@subsaverph.com")}" />
+          </label>
+        </div>
+        <label>Owner inbox (where support form emails go)
+          <input name="ownerInbox" type="email" value="${escapeAttr(s.ownerInbox || "")}" placeholder="you@outlook.com" />
+        </label>
+        <label>Website URL
+          <input name="websiteUrl" value="${escapeAttr(s.websiteUrl || "")}" />
+        </label>
+      </section>
+
+      <!-- ========== 13. UI LABELS ========== -->
+      <section class="settings-block" id="sc-ui">
+        <h3 class="settings-h">13 · Buttons, menu &amp; small labels <span class="settings-page">grouped like the website</span></h3>
+        <p class="muted settings-lead">Small words on buttons and menus. Grouped by where you see them. Product names stay under Products.</p>
+        ${renderUiStringGroups(ui)}
+      </section>
+
+      <div class="settings-save-bar">
+        <button class="btn" type="submit">Save all site content</button>
+        <span class="muted">Saves every section above to the live store.</span>
       </div>
-
-      <h3 class="settings-h">Homepage hero</h3>
-      <label>Hero eyebrow<input name="heroEyebrow" value="${escapeAttr(s.heroEyebrow || "")}" /></label>
-      <label>Hero title (use Enter for line breaks)<textarea name="heroTitle" rows="4">${escapeHtml(s.heroTitle || "")}</textarea></label>
-      <label>Hero lead<textarea name="heroLead" rows="3">${escapeHtml(s.heroLead || "")}</textarea></label>
-
-      <h3 class="settings-h">Homepage strips &amp; sections</h3>
-      <div class="grid2">
-        <label>Strip 1<input name="strip1" value="${escapeAttr(s.strip1 || "")}" /></label>
-        <label>Strip 2<input name="strip2" value="${escapeAttr(s.strip2 || "")}" /></label>
-        <label>Strip 3<input name="strip3" value="${escapeAttr(s.strip3 || "")}" /></label>
-        <label>Strip 4<input name="strip4" value="${escapeAttr(s.strip4 || "")}" /></label>
-        <label>Platforms section title<input name="platformsTitle" value="${escapeAttr(s.platformsTitle || "")}" /></label>
-        <label>Catalog section title<input name="catalogTitle" value="${escapeAttr(s.catalogTitle || "")}" /></label>
-      </div>
-      <label>Mission title<input name="missionTitle" value="${escapeAttr(s.missionTitle || "")}" /></label>
-      <label>Mission text<textarea name="missionText" rows="3">${escapeHtml(s.missionText || "")}</textarea></label>
-
-      <h3 class="settings-h">How it works page</h3>
-      <div class="grid2">
-        <label>Eyebrow<input name="howEyebrow" value="${escapeAttr(s.howEyebrow || "Protocol")}" /></label>
-        <label>Page title<input name="howTitle" value="${escapeAttr(s.howTitle || "How it works")}" /></label>
-      </div>
-      <div class="grid2">
-        <label>Step 1 title<input name="howStep1Title" value="${escapeAttr(s.howStep1Title || UI_STRING_DEFAULTS.how_step1_t)}" /></label>
-        <label>Step 1 text<input name="howStep1Text" value="${escapeAttr(s.howStep1Text || UI_STRING_DEFAULTS.how_step1_p)}" /></label>
-        <label>Step 2 title<input name="howStep2Title" value="${escapeAttr(s.howStep2Title || UI_STRING_DEFAULTS.how_step2_t)}" /></label>
-        <label>Step 2 text<input name="howStep2Text" value="${escapeAttr(s.howStep2Text || UI_STRING_DEFAULTS.how_step2_p)}" /></label>
-        <label>Step 3 title<input name="howStep3Title" value="${escapeAttr(s.howStep3Title || UI_STRING_DEFAULTS.how_step3_t)}" /></label>
-        <label>Step 3 text<input name="howStep3Text" value="${escapeAttr(s.howStep3Text || UI_STRING_DEFAULTS.how_step3_p)}" /></label>
-        <label>Step 4 title<input name="howStep4Title" value="${escapeAttr(s.howStep4Title || UI_STRING_DEFAULTS.how_step4_t)}" /></label>
-        <label>Step 4 text<input name="howStep4Text" value="${escapeAttr(s.howStep4Text || UI_STRING_DEFAULTS.how_step4_p)}" /></label>
-      </div>
-      <label>Notice box title<input name="howNoticeTitle" value="${escapeAttr(s.howNoticeTitle || UI_STRING_DEFAULTS.demo_notice)}" /></label>
-      <label>Notice box text<textarea name="howNoticeText" rows="2">${escapeHtml(s.howNoticeText || UI_STRING_DEFAULTS.demo_notice_p)}</textarea></label>
-      <label>CTA button label<input name="howCtaLabel" value="${escapeAttr(s.howCtaLabel || UI_STRING_DEFAULTS.cta_browse)}" /></label>
-
-      <h3 class="settings-h">Support page</h3>
-      <label>Badge<input name="supportPageBadge" value="${escapeAttr(s.supportPageBadge || "Help center")}" /></label>
-      <label>Support page title<input name="supportPageTitle" value="${escapeAttr(s.supportPageTitle || "We're here to help")}" /></label>
-      <label>Support page subtitle<textarea name="supportPageLead" rows="2">${escapeHtml(s.supportPageLead || "Order issues, login problems, missing codes — reach us by email or send a message below.")}</textarea></label>
-      <label>Support form heading<input name="supportFormTitle" value="${escapeAttr(s.supportFormTitle || "Send a message")}" /></label>
-      <label>Support form subtext<textarea name="supportFormSub" rows="2">${escapeHtml(s.supportFormSub || "No email app needed — we get this in our inbox and reply by email.")}</textarea></label>
-      <label>Support subject options (one topic per line)
-        <textarea name="supportSubjectOptions" rows="8">${escapeHtml(
-          s.supportSubjectOptions ||
-            "Login not working\nMissing code or credentials\nWrong product delivered\nPayment charged but no order\nAccount expired early\nRefund request\nOrder status question\nPayment / checkout problem\nOther"
-        )}</textarea>
-      </label>
-      <label>Chatbot extra FAQ
-        <textarea name="chatbotFaq" rows="4">${escapeHtml(s.chatbotFaq || "")}</textarea>
-      </label>
-      <label>Chat welcome line
-        <input name="chatWelcome" value="${escapeAttr(s.chatWelcome || "")}" />
-      </label>
-
-      <h3 class="settings-h">Success page (after payment)</h3>
-      <label>Success heading<input name="successTitle" value="${escapeAttr(s.successTitle || "Order delivered")}" /></label>
-      <label>Package title<input name="successPackageTitle" value="${escapeAttr(s.successPackageTitle || "Your access package")}" /></label>
-      <label>Package subtitle
-        <input name="successPackageSub" value="${escapeAttr(s.successPackageSub || "Login credentials, features, instructions, and rules for each product.")}" />
-      </label>
-      <label>Footer note<textarea name="successFooterNote" rows="2">${escapeHtml(s.successFooterNote || "Save these credentials now. Follow the instructions and rules for each product.")}</textarea></label>
-
-      <h3 class="settings-h">Footer</h3>
-      <label>Footer blurb<textarea name="footerText" rows="3">${escapeHtml(s.footerText || "")}</textarea></label>
-      <label>Company about blurb<textarea name="footerCompanyBlurb" rows="4">${escapeHtml(s.footerCompanyBlurb || "")}</textarea></label>
-      <div class="grid2">
-        <label>Brand label<input name="footerBrand" value="${escapeAttr(s.footerBrand || "")}" /></label>
-        <label>Service area<input name="footerServiceArea" value="${escapeAttr(s.footerServiceArea || "")}" /></label>
-        <label>Website label<input name="footerWebsite" value="${escapeAttr(s.footerWebsite || "")}" /></label>
-        <label>Support label<input name="footerSupport" value="${escapeAttr(s.footerSupport || "")}" /></label>
-        <label>Business type<input name="footerBusinessType" value="${escapeAttr(s.footerBusinessType || "")}" /></label>
-        <label>Copyright line<input name="footerCopyright" value="${escapeAttr(s.footerCopyright || "")}" /></label>
-      </div>
-      <label>Footer disclaimer<textarea name="footerDisclaimer" rows="3">${escapeHtml(s.footerDisclaimer || "")}</textarea></label>
-
-      <h3 class="settings-h">About page</h3>
-      <div class="grid2">
-        <label>About title<input name="aboutTitle" value="${escapeAttr(s.aboutTitle || "")}" /></label>
-        <label>Last updated<input name="aboutUpdated" value="${escapeAttr(s.aboutUpdated || "")}" /></label>
-      </div>
-      <label>About body<textarea name="aboutBody" rows="10">${escapeHtml(s.aboutBody || "")}</textarea></label>
-
-      <h3 class="settings-h">Checkout — purchase rules (before pay)</h3>
-      <label>Popup title<input name="checkoutTermsTitle" value="${escapeAttr(s.checkoutTermsTitle || "Purchase details & rules")}" /></label>
-      <label>Eyebrow label<input name="checkoutTermsEyebrow" value="${escapeAttr(s.checkoutTermsEyebrow || "Before you pay")}" /></label>
-      <label>What you are buying<textarea name="checkoutWhatYouBuy" rows="5">${escapeHtml(s.checkoutWhatYouBuy || "")}</textarea></label>
-      <label>Rules &amp; regulations<textarea name="checkoutRules" rows="10">${escapeHtml(s.checkoutRules || "")}</textarea></label>
-      <label>Support blurb<textarea name="checkoutSupportText" rows="3">${escapeHtml(s.checkoutSupportText || "")}</textarea></label>
-      <label>Accept checkbox text<input name="checkoutAcceptLabel" value="${escapeAttr(s.checkoutAcceptLabel || "")}" /></label>
-      <label>Confirm button prefix<input name="checkoutConfirmLabel" value="${escapeAttr(s.checkoutConfirmLabel || "Accept & pay")}" /></label>
-
-      <h3 class="settings-h">Terms of Use</h3>
-      <div class="grid2">
-        <label>Terms title<input name="termsTitle" value="${escapeAttr(s.termsTitle || "")}" /></label>
-        <label>Last updated<input name="termsUpdated" value="${escapeAttr(s.termsUpdated || "")}" /></label>
-      </div>
-      <label>Terms body<textarea name="termsBody" rows="12">${escapeHtml(s.termsBody || "")}</textarea></label>
-
-      <h3 class="settings-h">Privacy Policy</h3>
-      <div class="grid2">
-        <label>Privacy title<input name="privacyTitle" value="${escapeAttr(s.privacyTitle || "")}" /></label>
-        <label>Last updated<input name="privacyUpdated" value="${escapeAttr(s.privacyUpdated || "")}" /></label>
-      </div>
-      <label>Privacy body<textarea name="privacyBody" rows="12">${escapeHtml(s.privacyBody || "")}</textarea></label>
-
-      <h3 class="settings-h">All UI labels (buttons, nav, cart…)</h3>
-      <p class="muted" style="margin-top:0">Every small English label. Product names/prices stay under Products.</p>
-      <div class="ui-strings-grid">${uiFields}</div>
-
-      <button class="btn" type="submit" style="margin-top:20px">Save all site content</button>
     </form>`;
 }
 
