@@ -539,22 +539,20 @@ function applySiteChrome() {
   };
   setText("#footerBlurb", c("footer_blurb", "footerText"));
   setText("#footerCompanyBlurb", c("footer_company_blurb", "footerCompanyBlurb"));
-  setText("#footerBrand", s.footerBrand || s.siteName || "SubSaverPH");
-  setText("#footerServiceArea", c("footer_service_area", "footerServiceArea"));
-  setText("#footerWebsiteLabel", s.footerWebsite || "subsaverph.com");
-  const support = supportEmailAddress();
-  setText("#footerBusinessType", c("footer_business_type", "footerBusinessType"));
   setText("#footerDisclaimer", c("footer_disclaimer", "footerDisclaimer"));
   const year = new Date().getFullYear();
   setText("#footerCopyright", `© ${year} ${c("footer_copyright", "footerCopyright")}`);
-  document.querySelectorAll(".footer-facts li span[data-i18n-meta], .footer-meta li span[data-i18n-meta]").forEach((span) => {
-    span.textContent = t(span.getAttribute("data-i18n-meta"));
-  });
-  // Footer: all support links go to the Support page (email options live there)
+  const support = supportEmailAddress();
+  // Footer: support links go to the Support page
   const supportLabel = document.querySelector("#footerSupportLabel");
   if (supportLabel) {
-    supportLabel.innerHTML = `<a href="#/support" class="js-go-support">${escapeHtml(support)}</a>`;
+    supportLabel.textContent = support;
+    supportLabel.setAttribute("href", "#/support");
+    supportLabel.classList.add("js-go-support");
   }
+  document.querySelectorAll(".footer-contact span[data-i18n-meta]").forEach((span) => {
+    span.textContent = t(span.getAttribute("data-i18n-meta"));
+  });
   document.querySelectorAll("a[data-support-email], a[data-support-link], a.js-go-support").forEach((a) => {
     a.setAttribute("href", "#/support");
     a.removeAttribute("target");
