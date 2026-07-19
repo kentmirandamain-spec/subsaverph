@@ -310,10 +310,10 @@ function settingsView() {
       <h3 class="settings-h">Google / search preview (before click)</h3>
       <p class="muted" style="margin-top:0">Title &amp; description shown when people search “SubSaverPH”. Request re-indexing in Google Search Console after changes.</p>
       <label>SEO title (browser tab + Google blue link)
-        <input name="seoTitle" value="${escapeAttr(s.seoTitle || "")}" placeholder="SubSaverPH — Official Site | Philippines Digital Subscription Store" />
+        <input name="seoTitle" value="${escapeAttr(s.seoTitle || "")}" placeholder="SubSaverPH — Discounted SuperGrok, Canva, Netflix Philippines" />
       </label>
-      <label>SEO description (gray text under the link — company only, no product names)
-        <textarea name="seoDescription" rows="3" placeholder="SubSaverPH is a Philippines-based online storefront for discounted prepaid digital subscriptions…">${escapeHtml(s.seoDescription || "")}</textarea>
+      <label>SEO description (gray text under the link)
+        <textarea name="seoDescription" rows="3" placeholder="Buy discounted prepaid subscriptions…">${escapeHtml(s.seoDescription || "")}</textarea>
       </label>
       <label>SEO keywords (comma-separated)
         <input name="seoKeywords" value="${escapeAttr(s.seoKeywords || "")}" />
