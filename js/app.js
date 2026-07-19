@@ -1064,62 +1064,116 @@ function viewSupport() {
     orderId: draft.orderId || "",
   });
   return `
-    <div class="page">
+    <div class="page support-page-wrap">
       <div class="page-inner support-page">
-        <p class="eyebrow">Help center</p>
-        <h1 class="page-title">Support</h1>
-        <p class="muted" style="max-width:36rem;line-height:1.55">
-          Need help with an order, login, or delivery? Email us from this page.
-        </p>
-
-        <div class="support-card" style="margin-bottom:18px">
-          <p class="eyebrow" style="margin:0 0 10px">Email support</p>
-          <p style="margin:0 0 6px;font-size:1.05rem;font-weight:600;word-break:break-all">${escapeHtml(email)}</p>
-          <p class="muted" style="margin:0 0 16px;line-height:1.5;font-size:0.9rem">
-            Choose how you want to email us. Include your Order ID if you have one.
+        <header class="support-hero">
+          <div class="support-hero-badge">Help center</div>
+          <h1 class="support-hero-title">We're here to help</h1>
+          <p class="support-hero-lead">
+            Order issues, login problems, missing codes — reach us by email or send a message below.
+            We reply to the address you provide.
           </p>
-          <div class="cta" style="margin:0;flex-wrap:wrap">
-            <a class="btn solid" href="${escapeAttr(gmailHref)}" target="_blank" rel="noopener noreferrer">Email with Gmail</a>
-            <a class="btn" href="${escapeAttr(mailtoHref)}">Open email app</a>
-            <button type="button" class="btn" data-copy-support-email>Copy email address</button>
+          <div class="support-hero-meta">
+            <span class="support-pill">
+              <span class="support-pill-dot" aria-hidden="true"></span>
+              Usually replies within 24h
+            </span>
+            <span class="support-pill support-pill-mono">${escapeHtml(email)}</span>
           </div>
+        </header>
+
+        <div class="support-channels" role="list">
+          <a class="support-channel" role="listitem" href="${escapeAttr(gmailHref)}" target="_blank" rel="noopener noreferrer">
+            <span class="support-channel-icon" aria-hidden="true">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v11a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 17.5v-11Z"/><path d="m5 7 7 5 7-5"/></svg>
+            </span>
+            <span class="support-channel-body">
+              <span class="support-channel-title">Email with Gmail</span>
+              <span class="support-channel-desc">Opens Gmail compose with our address ready</span>
+            </span>
+            <span class="support-channel-arrow" aria-hidden="true">→</span>
+          </a>
+          <a class="support-channel" role="listitem" href="${escapeAttr(mailtoHref)}">
+            <span class="support-channel-icon" aria-hidden="true">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+            </span>
+            <span class="support-channel-body">
+              <span class="support-channel-title">Open email app</span>
+              <span class="support-channel-desc">Outlook, Apple Mail, or your default app</span>
+            </span>
+            <span class="support-channel-arrow" aria-hidden="true">→</span>
+          </a>
+          <button type="button" class="support-channel" role="listitem" data-copy-support-email>
+            <span class="support-channel-icon" aria-hidden="true">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+            </span>
+            <span class="support-channel-body">
+              <span class="support-channel-title">Copy email address</span>
+              <span class="support-channel-desc">${escapeHtml(email)}</span>
+            </span>
+            <span class="support-channel-arrow" aria-hidden="true">⧉</span>
+          </button>
         </div>
 
-        <form class="support-card support-form" id="supportForm" novalidate>
-          <p class="eyebrow" style="margin:0 0 12px">Or message us here</p>
-          <p class="muted" style="margin:0 0 14px;font-size:0.9rem;line-height:1.45;text-transform:none;letter-spacing:0">
-            No email app? Send a message below — we reply to the address you enter.
-          </p>
-          <label>Your name
-            <input name="name" type="text" autocomplete="name" placeholder="Your name" />
-          </label>
-          <label>Your email (we reply here)
-            <input name="email" type="email" required autocomplete="email" placeholder="you@gmail.com" />
-          </label>
-          <label>Order ID (optional)
-            <input name="orderId" type="text" placeholder="e.g. PHxxxxxxxxxx" value="${escapeAttr(draft.orderId || "")}" />
-          </label>
-          <label>Subject
-            <input name="subject" type="text" placeholder="Login not working / missing code…" value="${escapeAttr(draft.subject || "")}" />
-          </label>
-          <label>Message
-            <textarea name="message" required rows="5" placeholder="Describe the problem…">${escapeHtml(draft.message || "")}</textarea>
-          </label>
-          <p class="err" id="supportFormErr" style="min-height:1.2em;margin:0"></p>
-          <p class="ok" id="supportFormOk" style="min-height:1.2em;margin:0;color:var(--ok,#7dffa3)"></p>
-          <div class="cta" style="margin-top:8px">
-            <button type="submit" class="btn solid" id="supportFormSubmit">Send message</button>
-          </div>
-        </form>
+        <div class="support-layout">
+          <section class="support-panel support-panel-form">
+            <div class="support-panel-head">
+              <h2 class="support-panel-title">Send a message</h2>
+              <p class="support-panel-sub">No email app needed — we get this in our inbox and reply by email.</p>
+            </div>
+            <form class="support-form" id="supportForm" novalidate>
+              <div class="support-form-grid">
+                <label class="support-field">Your name
+                  <input name="name" type="text" autocomplete="name" placeholder="Juan Dela Cruz" />
+                </label>
+                <label class="support-field">Your email
+                  <input name="email" type="email" required autocomplete="email" placeholder="you@gmail.com" />
+                </label>
+              </div>
+              <div class="support-form-grid">
+                <label class="support-field">Order ID <span class="support-optional">optional</span>
+                  <input name="orderId" type="text" placeholder="PHxxxxxxxxxx" value="${escapeAttr(draft.orderId || "")}" />
+                </label>
+                <label class="support-field">Subject
+                  <input name="subject" type="text" placeholder="Login not working…" value="${escapeAttr(draft.subject || "")}" />
+                </label>
+              </div>
+              <label class="support-field">Message
+                <textarea name="message" required rows="5" placeholder="Tell us what happened, and include any error text if you can…">${escapeHtml(draft.message || "")}</textarea>
+              </label>
+              <p class="err support-form-status" id="supportFormErr"></p>
+              <p class="ok support-form-status" id="supportFormOk"></p>
+              <div class="support-form-actions">
+                <button type="submit" class="btn solid support-submit" id="supportFormSubmit">Send message</button>
+              </div>
+            </form>
+          </section>
 
-        <div class="note" style="margin-top:22px">
-          <h3 style="margin-top:0">Before you write</h3>
-          <ul class="muted" style="margin:8px 0 0;padding-left:1.2rem;line-height:1.55">
-            <li>Include your Order ID from the success page or payment email.</li>
-            <li>Describe what is wrong (e.g. login failed, code missing, wrong product).</li>
-            <li>Do not change username, password, billing, or subscription on shared accounts — that voids support.</li>
-            <li>Refunds only if the product is defective or not delivered.</li>
-          </ul>
+          <aside class="support-panel support-panel-tips">
+            <h2 class="support-panel-title">Before you write</h2>
+            <ul class="support-tips">
+              <li>
+                <span class="support-tip-num">01</span>
+                <span><strong>Order ID</strong> — from the success page or payment email so we can find your delivery fast.</span>
+              </li>
+              <li>
+                <span class="support-tip-num">02</span>
+                <span><strong>Be specific</strong> — login failed, code missing, wrong product, etc.</span>
+              </li>
+              <li>
+                <span class="support-tip-num">03</span>
+                <span><strong>Don't change logins</strong> — changing username, password, or billing on shared accounts voids support.</span>
+              </li>
+              <li>
+                <span class="support-tip-num">04</span>
+                <span><strong>Refunds</strong> — only if the product is defective or not delivered.</span>
+              </li>
+            </ul>
+            <div class="support-tips-foot">
+              <p class="support-tips-foot-label">Direct email</p>
+              <p class="support-tips-foot-email">${escapeHtml(email)}</p>
+            </div>
+          </aside>
         </div>
       </div>
     </div>`;
