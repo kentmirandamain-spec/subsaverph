@@ -40,10 +40,8 @@ function formatReply(text) {
 
 function setStatusLabel(sub, d) {
   if (!sub) return;
-  if (d?.provider === "groq") sub.textContent = "Online · free cloud AI";
-  else if (d?.provider === "gemini") sub.textContent = "Online · free cloud AI";
-  else if (d?.provider === "spacexai" || d?.provider === "xai") sub.textContent = "Online · cloud AI";
-  else sub.textContent = "Online · store assistant";
+  // Keep status generic — do not expose provider / "free cloud AI" wording
+  sub.innerHTML = `<span class="ssph-chat-dot" aria-hidden="true"></span> Online · store assistant`;
 }
 
 export function mountChatbot() {
