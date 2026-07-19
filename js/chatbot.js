@@ -89,6 +89,8 @@ export function mountChatbot() {
           <button type="button" data-suggest="What are CapCut account rules?">CapCut rules</button>
           <button type="button" data-suggest="How do I receive my login after payment?">After payment</button>
           <button type="button" data-suggest="How do refunds work?">Refunds</button>
+          <button type="button" data-suggest="What products do you sell and roughly how much?">Products</button>
+          <button type="button" data-suggest="Explain how GCash checkout usually works on this site">Payments</button>
         </div>`;
       list.querySelectorAll("[data-suggest]").forEach((btn) => {
         btn.addEventListener("click", () => {
@@ -159,9 +161,11 @@ export function mountChatbot() {
       messages.push({ role: "assistant", content: reply });
       saveHistory(messages);
       if (data.provider === "fallback") {
-        sub.textContent = "Quick tips mode (add XAI_API_KEY for full AI)";
+        sub.textContent = "Limited tips — set XAI_API_KEY for full AI (any question)";
       } else if (data.provider === "xai" || data.provider === "spacexai") {
-        sub.textContent = "Powered by SpaceXAI (Grok)";
+        sub.textContent = data.mode
+          ? `Grok · ${data.mode}`
+          : "Powered by SpaceXAI (Grok) — ask anything";
       }
       renderMessages();
     } catch (err) {

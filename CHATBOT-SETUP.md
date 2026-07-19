@@ -7,6 +7,7 @@ Floating chat on the storefront answers product, CapCut rules, payment, and deli
 - **SpaceXAI** via xAI API (`https://api.x.ai/v1`)
 - Default model: **`grok-4.5`**
 - Key: **`XAI_API_KEY`** (server-side only — never put this in the browser)
+- Uses **Responses API** + **web_search** + **code_interpreter** so it can answer **any** question (store + general + current topics)
 
 ## Render / server env
 
@@ -15,16 +16,15 @@ XAI_API_KEY=xai-...
 # optional:
 XAI_MODEL=grok-4.5
 XAI_BASE_URL=https://api.x.ai/v1
+XAI_CHAT_TOOLS=1
 ```
 
-Get a key: https://console.x.ai
-
-## Behavior
+Get a key: https://console.x.ai — **required** for full answers to all questions.
 
 | Mode | When |
 |------|------|
-| **Full AI** | `XAI_API_KEY` is set |
-| **Fallback tips** | No key / API error — CapCut rules, refunds, delivery FAQ still work |
+| **Full AI (any question)** | `XAI_API_KEY` set — Grok + optional web search |
+| **Fallback tips** | No key / API down — CapCut, refunds, payments, delivery only |
 
 ## API
 

@@ -44,7 +44,8 @@ class ChatbotTests(unittest.TestCase):
         self.assertIn("CapCut Pro", prompt)
         self.assertIn("Do NOT log out", prompt)
         self.assertIn("Login on mobile app", prompt)
-        self.assertIn("never claim affiliation", prompt.lower())
+        self.assertIn("not affiliated", prompt.lower())
+        self.assertIn("all kinds of questions", prompt.lower())
 
     def test_call_without_api_key_uses_fallback(self):
         with mock.patch.dict("os.environ", {"XAI_API_KEY": ""}, clear=False):
