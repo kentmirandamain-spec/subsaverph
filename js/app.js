@@ -1043,6 +1043,31 @@ function viewSupport() {
   } catch {
     /* ignore */
   }
+  const subjectOptions = [
+    { value: "", label: "Select a topic…" },
+    { value: "Login not working", label: "Login not working" },
+    { value: "Missing code or credentials", label: "Missing code or credentials" },
+    { value: "Wrong product delivered", label: "Wrong product delivered" },
+    { value: "Payment charged but no order", label: "Payment charged but no order" },
+    { value: "Account expired early", label: "Account expired early" },
+    { value: "Refund request", label: "Refund request" },
+    { value: "Order status question", label: "Order status question" },
+    { value: "Payment / checkout problem", label: "Payment / checkout problem" },
+    { value: "Partnership or business inquiry", label: "Partnership or business inquiry" },
+    { value: "Other", label: "Other (type your own)" },
+  ];
+  const draftSubject = String(draft.subject || "").trim();
+  const knownSubjects = new Set(subjectOptions.map((o) => o.value).filter(Boolean));
+  const subjectIsCustom = draftSubject && !knownSubjects.has(draftSubject);
+  const selectedSubject = subjectIsCustom ? "Other" : draftSubject;
+  const customSubjectVal = subjectIsCustom ? draftSubject : "";
+  const subjectOptsHtml = subjectOptions
+    .map((o) => {
+      const sel = o.value === selectedSubject ? " selected" : "";
+      return `<option value="${escapeAttr(o.value)}"${sel}>${escapeHtml(o.label)}</option>`;
+    })
+    .join("");
+
   const gmailHref = gmailComposeUrl({
     subject: draft.subject || "SubSaverPH support request",
     body: draft.message || "",
@@ -1125,9 +1150,15 @@ function viewSupport() {
                   <input name="orderId" type="text" placeholder="PHxxxxxxxxxx" value="${escapeAttr(draft.orderId || "")}" />
                 </label>
                 <label class="support-field">Subject
-                  <input name="subject" type="text" placeholder="Login not working…" value="${escapeAttr(draft.subject || "")}" />
+                  <select name="subject" id="supportSubject" class="support-select" required>
+                    ${subjectOptsHtml}
+                  </select>
                 </label>
               </div>
+              <label class="support-field support-subject-other" id="supportSubjectOtherWrap"${selectedSubject === "Other" ? "" : " hidden"}>
+                Describe your subject
+                <input name="subjectOther" id="supportSubjectOther" type="text" placeholder="e.g. Can't redeem code on Netflix…" value="${escapeAttr(customSubjectVal)}" autocomplete="off" />
+              </label>
               <label class="support-field">Message
                 <textarea name="message" required rows="5" placeholder="Tell us what happened, and include any error text if you can…">${escapeHtml(draft.message || "")}</textarea>
               </label>
@@ -1977,6 +2008,22 @@ function bind() {
   const supportForm = $("#supportForm");
   if (supportForm && !supportForm.dataset.bound) {
     supportForm.dataset.bound = "1";
+
+    // Subject dropdown: show "Other" free-text when selected
+    const subjectSel = $("#supportSubject");
+    const otherWrap = $("#supportSubjectOtherWrap");
+    const otherInput = $("#supportSubjectOther");
+    const syncSubjectOther = () => {
+      const isOther = subjectSel && subjectSel.value === "Other";
+      if (otherWrap) otherWrap.hidden = !isOther;
+      if (otherInput) {
+        otherInput.required = !!isOther;
+        if (!isOther) otherInput.value = "";
+      }
+    };
+    subjectSel?.addEventListener("change", syncSubjectOther);
+    syncSubjectOther();
+
     supportForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -1986,11 +2033,27 @@ function bind() {
       if (errEl) errEl.textContent = "";
       if (okEl) okEl.textContent = "";
       const fd = new FormData(supportForm);
+      let subject = String(fd.get("subject") || "").trim();
+      if (!subject) {
+        if (errEl) errEl.textContent = "Please select a subject.";
+        toast("Please select a subject.", true);
+        subjectSel?.focus();
+        return;
+      }
+      if (subject === "Other") {
+        subject = String(fd.get("subjectOther") || "").trim();
+        if (!subject) {
+          if (errEl) errEl.textContent = "Please describe your subject.";
+          toast("Please describe your subject.", true);
+          otherInput?.focus();
+          return;
+        }
+      }
       const payload = {
         name: String(fd.get("name") || "").trim(),
         email: String(fd.get("email") || "").trim(),
         orderId: String(fd.get("orderId") || "").trim(),
-        subject: String(fd.get("subject") || "Support request").trim(),
+        subject,
         message: String(fd.get("message") || "").trim(),
       };
       if (!payload.email || !payload.email.includes("@")) {

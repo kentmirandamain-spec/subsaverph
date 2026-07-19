@@ -4540,7 +4540,9 @@ html[data-theme="light"] .footer {
   margin-left: 4px;
 }
 .support-form input,
-.support-form textarea {
+.support-form textarea,
+.support-form select,
+.support-select {
   font: inherit;
   font-weight: 400;
   color: var(--text);
@@ -4552,6 +4554,26 @@ html[data-theme="light"] .footer {
   letter-spacing: 0;
   font-size: 0.95rem;
   transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+  width: 100%;
+}
+.support-form select,
+.support-select {
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  padding-right: 40px;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--text) 50%),
+    linear-gradient(135deg, var(--text) 50%, transparent 50%);
+  background-position:
+    calc(100% - 18px) 50%,
+    calc(100% - 12px) 50%;
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
+}
+.support-form select option {
+  background: var(--panel-solid, #0a0a0a);
+  color: var(--text);
 }
 .support-form textarea {
   min-height: 132px;
@@ -4563,14 +4585,31 @@ html[data-theme="light"] .footer {
   color: var(--mute-2);
 }
 .support-form input:hover,
-.support-form textarea:hover {
+.support-form textarea:hover,
+.support-form select:hover,
+.support-select:hover {
   border-color: var(--line-strong);
 }
 .support-form input:focus,
-.support-form textarea:focus {
+.support-form textarea:focus,
+.support-form select:focus,
+.support-select:focus {
   outline: none;
   border-color: var(--text);
   box-shadow: 0 0 0 3px var(--selection-bg);
+}
+.support-subject-other {
+  animation: supportOtherIn 0.2s var(--ease);
+}
+@keyframes supportOtherIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 .support-form-status {
   min-height: 1.25em;
