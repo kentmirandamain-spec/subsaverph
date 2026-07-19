@@ -138,6 +138,10 @@ window.DEALS = [
       "4K export options",
     ],
     finePrint: "Features vary by platform version. Demo listing only.",
+    howToRedeem:
+      "1. Download and open the CapCut mobile app (iOS or Android).\n2. Sign in with the Username and Password from your delivery package.\n3. Use CapCut primarily on mobile with these credentials.\n4. To use CapCut on PC: first stay logged in on the mobile app, then open CapCut on PC and scan the QR code shown on the PC using your mobile app (after you are already logged in on mobile).\n5. Do not log out of the account on mobile if you still need access.\n6. If login fails, contact support with your Order ID before trying other fixes.",
+    importantNotes:
+      "Do NOT log out of the CapCut account. If you log out, you may not be able to use the account again.\nMaximum of 2 devices only. If you log in on a 3rd device/account session, you will lose access to the account.\nLosing access from logging out or using more than 2 devices is NOT refundable.\nDo not change the username, email, password, billing, or subscription settings.\nDo not share, resell, or post the login publicly.\nPersonal use only — follow CapCut/official service terms.\nBreaking these rules voids refunds and support.",
   },
   {
     id: "capcut-std",
@@ -164,6 +168,10 @@ window.DEALS = [
       "6-month prepaid",
     ],
     finePrint: "Illustrative tier for demo catalog.",
+    howToRedeem:
+      "1. Download and open the CapCut mobile app (iOS or Android).\n2. Sign in with the Username and Password from your delivery package.\n3. Use CapCut primarily on mobile with these credentials.\n4. To use CapCut on PC: first stay logged in on the mobile app, then open CapCut on PC and scan the QR code shown on the PC using your mobile app (after you are already logged in on mobile).\n5. Do not log out of the account on mobile if you still need access.\n6. If login fails, contact support with your Order ID before trying other fixes.",
+    importantNotes:
+      "Do NOT log out of the CapCut account. If you log out, you may not be able to use the account again.\nMaximum of 2 devices only. If you log in on a 3rd device/account session, you will lose access to the account.\nLosing access from logging out or using more than 2 devices is NOT refundable.\nDo not change the username, email, password, billing, or subscription settings.\nDo not share, resell, or post the login publicly.\nPersonal use only — follow CapCut/official service terms.\nBreaking these rules voids refunds and support.",
   },
   {
     id: "netflix-prem",
