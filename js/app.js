@@ -1053,14 +1053,12 @@ function viewSupport() {
     { value: "Refund request", label: "Refund request" },
     { value: "Order status question", label: "Order status question" },
     { value: "Payment / checkout problem", label: "Payment / checkout problem" },
-    { value: "Partnership or business inquiry", label: "Partnership or business inquiry" },
-    { value: "Other", label: "Other (type your own)" },
+    { value: "Other", label: "Other" },
   ];
   const draftSubject = String(draft.subject || "").trim();
   const knownSubjects = new Set(subjectOptions.map((o) => o.value).filter(Boolean));
-  const subjectIsCustom = draftSubject && !knownSubjects.has(draftSubject);
-  const selectedSubject = subjectIsCustom ? "Other" : draftSubject;
-  const customSubjectVal = subjectIsCustom ? draftSubject : "";
+  // Prefill: match a known option, else default blank (user picks from list)
+  const selectedSubject = knownSubjects.has(draftSubject) ? draftSubject : "";
   const subjectOptsHtml = subjectOptions
     .map((o) => {
       const sel = o.value === selectedSubject ? " selected" : "";
@@ -1155,10 +1153,6 @@ function viewSupport() {
                   </select>
                 </label>
               </div>
-              <label class="support-field support-subject-other" id="supportSubjectOtherWrap"${selectedSubject === "Other" ? "" : " hidden"}>
-                Describe your subject
-                <input name="subjectOther" id="supportSubjectOther" type="text" placeholder="e.g. Can't redeem code on Netflix…" value="${escapeAttr(customSubjectVal)}" autocomplete="off" />
-              </label>
               <label class="support-field">Message
                 <textarea name="message" required rows="5" placeholder="Tell us what happened, and include any error text if you can…">${escapeHtml(draft.message || "")}</textarea>
               </label>
@@ -2009,21 +2003,6 @@ function bind() {
   if (supportForm && !supportForm.dataset.bound) {
     supportForm.dataset.bound = "1";
 
-    // Subject dropdown: show "Other" free-text when selected
-    const subjectSel = $("#supportSubject");
-    const otherWrap = $("#supportSubjectOtherWrap");
-    const otherInput = $("#supportSubjectOther");
-    const syncSubjectOther = () => {
-      const isOther = subjectSel && subjectSel.value === "Other";
-      if (otherWrap) otherWrap.hidden = !isOther;
-      if (otherInput) {
-        otherInput.required = !!isOther;
-        if (!isOther) otherInput.value = "";
-      }
-    };
-    subjectSel?.addEventListener("change", syncSubjectOther);
-    syncSubjectOther();
-
     supportForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -2033,21 +2012,12 @@ function bind() {
       if (errEl) errEl.textContent = "";
       if (okEl) okEl.textContent = "";
       const fd = new FormData(supportForm);
-      let subject = String(fd.get("subject") || "").trim();
+      const subject = String(fd.get("subject") || "").trim();
       if (!subject) {
         if (errEl) errEl.textContent = "Please select a subject.";
         toast("Please select a subject.", true);
-        subjectSel?.focus();
+        $("#supportSubject")?.focus();
         return;
-      }
-      if (subject === "Other") {
-        subject = String(fd.get("subjectOther") || "").trim();
-        if (!subject) {
-          if (errEl) errEl.textContent = "Please describe your subject.";
-          toast("Please describe your subject.", true);
-          otherInput?.focus();
-          return;
-        }
       }
       const payload = {
         name: String(fd.get("name") || "").trim(),

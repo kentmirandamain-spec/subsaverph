@@ -4598,19 +4598,7 @@ html[data-theme="light"] .footer {
   border-color: var(--text);
   box-shadow: 0 0 0 3px var(--selection-bg);
 }
-.support-subject-other {
-  animation: supportOtherIn 0.2s var(--ease);
-}
-@keyframes supportOtherIn {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
+
 .support-form-status {
   min-height: 1.25em;
   margin: 0 0 4px;
