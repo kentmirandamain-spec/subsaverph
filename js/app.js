@@ -853,22 +853,31 @@ function formatRuleLine(line) {
 }
 
 function viewHow() {
+  const s = siteSettings();
+  const step = (n) => ({
+    t: s[`howStep${n}Title`] || t(`how_step${n}_t`),
+    p: s[`howStep${n}Text`] || t(`how_step${n}_p`),
+  });
+  const s1 = step(1);
+  const s2 = step(2);
+  const s3 = step(3);
+  const s4 = step(4);
   return `
     <div class="page">
       <div class="page-inner">
-        <p class="eyebrow">${escapeHtml(t("protocol"))}</p>
-        <h1 class="page-title">${escapeHtml(t("page_how"))}</h1>
+        <p class="eyebrow">${escapeHtml(s.howEyebrow || t("protocol"))}</p>
+        <h1 class="page-title">${escapeHtml(s.howTitle || t("page_how"))}</h1>
         <div class="steps">
-          <div class="step"><em>01</em><h3>${escapeHtml(t("how_step1_t"))}</h3><p>${escapeHtml(t("how_step1_p"))}</p></div>
-          <div class="step"><em>02</em><h3>${escapeHtml(t("how_step2_t"))}</h3><p>${escapeHtml(t("how_step2_p"))}</p></div>
-          <div class="step"><em>03</em><h3>${escapeHtml(t("how_step3_t"))}</h3><p>${escapeHtml(t("how_step3_p"))}</p></div>
-          <div class="step"><em>04</em><h3>${escapeHtml(t("how_step4_t"))}</h3><p>${escapeHtml(t("how_step4_p"))}</p></div>
+          <div class="step"><em>01</em><h3>${escapeHtml(s1.t)}</h3><p>${escapeHtml(s1.p)}</p></div>
+          <div class="step"><em>02</em><h3>${escapeHtml(s2.t)}</h3><p>${escapeHtml(s2.p)}</p></div>
+          <div class="step"><em>03</em><h3>${escapeHtml(s3.t)}</h3><p>${escapeHtml(s3.p)}</p></div>
+          <div class="step"><em>04</em><h3>${escapeHtml(s4.t)}</h3><p>${escapeHtml(s4.p)}</p></div>
         </div>
         <div class="note">
-          <h3>${escapeHtml(t("demo_notice"))}</h3>
-          <p class="muted">${escapeHtml(t("demo_notice_p"))}</p>
+          <h3>${escapeHtml(s.howNoticeTitle || t("demo_notice"))}</h3>
+          <p class="muted">${escapeHtml(s.howNoticeText || t("demo_notice_p"))}</p>
           <div class="cta" style="margin:18px 0 0">
-            <a class="btn solid" href="#/deals">${escapeHtml(t("cta_browse"))}</a>
+            <a class="btn solid" href="#/deals">${escapeHtml(s.howCtaLabel || t("cta_browse"))}</a>
           </div>
         </div>
       </div>
@@ -1065,6 +1074,7 @@ function goSupportPage(opts = {}) {
 
 function viewSupport() {
   const email = supportEmailAddress();
+  const s = siteSettings();
   let draft = { orderId: "", subject: "", message: "" };
   try {
     draft = { ...draft, ...JSON.parse(sessionStorage.getItem("subsaverph_support_draft") || "{}") };
@@ -1082,17 +1092,25 @@ function viewSupport() {
   } catch {
     /* ignore */
   }
+  const defaultTopics = [
+    "Login not working",
+    "Missing code or credentials",
+    "Wrong product delivered",
+    "Payment charged but no order",
+    "Account expired early",
+    "Refund request",
+    "Order status question",
+    "Payment / checkout problem",
+    "Other",
+  ];
+  const topicLines = String(s.supportSubjectOptions || "")
+    .split(/\r?\n/)
+    .map((x) => x.trim())
+    .filter(Boolean);
+  const topics = topicLines.length ? topicLines : defaultTopics;
   const subjectOptions = [
     { value: "", label: "Select a topic…" },
-    { value: "Login not working", label: "Login not working" },
-    { value: "Missing code or credentials", label: "Missing code or credentials" },
-    { value: "Wrong product delivered", label: "Wrong product delivered" },
-    { value: "Payment charged but no order", label: "Payment charged but no order" },
-    { value: "Account expired early", label: "Account expired early" },
-    { value: "Refund request", label: "Refund request" },
-    { value: "Order status question", label: "Order status question" },
-    { value: "Payment / checkout problem", label: "Payment / checkout problem" },
-    { value: "Other", label: "Other" },
+    ...topics.map((topic) => ({ value: topic, label: topic })),
   ];
   const draftSubject = String(draft.subject || "").trim();
   const knownSubjects = new Set(subjectOptions.map((o) => o.value).filter(Boolean));
@@ -1119,11 +1137,13 @@ function viewSupport() {
     <div class="page support-page-wrap">
       <div class="page-inner support-page">
         <header class="support-hero">
-          <div class="support-hero-badge">Help center</div>
-          <h1 class="support-hero-title">We're here to help</h1>
+          <div class="support-hero-badge">${escapeHtml(s.supportPageBadge || "Help center")}</div>
+          <h1 class="support-hero-title">${escapeHtml(s.supportPageTitle || "We're here to help")}</h1>
           <p class="support-hero-lead">
-            Order issues, login problems, missing codes — reach us by email or send a message below.
-            We reply to the address you provide.
+            ${escapeHtml(
+              s.supportPageLead ||
+                "Order issues, login problems, missing codes — reach us by email or send a message below. We reply to the address you provide."
+            )}
           </p>
           <div class="support-hero-meta">
             <span class="support-pill">
@@ -1170,8 +1190,10 @@ function viewSupport() {
         <div class="support-layout">
           <section class="support-panel support-panel-form">
             <div class="support-panel-head">
-              <h2 class="support-panel-title">Send a message</h2>
-              <p class="support-panel-sub">No email app needed — we get this in our inbox and reply by email.</p>
+              <h2 class="support-panel-title">${escapeHtml(s.supportFormTitle || "Send a message")}</h2>
+              <p class="support-panel-sub">${escapeHtml(
+                s.supportFormSub || "No email app needed — we get this in our inbox and reply by email."
+              )}</p>
             </div>
             <form class="support-form" id="supportForm" novalidate>
               <div class="support-form-grid">
@@ -1762,23 +1784,30 @@ function viewSuccess() {
       ? `Logins are shown below. Email to <strong style="color:var(--text)">${escapeHtml(order.email)}</strong> was not confirmed${order.emailDetail ? ` (${escapeHtml(String(order.emailDetail).slice(0, 80))})` : ""}. Save them here.`
       : `Save your login details below.`;
 
+  const ss = siteSettings();
   return `
     <div class="success">
       <div class="success-card success-card-wide">
         <div class="ok">OK</div>
-        <h1>Order delivered</h1>
+        <h1>${escapeHtml(ss.successTitle || "Order delivered")}</h1>
         <p class="muted">Order <strong class="success-order-id">${escapeHtml(order.id)}</strong><br/>${emailNote}</p>
         <p style="margin-top:12px;font-weight:600">${escapeHtml(order.currency || getCurrencyCode())} · ${escapeHtml(order.paymentMode || "instant")} · Instant digital delivery</p>
 
         <div class="cred-panel delivery-panel" role="region" aria-label="Your product delivery">
           <div class="cred-panel-head">
-            <h2>Your access package</h2>
-            <p class="muted">Login credentials, features, instructions, and rules for each product.</p>
+            <h2>${escapeHtml(ss.successPackageTitle || "Your access package")}</h2>
+            <p class="muted">${escapeHtml(
+              ss.successPackageSub ||
+                "Login credentials, features, instructions, and rules for each product."
+            )}</p>
           </div>
           <div class="delivery-list">${deliveryPackets}</div>
         </div>
 
-        <p class="muted" style="font-size:0.8rem;margin-top:16px">Save these credentials now. Follow the instructions and rules for each product. Not affiliated with listed brands.</p>
+        <p class="muted" style="font-size:0.8rem;margin-top:16px">${escapeHtml(
+          ss.successFooterNote ||
+            "Save these credentials now. Follow the instructions and rules for each product. Not affiliated with listed brands."
+        )}</p>
         <div class="support-inline">
           <p class="muted" style="margin:0;font-size:0.9rem">Problem with this order?</p>
           <button type="button" class="btn solid" data-go-support-order="${escapeAttr(order.id || "")}" data-go-support-pay="${escapeAttr(order.providerRef || order.stripeSessionId || "")}">Contact support</button>
