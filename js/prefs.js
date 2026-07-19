@@ -1533,9 +1533,32 @@ export function setLang(lang) {
   return v;
 }
 
+/** Admin-editable English UI overrides (settings.uiStrings). Safe no-op if unused. */
+let adminUiOverrides = {};
+
+export function setAdminUiOverrides(obj) {
+  adminUiOverrides =
+    obj && typeof obj === "object" && !Array.isArray(obj) ? { ...obj } : {};
+}
+
+export function getAdminUiOverrides() {
+  return { ...adminUiOverrides };
+}
+
+export function getDefaultUiStrings() {
+  return { ...EN };
+}
+
 export function t(key, lang = getLang()) {
+  if (lang === "en" && adminUiOverrides[key] != null && String(adminUiOverrides[key]).length) {
+    return String(adminUiOverrides[key]);
+  }
   const pack = packFor(lang);
-  return pack[key] || EN[key] || key;
+  if (pack[key]) return pack[key];
+  if (adminUiOverrides[key] != null && String(adminUiOverrides[key]).length) {
+    return String(adminUiOverrides[key]);
+  }
+  return EN[key] || key;
 }
 
 export function fillLanguageSelect(selectEl) {

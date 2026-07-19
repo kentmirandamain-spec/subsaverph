@@ -36,6 +36,7 @@ import {
   setLang,
   t,
   fillLanguageSelect,
+  setAdminUiOverrides,
 } from "./prefs.js";
 import { queueTranslateDom } from "./translate.js";
 
@@ -493,8 +494,36 @@ function textToLegalHtml(raw) {
     .join("\n");
 }
 
+function applySeoMeta() {
+  const s = siteSettings();
+  if (s.seoTitle) document.title = String(s.seoTitle);
+  const setMeta = (selector, attr, val) => {
+    if (!val) return;
+    const el = document.querySelector(selector);
+    if (el) el.setAttribute(attr, String(val));
+  };
+  setMeta('meta[name="description"]', "content", s.seoDescription);
+  setMeta('meta[property="og:title"]', "content", s.seoOgTitle || s.seoTitle);
+  setMeta('meta[property="og:description"]', "content", s.seoOgDescription || s.seoDescription);
+  setMeta('meta[name="twitter:title"]', "content", s.seoOgTitle || s.seoTitle);
+  setMeta('meta[name="twitter:description"]', "content", s.seoOgDescription || s.seoDescription);
+  setMeta('meta[name="keywords"]', "content", s.seoKeywords);
+}
+
 function applySiteChrome() {
   const s = siteSettings();
+  try {
+    applySeoMeta();
+  } catch {
+    /* ignore */
+  }
+  try {
+    if (s.uiStrings && typeof s.uiStrings === "object") {
+      setAdminUiOverrides(s.uiStrings);
+    }
+  } catch {
+    /* ignore */
+  }
   const setText = (sel, val) => {
     const el = document.querySelector(sel);
     if (el && val != null && String(val).length) el.textContent = val;
@@ -2469,7 +2498,15 @@ async function loadLiveCatalog() {
         stockLeft: typeof d.stockLeft === "number" ? d.stockLeft : Number(d.stockLeft) || 0,
       }));
     }
-    if (data.settings) state.settings = data.settings;
+    if (data.settings) {
+      state.settings = data.settings;
+      try {
+        if (data.settings.uiStrings) setAdminUiOverrides(data.settings.uiStrings);
+        applySeoMeta();
+      } catch {
+        /* ignore */
+      }
+    }
     if (Array.isArray(data.brands)) window.BRANDS = data.brands;
     if (Array.isArray(data.categories)) window.CATEGORIES = data.categories;
     state.paymentMode = data.paymentMode || "instant_demo";
