@@ -1,5 +1,5 @@
 /**
- * SubSaverPH floating AI support chat (SpaceXAI backend via /api/chat).
+ * SubSaverPH floating customer help chat.
  */
 const CHAT_STORAGE_KEY = "subsaverph_chat_v1";
 
@@ -38,31 +38,66 @@ function formatReply(text) {
   return t;
 }
 
+function setStatusLabel(sub, d) {
+  if (!sub) return;
+  if (d?.provider === "groq") sub.textContent = "Online · free cloud AI";
+  else if (d?.provider === "gemini") sub.textContent = "Online · free cloud AI";
+  else if (d?.provider === "spacexai" || d?.provider === "xai") sub.textContent = "Online · cloud AI";
+  else sub.textContent = "Online · store assistant";
+}
+
 export function mountChatbot() {
   if (document.getElementById("ssphChatRoot")) return;
 
   const root = document.createElement("div");
   root.id = "ssphChatRoot";
   root.innerHTML = `
-    <button type="button" class="ssph-chat-fab" id="ssphChatFab" aria-label="Open customer help chat">
-      <span class="ssph-chat-fab-icon" aria-hidden="true">💬</span>
+    <button type="button" class="ssph-chat-fab" id="ssphChatFab" aria-label="Open help chat" aria-expanded="false">
+      <span class="ssph-chat-fab-ring" aria-hidden="true"></span>
+      <span class="ssph-chat-fab-core" aria-hidden="true">
+        <svg class="ssph-chat-fab-svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12a8.5 8.5 0 0 1-8.5 8.5c-1.3 0-2.5-.3-3.6-.8L3 21l1.4-4.1A8.4 8.4 0 0 1 3.5 12 8.5 8.5 0 1 1 21 12Z"/>
+          <path d="M8.5 12h.01M12 12h.01M15.5 12h.01"/>
+        </svg>
+        <svg class="ssph-chat-fab-close-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+          <path d="M6 6l12 12M18 6L6 18"/>
+        </svg>
+      </span>
       <span class="ssph-chat-fab-label">Help</span>
     </button>
+
     <section class="ssph-chat-panel" id="ssphChatPanel" hidden aria-label="Customer help chat">
+      <div class="ssph-chat-glow" aria-hidden="true"></div>
       <header class="ssph-chat-head">
-        <div>
-          <strong>Free Help Chat</strong>
-          <p class="ssph-chat-sub" id="ssphChatSub">Free store assistant · products, payment, delivery, rules</p>
+        <div class="ssph-chat-brand">
+          <span class="ssph-chat-avatar" aria-hidden="true">S</span>
+          <div class="ssph-chat-brand-text">
+            <strong>SubSaverPH Help</strong>
+            <p class="ssph-chat-sub" id="ssphChatSub"><span class="ssph-chat-dot" aria-hidden="true"></span> Online · store assistant</p>
+          </div>
         </div>
-        <button type="button" class="ssph-chat-close" id="ssphChatClose" aria-label="Close chat">✕</button>
+        <div class="ssph-chat-head-actions">
+          <button type="button" class="ssph-chat-icon-btn" id="ssphChatClear" title="Clear chat" aria-label="Clear chat">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M9 7V5h6v2M8 7l1 12h6l1-12"/></svg>
+          </button>
+          <button type="button" class="ssph-chat-icon-btn" id="ssphChatClose" aria-label="Close chat">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          </button>
+        </div>
       </header>
+
       <div class="ssph-chat-messages" id="ssphChatMessages" role="log" aria-live="polite"></div>
-      <form class="ssph-chat-form" id="ssphChatForm">
-        <input type="text" id="ssphChatInput" name="message" autocomplete="off" maxlength="2000"
-          placeholder="Ask about products, payment, login…" required />
-        <button type="submit" class="btn solid sm" id="ssphChatSend">Send</button>
-      </form>
-      <p class="ssph-chat-foot">Free store assistant · <a href="#/support">Human support</a></p>
+
+      <div class="ssph-chat-composer">
+        <form class="ssph-chat-form" id="ssphChatForm">
+          <input type="text" id="ssphChatInput" name="message" autocomplete="off" maxlength="2000"
+            placeholder="Ask about payment, login, rules…" required />
+          <button type="submit" class="ssph-chat-send" id="ssphChatSend" aria-label="Send message">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3.4 20.6 21 12 3.4 3.4 3 10l11 2L3 14z"/></svg>
+          </button>
+        </form>
+        <p class="ssph-chat-foot">Store help only · <a href="#/support">Human support</a></p>
+      </div>
     </section>
   `;
   document.body.appendChild(root);
@@ -70,6 +105,7 @@ export function mountChatbot() {
   const fab = root.querySelector("#ssphChatFab");
   const panel = root.querySelector("#ssphChatPanel");
   const closeBtn = root.querySelector("#ssphChatClose");
+  const clearBtn = root.querySelector("#ssphChatClear");
   const form = root.querySelector("#ssphChatForm");
   const input = root.querySelector("#ssphChatInput");
   const list = root.querySelector("#ssphChatMessages");
@@ -79,20 +115,27 @@ export function mountChatbot() {
   let messages = loadHistory();
   let busy = false;
 
+  function welcomeHtml() {
+    return `
+      <div class="ssph-chat-row bot">
+        <span class="ssph-chat-mini-avatar" aria-hidden="true">S</span>
+        <div class="ssph-chat-bubble bot">
+          Hi — I’m your SubSaverPH help assistant. Ask about products, prices, payment, login after pay, account rules, or refunds.
+        </div>
+      </div>
+      <div class="ssph-chat-suggestions" role="list">
+        <button type="button" data-suggest="Hi, I need help choosing a product">Need help</button>
+        <button type="button" data-suggest="What are CapCut account rules?">CapCut rules</button>
+        <button type="button" data-suggest="How do I receive my login after payment?">After payment</button>
+        <button type="button" data-suggest="How do refunds work?">Refunds</button>
+        <button type="button" data-suggest="What products do you sell and roughly how much?">Products</button>
+        <button type="button" data-suggest="What payment methods do you accept?">Payments</button>
+      </div>`;
+  }
+
   function renderMessages() {
     if (!messages.length) {
-      list.innerHTML = `
-        <div class="ssph-chat-bubble bot">
-          Hi! I’m your <strong>free</strong> SubSaverPH help chat. Ask about products, prices, payment, login after pay, CapCut rules, and refunds — no sign-up needed.
-        </div>
-        <div class="ssph-chat-suggestions">
-          <button type="button" data-suggest="Hi, I need help choosing a product">Need help</button>
-          <button type="button" data-suggest="What are CapCut account rules?">CapCut rules</button>
-          <button type="button" data-suggest="How do I receive my login after payment?">After payment</button>
-          <button type="button" data-suggest="How do refunds work?">Refunds</button>
-          <button type="button" data-suggest="What products do you sell and roughly how much?">Products</button>
-          <button type="button" data-suggest="What payment methods do you accept?">Payments</button>
-        </div>`;
+      list.innerHTML = welcomeHtml();
       list.querySelectorAll("[data-suggest]").forEach((btn) => {
         btn.addEventListener("click", () => {
           input.value = btn.getAttribute("data-suggest") || "";
@@ -103,9 +146,10 @@ export function mountChatbot() {
     }
     list.innerHTML = messages
       .map((m) => {
-        const cls = m.role === "user" ? "user" : "bot";
-        const body = m.role === "user" ? escapeHtml(m.content) : formatReply(m.content);
-        return `<div class="ssph-chat-bubble ${cls}">${body}</div>`;
+        if (m.role === "user") {
+          return `<div class="ssph-chat-row user"><div class="ssph-chat-bubble user">${escapeHtml(m.content)}</div></div>`;
+        }
+        return `<div class="ssph-chat-row bot"><span class="ssph-chat-mini-avatar" aria-hidden="true">S</span><div class="ssph-chat-bubble bot">${formatReply(m.content)}</div></div>`;
       })
       .join("");
     list.scrollTop = list.scrollHeight;
@@ -113,13 +157,15 @@ export function mountChatbot() {
 
   function openPanel() {
     panel.hidden = false;
+    root.classList.add("is-open");
     fab.setAttribute("aria-expanded", "true");
     renderMessages();
-    setTimeout(() => input.focus(), 50);
+    setTimeout(() => input.focus(), 80);
   }
 
   function closePanel() {
     panel.hidden = true;
+    root.classList.remove("is-open");
     fab.setAttribute("aria-expanded", "false");
   }
 
@@ -128,6 +174,12 @@ export function mountChatbot() {
     else closePanel();
   });
   closeBtn.addEventListener("click", closePanel);
+  clearBtn?.addEventListener("click", () => {
+    messages = [];
+    saveHistory(messages);
+    renderMessages();
+    input.focus();
+  });
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -140,9 +192,15 @@ export function mountChatbot() {
     renderMessages();
     busy = true;
     sendBtn.disabled = true;
+    root.classList.add("is-busy");
+
     const thinking = document.createElement("div");
-    thinking.className = "ssph-chat-bubble bot ssph-chat-thinking";
-    thinking.textContent = "Thinking…";
+    thinking.className = "ssph-chat-row bot ssph-chat-thinking-row";
+    thinking.innerHTML = `
+      <span class="ssph-chat-mini-avatar" aria-hidden="true">S</span>
+      <div class="ssph-chat-bubble bot ssph-chat-thinking" aria-label="Thinking">
+        <span></span><span></span><span></span>
+      </div>`;
     list.appendChild(thinking);
     list.scrollTop = list.scrollHeight;
 
@@ -161,17 +219,9 @@ export function mountChatbot() {
         "Sorry, I could not answer right now. Please use Support with your Order ID.";
       messages.push({ role: "assistant", content: reply });
       saveHistory(messages);
-      if (data.provider === "free" || data.provider === "assistant" || data.provider === "fallback") {
-        sub.textContent = "Free store assistant · products, payment, delivery, rules";
-      } else if (data.provider === "groq") {
-        sub.textContent = "Free cloud AI (Groq) · store help";
-      } else if (data.provider === "gemini") {
-        sub.textContent = "Free cloud AI (Gemini) · store help";
-      } else if (data.provider === "xai" || data.provider === "spacexai") {
-        sub.textContent = "Cloud AI (Grok) · store help";
-      }
+      setStatusLabel(sub, data);
       renderMessages();
-    } catch (err) {
+    } catch {
       thinking.remove();
       messages.push({
         role: "assistant",
@@ -182,23 +232,16 @@ export function mountChatbot() {
     } finally {
       busy = false;
       sendBtn.disabled = false;
+      root.classList.remove("is-busy");
       input.focus();
     }
   });
 
-  // Status badge
   fetch("/api/chat/status", { credentials: "same-origin" })
     .then((r) => r.json())
-    .then((d) => {
-      if (d.provider === "groq") sub.textContent = "Free cloud AI (Groq) · store help";
-      else if (d.provider === "gemini") sub.textContent = "Free cloud AI (Gemini) · store help";
-      else if (d.provider === "spacexai" || d.provider === "xai")
-        sub.textContent = "Cloud AI (Grok) · store help";
-      else sub.textContent = "Free store assistant · products, payment, delivery, rules";
-    })
+    .then((d) => setStatusLabel(sub, d))
     .catch(() => {});
 
-  // Open help when landing on support or ?chat=1
   try {
     const wantChat =
       /#\/support/i.test(location.hash || "") ||
@@ -214,10 +257,12 @@ export function mountChatbot() {
 
 /** Open the help chat from other UI (e.g. support page). */
 export function openChatbot() {
+  const root = document.getElementById("ssphChatRoot");
   const fab = document.getElementById("ssphChatFab");
   const panel = document.getElementById("ssphChatPanel");
   if (!fab || !panel) return;
   panel.hidden = false;
+  root?.classList.add("is-open");
   fab.setAttribute("aria-expanded", "true");
   document.getElementById("ssphChatInput")?.focus();
 }
