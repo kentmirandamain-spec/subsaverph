@@ -114,7 +114,7 @@ const EN = {
   platforms_title: "Select a service",
   catalog_title: "Highest savings",
   mission_title: "Stack subscriptions without stacking full price",
-  mission_text: "SuperGrok, Canva, CapCut, Netflix, and YouTube at outlet rates.",
+  mission_text: "AI, Design, Video, and Streaming plans at outlet rates.",
   strip1: "Secure checkout",
   strip2: "Searchable FX pay",
   strip3: "Instant digital codes",
