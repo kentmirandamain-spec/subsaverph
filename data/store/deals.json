@@ -25,7 +25,10 @@
       "Instant digital code"
     ],
     "finePrint": "Demo listing - not affiliated with xAI. Features depend on region and account eligibility.",
-    "active": true
+    "active": true,
+    "sellerId": "platform",
+    "listingStatus": "live",
+    "sellerName": "SubSaverPH"
   },
   {
     "id": "supergrok-1m",
@@ -53,7 +56,10 @@
       "Instant digital code"
     ],
     "finePrint": "Demo listing - not affiliated with xAI. Fixed PHP 399 base price (converts when you change currency).",
-    "active": true
+    "active": true,
+    "sellerId": "platform",
+    "listingStatus": "live",
+    "sellerName": "SubSaverPH"
   },
   {
     "id": "canva-pro",
@@ -81,7 +87,10 @@
       "Magic Studio features"
     ],
     "finePrint": "Seat limits may apply. Demo product - not an official Canva reseller.",
-    "active": true
+    "active": true,
+    "sellerId": "platform",
+    "listingStatus": "live",
+    "sellerName": "SubSaverPH"
   },
   {
     "id": "canva-teams",
@@ -109,7 +118,10 @@
       "Admin controls"
     ],
     "finePrint": "Seat count is fixed for the prepaid term. Demo only.",
-    "active": true
+    "active": true,
+    "sellerId": "platform",
+    "listingStatus": "live",
+    "sellerName": "SubSaverPH"
   },
   {
     "id": "capcut-pro",
@@ -137,7 +149,10 @@
       "4K export options"
     ],
     "finePrint": "Features vary by platform version. Demo listing only.",
-    "active": true
+    "active": true,
+    "sellerId": "platform",
+    "listingStatus": "live",
+    "sellerName": "SubSaverPH"
   },
   {
     "id": "capcut-std",
@@ -164,7 +179,10 @@
       "6-month prepaid"
     ],
     "finePrint": "Illustrative tier for demo catalog.",
-    "active": true
+    "active": true,
+    "sellerId": "platform",
+    "listingStatus": "live",
+    "sellerName": "SubSaverPH"
   },
   {
     "id": "netflix-prem",
@@ -192,7 +210,10 @@
       "Ad-free catalog"
     ],
     "finePrint": "Region and household rules apply. Not affiliated with Netflix - demo storefront only.",
-    "active": true
+    "active": true,
+    "sellerId": "platform",
+    "listingStatus": "live",
+    "sellerName": "SubSaverPH"
   },
   {
     "id": "netflix-std",
@@ -220,7 +241,10 @@
       "12-month term"
     ],
     "finePrint": "Plan details are simplified for this demo.",
-    "active": true
+    "active": true,
+    "sellerId": "platform",
+    "listingStatus": "live",
+    "sellerName": "SubSaverPH"
   },
   {
     "id": "yt-premium",
@@ -248,7 +272,10 @@
       "YouTube extras"
     ],
     "finePrint": "Not affiliated with Google/YouTube. Demo product only.",
-    "active": true
+    "active": true,
+    "sellerId": "platform",
+    "listingStatus": "live",
+    "sellerName": "SubSaverPH"
   },
   {
     "id": "yt-family",
@@ -276,6 +303,9 @@
       "6-month prepaid"
     ],
     "finePrint": "Household verification may be required by the provider.",
-    "active": true
+    "active": true,
+    "sellerId": "platform",
+    "listingStatus": "live",
+    "sellerName": "SubSaverPH"
   }
 ]

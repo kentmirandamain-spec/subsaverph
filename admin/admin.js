@@ -15,6 +15,10 @@ const state = {
   stockCodes: [],
   orders: [],
   supportMessages: [],
+  sellers: [],
+  pendingListings: [],
+  payouts: [],
+  payoutFilter: "held",
 };
 
 function friendlyApiError(status, raw, data) {
@@ -98,11 +102,15 @@ function shell(content) {
         <button type="button" data-tab="deals" class="${state.tab === "deals" ? "active" : ""}">Products</button>
         <button type="button" data-tab="stock" class="${state.tab === "stock" ? "active" : ""}">Codes / Stock</button>
         <button type="button" data-tab="orders" class="${state.tab === "orders" ? "active" : ""}">Orders</button>
+        <button type="button" data-tab="sellers" class="${state.tab === "sellers" ? "active" : ""}">Sellers</button>
+        <button type="button" data-tab="listings" class="${state.tab === "listings" ? "active" : ""}">Listing queue</button>
+        <button type="button" data-tab="payouts" class="${state.tab === "payouts" ? "active" : ""}">Payouts</button>
         <button type="button" data-tab="support" class="${state.tab === "support" ? "active" : ""}">Support inbox</button>
         <button type="button" data-tab="emailtest" class="${state.tab === "emailtest" ? "active" : ""}">★ Test email</button>
         <button type="button" data-tab="settings" class="${state.tab === "settings" ? "active" : ""}">Site content</button>
         <button type="button" data-tab="account" class="${state.tab === "account" ? "active" : ""}">Account</button>
         <a href="/" target="_blank" rel="noopener">↗ View live site</a>
+        <a href="/seller" target="_blank" rel="noopener">↗ Seller portal</a>
         <button type="button" id="logoutBtn">Log out</button>
         <p class="muted" style="margin-top:24px;padding:0 12px">Signed in as ${escapeHtml(state.user || "admin")}</p>
       </aside>
@@ -173,6 +181,23 @@ function settingsView() {
     <div class="top"><h1>Site content</h1></div>
     <p class="muted">Edit every major text block on the storefront. Save once — the live site updates immediately.</p>
     <form class="panel" id="settingsForm">
+      <h3 class="settings-h">Marketplace</h3>
+      <div class="grid2">
+        <label>Platform fee % (your cut on each sale)
+          <input name="platformFeePercent" type="number" min="0" max="100" step="0.1" value="${escapeAttr(s.platformFeePercent ?? 20)}" />
+        </label>
+        <label>Marketplace enabled
+          <select name="marketplaceEnabled">
+            <option value="true" ${s.marketplaceEnabled !== false ? "selected" : ""}>Yes — sellers can register</option>
+            <option value="false" ${s.marketplaceEnabled === false ? "selected" : ""}>No — closed</option>
+          </select>
+        </label>
+      </div>
+      <p class="muted" style="margin-top:-6px;margin-bottom:14px;font-size:0.85rem">
+        Fee is calculated at checkout. Seller earnings stay <strong>held</strong> until you release them under Payouts.
+        If you refund a buyer in Stripe/PayMongo, cancel the matching payout row.
+      </p>
+
       <h3 class="settings-h">Brand &amp; contact</h3>
       <div class="grid2">
         <label>Site name<input name="siteName" value="${escapeAttr(s.siteName || "")}" /></label>
@@ -393,6 +418,102 @@ function ordersView() {
     </div>`;
 }
 
+function sellersView() {
+  const rows = (state.sellers || [])
+    .map((s) => {
+      const bal = s.balances || {};
+      return `
+      <tr>
+        <td><strong>${escapeHtml(s.displayName || "")}</strong>
+          <div class="muted">${escapeHtml(s.email || "")}</div>
+          <div class="muted">${escapeHtml(s.id || "")}</div>
+        </td>
+        <td><span class="badge">${escapeHtml(s.status || "")}</span></td>
+        <td class="muted">${escapeHtml(s.payoutMethod || "—")}<br/>${escapeHtml(s.payoutDetails || "")}</td>
+        <td class="muted">Held ₱${Number(bal.held || 0).toFixed(2)}<br/>Released ₱${Number(bal.released || 0).toFixed(2)}<br/>Paid ₱${Number(bal.paid || 0).toFixed(2)}</td>
+        <td class="row-actions">
+          ${s.status !== "approved" ? `<button type="button" class="btn" data-seller-status="${escapeAttr(s.id)}" data-status="approved">Approve</button>` : ""}
+          ${s.status !== "suspended" ? `<button type="button" class="btn ghost" data-seller-status="${escapeAttr(s.id)}" data-status="suspended">Suspend</button>` : ""}
+          ${s.status !== "rejected" ? `<button type="button" class="btn ghost" data-seller-status="${escapeAttr(s.id)}" data-status="rejected">Reject</button>` : ""}
+        </td>
+      </tr>`;
+    })
+    .join("");
+  return `
+    <div class="top"><h1>Sellers</h1></div>
+    <p class="muted">Public registration at <code>/seller</code>. Approve before they can list products or add stock.</p>
+    <div class="panel" style="overflow:auto">
+      <table class="table">
+        <thead><tr><th>Seller</th><th>Status</th><th>Payout info</th><th>Balances</th><th></th></tr></thead>
+        <tbody>${rows || `<tr><td colspan="5" class="muted">No sellers yet.</td></tr>`}</tbody>
+      </table>
+    </div>`;
+}
+
+function listingsQueueView() {
+  const rows = (state.pendingListings || [])
+    .map(
+      (d) => `
+      <tr>
+        <td><strong>${escapeHtml(d.name || "")}</strong><div class="muted">${escapeHtml(d.id || "")}</div></td>
+        <td>${escapeHtml(d.sellerName || d.sellerId || "")}</td>
+        <td>₱${Number(d.price || 0).toFixed(2)} <span class="muted">${escapeHtml(d.priceBase || "")}</span></td>
+        <td class="row-actions">
+          <button type="button" class="btn" data-listing="${escapeAttr(d.id)}" data-listing-status="live">Approve live</button>
+          <button type="button" class="btn ghost" data-listing="${escapeAttr(d.id)}" data-listing-status="rejected">Reject</button>
+        </td>
+      </tr>`
+    )
+    .join("");
+  return `
+    <div class="top"><h1>Listing queue</h1></div>
+    <p class="muted">Seller products waiting for approval before they appear on the storefront.</p>
+    <div class="panel" style="overflow:auto">
+      <table class="table">
+        <thead><tr><th>Product</th><th>Seller</th><th>Price</th><th></th></tr></thead>
+        <tbody>${rows || `<tr><td colspan="4" class="muted">No pending listings.</td></tr>`}</tbody>
+      </table>
+    </div>`;
+}
+
+function payoutsView() {
+  const f = state.payoutFilter || "held";
+  const rows = (state.payouts || [])
+    .filter((p) => !f || f === "all" || p.status === f)
+    .map((p) => {
+      return `
+      <tr>
+        <td><strong>${escapeHtml(p.id || "")}</strong><div class="muted">${escapeHtml(p.createdAt || "")}</div></td>
+        <td>${escapeHtml(p.sellerName || p.sellerId || "")}<div class="muted">Order ${escapeHtml(p.orderId || "")}</div></td>
+        <td>Gross ₱${Number(p.gross || 0).toFixed(2)}<br/>Fee ₱${Number(p.fee || 0).toFixed(2)}<br/><strong>Net ₱${Number(p.net || 0).toFixed(2)}</strong></td>
+        <td><span class="badge">${escapeHtml(p.status || "")}</span></td>
+        <td class="row-actions">
+          ${p.status === "held" ? `<button type="button" class="btn" data-payout-release="${escapeAttr(p.id)}">Release</button>` : ""}
+          ${p.status === "held" || p.status === "released" ? `<button type="button" class="btn" data-payout-paid="${escapeAttr(p.id)}">Mark paid</button>` : ""}
+          ${p.status !== "paid" && p.status !== "cancelled" ? `<button type="button" class="btn ghost" data-payout-cancel="${escapeAttr(p.id)}">Cancel</button>` : ""}
+        </td>
+      </tr>`;
+    })
+    .join("");
+  return `
+    <div class="top"><h1>Payouts</h1></div>
+    <p class="muted">After a sale, seller net is <strong>held</strong>. Release when ready, then send GCash/bank offline and Mark paid. Cancel if you refunded the buyer.</p>
+    <div class="row-actions" style="margin-bottom:12px">
+      ${["held", "released", "paid", "cancelled", "all"]
+        .map(
+          (k) =>
+            `<button type="button" class="btn ${f === k ? "" : "ghost"}" data-payout-filter="${k}">${k}</button>`
+        )
+        .join("")}
+    </div>
+    <div class="panel" style="overflow:auto">
+      <table class="table">
+        <thead><tr><th>Payout</th><th>Seller / order</th><th>Amounts</th><th>Status</th><th></th></tr></thead>
+        <tbody>${rows || `<tr><td colspan="5" class="muted">No payouts in this filter.</td></tr>`}</tbody>
+      </table>
+    </div>`;
+}
+
 function supportInboxView() {
   const rows = (state.supportMessages || [])
     .map((m) => {
@@ -580,6 +701,9 @@ function render() {
   else if (state.tab === "stock") content = stockView();
   else if (state.tab === "orders") content = ordersView();
   else if (state.tab === "support") content = supportInboxView();
+  else if (state.tab === "sellers") content = sellersView();
+  else if (state.tab === "listings") content = listingsQueueView();
+  else if (state.tab === "payouts") content = payoutsView();
   else content = dealsView();
 
   app.innerHTML = shell(content);
@@ -596,10 +720,97 @@ function bindShell() {
         if (state.tab === "stock") await loadInventory();
         if (state.tab === "orders") await loadOrders();
         if (state.tab === "support") await loadSupportMessages();
+        if (state.tab === "sellers") await loadSellers();
+        if (state.tab === "listings") await loadPendingListings();
+        if (state.tab === "payouts") await loadPayouts();
       } catch (err) {
         toast(err.message, true);
       }
       render();
+    });
+  });
+
+  $$("[data-seller-status]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      try {
+        await api(`/api/admin/sellers/${encodeURIComponent(btn.dataset.sellerStatus)}`, {
+          method: "PUT",
+          body: JSON.stringify({ status: btn.dataset.status }),
+        });
+        await loadSellers();
+        toast(`Seller ${btn.dataset.status}`);
+      } catch (err) {
+        toast(err.message, true);
+      }
+    });
+  });
+
+  $$("[data-listing]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      try {
+        await api(`/api/admin/deals/${encodeURIComponent(btn.dataset.listing)}/listing`, {
+          method: "PUT",
+          body: JSON.stringify({ listingStatus: btn.dataset.listingStatus }),
+        });
+        await loadPendingListings();
+        await loadAll();
+        toast(`Listing ${btn.dataset.listingStatus}`);
+      } catch (err) {
+        toast(err.message, true);
+      }
+    });
+  });
+
+  $$("[data-payout-filter]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      state.payoutFilter = btn.dataset.payoutFilter;
+      render();
+    });
+  });
+
+  $$("[data-payout-release]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      try {
+        await api(`/api/admin/payouts/${encodeURIComponent(btn.dataset.payoutRelease)}/release`, {
+          method: "POST",
+          body: "{}",
+        });
+        await loadPayouts();
+        toast("Payout released — send money to seller, then Mark paid");
+      } catch (err) {
+        toast(err.message, true);
+      }
+    });
+  });
+
+  $$("[data-payout-paid]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      try {
+        await api(`/api/admin/payouts/${encodeURIComponent(btn.dataset.payoutPaid)}/paid`, {
+          method: "POST",
+          body: "{}",
+        });
+        await loadPayouts();
+        toast("Marked paid");
+      } catch (err) {
+        toast(err.message, true);
+      }
+    });
+  });
+
+  $$("[data-payout-cancel]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      if (!confirm("Cancel this payout (e.g. after refunding the buyer)?")) return;
+      try {
+        await api(`/api/admin/payouts/${encodeURIComponent(btn.dataset.payoutCancel)}/cancel`, {
+          method: "POST",
+          body: JSON.stringify({ note: "Cancelled by admin" }),
+        });
+        await loadPayouts();
+        toast("Payout cancelled");
+      } catch (err) {
+        toast(err.message, true);
+      }
     });
   });
 
@@ -724,6 +935,11 @@ function bindShell() {
     e.preventDefault();
     const fd = new FormData(e.target);
     const payload = Object.fromEntries(fd.entries());
+    if (payload.platformFeePercent != null) {
+      payload.platformFeePercent = Number(payload.platformFeePercent);
+    }
+    if (payload.marketplaceEnabled === "true") payload.marketplaceEnabled = true;
+    if (payload.marketplaceEnabled === "false") payload.marketplaceEnabled = false;
     try {
       const data = await api("/api/admin/settings", {
         method: "PUT",
@@ -832,6 +1048,21 @@ async function loadOrders() {
 async function loadSupportMessages() {
   const data = await api("/api/admin/support-messages");
   state.supportMessages = data.messages || [];
+}
+
+async function loadSellers() {
+  const data = await api("/api/admin/sellers");
+  state.sellers = data.sellers || [];
+}
+
+async function loadPendingListings() {
+  const data = await api("/api/admin/listings/pending");
+  state.pendingListings = data.deals || [];
+}
+
+async function loadPayouts() {
+  const data = await api("/api/admin/payouts");
+  state.payouts = data.payouts || [];
 }
 
 async function boot() {
