@@ -852,38 +852,6 @@ function formatRuleLine(line) {
   return esc.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
 }
 
-function viewHow() {
-  const s = siteSettings();
-  const step = (n) => ({
-    t: s[`howStep${n}Title`] || t(`how_step${n}_t`),
-    p: s[`howStep${n}Text`] || t(`how_step${n}_p`),
-  });
-  const s1 = step(1);
-  const s2 = step(2);
-  const s3 = step(3);
-  const s4 = step(4);
-  return `
-    <div class="page">
-      <div class="page-inner">
-        <p class="eyebrow">${escapeHtml(s.howEyebrow || t("protocol"))}</p>
-        <h1 class="page-title">${escapeHtml(s.howTitle || t("page_how"))}</h1>
-        <div class="steps">
-          <div class="step"><em>01</em><h3>${escapeHtml(s1.t)}</h3><p>${escapeHtml(s1.p)}</p></div>
-          <div class="step"><em>02</em><h3>${escapeHtml(s2.t)}</h3><p>${escapeHtml(s2.p)}</p></div>
-          <div class="step"><em>03</em><h3>${escapeHtml(s3.t)}</h3><p>${escapeHtml(s3.p)}</p></div>
-          <div class="step"><em>04</em><h3>${escapeHtml(s4.t)}</h3><p>${escapeHtml(s4.p)}</p></div>
-        </div>
-        <div class="note">
-          <h3>${escapeHtml(s.howNoticeTitle || t("demo_notice"))}</h3>
-          <p class="muted">${escapeHtml(s.howNoticeText || t("demo_notice_p"))}</p>
-          <div class="cta" style="margin:18px 0 0">
-            <a class="btn solid" href="#/deals">${escapeHtml(s.howCtaLabel || t("cta_browse"))}</a>
-          </div>
-        </div>
-      </div>
-    </div>`;
-}
-
 function viewLegalShell(eyebrow, title, updated, bodyHtml) {
   return `
     <div class="page">
@@ -2036,7 +2004,8 @@ function render() {
         html = viewSearch();
         break;
       case "how":
-        html = viewHow();
+        // How it works page removed — send old links home
+        html = viewHome();
         break;
       case "about":
         html = viewAbout();
@@ -2613,7 +2582,7 @@ function bridgePathToHash() {
     const map = {
       deals: "deals",
       search: "search",
-      how: "how",
+      how: "home",
       about: "about",
       support: "support",
       contact: "support",

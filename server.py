@@ -3768,7 +3768,6 @@ def sitemap_xml():
         (f"{base}/", "1.0", "daily"),
         (f"{base}/deals", "0.9", "daily"),
         (f"{base}/search", "0.7", "weekly"),
-        (f"{base}/how", "0.6", "monthly"),
         (f"{base}/about", "0.6", "monthly"),
         (f"{base}/support", "0.7", "monthly"),
         (f"{base}/faq", "0.8", "weekly"),
@@ -3805,7 +3804,6 @@ _SEO_SPA_PATHS = frozenset(
     {
         "deals",
         "search",
-        "how",
         "about",
         "support",
         "faq",
@@ -3819,7 +3817,6 @@ _SEO_SPA_PATHS = frozenset(
 
 @app.get("/deals")
 @app.get("/search")
-@app.get("/how")
 @app.get("/about")
 @app.get("/support")
 @app.get("/faq")
@@ -3830,6 +3827,12 @@ _SEO_SPA_PATHS = frozenset(
 def seo_spa_shell():
     """Real paths for Google (not only hash routes)."""
     return _serve_html("index.html")
+
+
+@app.get("/how")
+def how_page_removed():
+    """How it works page removed — keep old links from breaking."""
+    return redirect("/", code=302)
 
 
 @app.get("/product/<deal_id>")

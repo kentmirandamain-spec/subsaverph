@@ -312,7 +312,6 @@ const UI_STRING_GROUPS = [
       ["page_deals", "All deals page title"],
       ["page_search", "Search page title"],
       ["page_results", "Results page title"],
-      ["page_how", "How it works page title (default)"],
     ],
   },
   {
@@ -377,7 +376,6 @@ const UI_STRING_GROUPS = [
       ["footer_about", "Link · About"],
       ["footer_terms", "Link · Terms"],
       ["footer_privacy", "Link · Privacy"],
-      ["footer_how", "Link · How it works"],
       ["footer_all_deals", "Link · All deals"],
       ["footer_contact", "Link · Support"],
       ["brand_meta", "Meta · Brand"],
@@ -418,7 +416,6 @@ const UI_STRING_GROUPS = [
     keys: [
       ["last_updated", "Last updated label"],
       ["back_to_home", "Back to home link"],
-      ["protocol", "How-it-works default eyebrow"],
     ],
   },
 ];
@@ -483,18 +480,17 @@ function settingsView() {
     <nav class="page-map" aria-label="Jump to section">
       <span class="page-map-label">Jump to</span>
       <a href="#sc-home">1 · Homepage</a>
-      <a href="#sc-how">2 · How it works</a>
-      <a href="#sc-about">3 · About</a>
-      <a href="#sc-support">4 · Support</a>
-      <a href="#sc-checkout">5 · Checkout rules</a>
-      <a href="#sc-success">6 · After payment</a>
-      <a href="#sc-footer">7 · Footer</a>
-      <a href="#sc-terms">8 · Terms</a>
-      <a href="#sc-privacy">9 · Privacy</a>
-      <a href="#sc-chat">10 · Help chat</a>
-      <a href="#sc-seo">11 · Google / SEO</a>
-      <a href="#sc-brand">12 · Brand &amp; contact</a>
-      <a href="#sc-ui">13 · Buttons &amp; labels</a>
+      <a href="#sc-about">2 · About</a>
+      <a href="#sc-support">3 · Support</a>
+      <a href="#sc-checkout">4 · Checkout rules</a>
+      <a href="#sc-success">5 · After payment</a>
+      <a href="#sc-footer">6 · Footer</a>
+      <a href="#sc-terms">7 · Terms</a>
+      <a href="#sc-privacy">8 · Privacy</a>
+      <a href="#sc-chat">9 · Help chat</a>
+      <a href="#sc-seo">10 · Google / SEO</a>
+      <a href="#sc-brand">11 · Brand &amp; contact</a>
+      <a href="#sc-ui">12 · Buttons &amp; labels</a>
     </nav>
 
     <form class="panel" id="settingsForm">
@@ -565,66 +561,9 @@ function settingsView() {
         </div>
       </section>
 
-      <!-- ========== 2. HOW IT WORKS ========== -->
-      <section class="settings-block" id="sc-how">
-        <h3 class="settings-h">2 · How it works page <span class="settings-page">#/how</span></h3>
-        <p class="muted settings-lead">Same layout as the How it works page: title → steps 01–04 → notice box → button.</p>
-        <div class="grid2">
-          <label>Small line above title
-            <input name="howEyebrow" value="${escapeAttr(s.howEyebrow || "Protocol")}" />
-          </label>
-          <label>Page title
-            <input name="howTitle" value="${escapeAttr(s.howTitle || "How it works")}" />
-          </label>
-        </div>
-
-        <div class="settings-sub">
-          <h4 class="settings-sub-h">Step 01</h4>
-          <div class="grid2">
-            <label>Step title<input name="howStep1Title" value="${escapeAttr(s.howStep1Title || UI_STRING_DEFAULTS.how_step1_t)}" /></label>
-            <label>Step text<input name="howStep1Text" value="${escapeAttr(s.howStep1Text || UI_STRING_DEFAULTS.how_step1_p)}" /></label>
-          </div>
-        </div>
-        <div class="settings-sub">
-          <h4 class="settings-sub-h">Step 02</h4>
-          <div class="grid2">
-            <label>Step title<input name="howStep2Title" value="${escapeAttr(s.howStep2Title || UI_STRING_DEFAULTS.how_step2_t)}" /></label>
-            <label>Step text<input name="howStep2Text" value="${escapeAttr(s.howStep2Text || UI_STRING_DEFAULTS.how_step2_p)}" /></label>
-          </div>
-        </div>
-        <div class="settings-sub">
-          <h4 class="settings-sub-h">Step 03</h4>
-          <div class="grid2">
-            <label>Step title<input name="howStep3Title" value="${escapeAttr(s.howStep3Title || UI_STRING_DEFAULTS.how_step3_t)}" /></label>
-            <label>Step text<input name="howStep3Text" value="${escapeAttr(s.howStep3Text || UI_STRING_DEFAULTS.how_step3_p)}" /></label>
-          </div>
-        </div>
-        <div class="settings-sub">
-          <h4 class="settings-sub-h">Step 04</h4>
-          <div class="grid2">
-            <label>Step title<input name="howStep4Title" value="${escapeAttr(s.howStep4Title || UI_STRING_DEFAULTS.how_step4_t)}" /></label>
-            <label>Step text<input name="howStep4Text" value="${escapeAttr(s.howStep4Text || UI_STRING_DEFAULTS.how_step4_p)}" /></label>
-          </div>
-        </div>
-
-        <div class="settings-sub">
-          <h4 class="settings-sub-h">Notice box</h4>
-          ${fieldHint("Highlighted box under the four steps")}
-          <label>Notice title
-            <input name="howNoticeTitle" value="${escapeAttr(s.howNoticeTitle || UI_STRING_DEFAULTS.demo_notice)}" />
-          </label>
-          <label>Notice text
-            <textarea name="howNoticeText" rows="2">${escapeHtml(s.howNoticeText || UI_STRING_DEFAULTS.demo_notice_p)}</textarea>
-          </label>
-        </div>
-        <label>Bottom button text
-          <input name="howCtaLabel" value="${escapeAttr(s.howCtaLabel || UI_STRING_DEFAULTS.cta_browse)}" />
-        </label>
-      </section>
-
-      <!-- ========== 3. ABOUT ========== -->
+      <!-- ========== 2. ABOUT ========== -->
       <section class="settings-block" id="sc-about">
-        <h3 class="settings-h">3 · About page <span class="settings-page">#/about</span></h3>
+        <h3 class="settings-h">2 · About page <span class="settings-page">#/about</span></h3>
         ${fieldHint("Full company story page")}
         <div class="grid2">
           <label>Page title<input name="aboutTitle" value="${escapeAttr(s.aboutTitle || "")}" /></label>
@@ -637,7 +576,7 @@ function settingsView() {
 
       <!-- ========== 4. SUPPORT ========== -->
       <section class="settings-block" id="sc-support">
-        <h3 class="settings-h">4 · Support page <span class="settings-page">#/support</span></h3>
+        <h3 class="settings-h">3 · Support page <span class="settings-page">#/support</span></h3>
         <p class="muted settings-lead">Top banner → form → topics list.</p>
         <label>Badge (small pill)
           <input name="supportPageBadge" value="${escapeAttr(s.supportPageBadge || "Help center")}" />
@@ -664,7 +603,7 @@ function settingsView() {
 
       <!-- ========== 5. CHECKOUT RULES ========== -->
       <section class="settings-block" id="sc-checkout">
-        <h3 class="settings-h">5 · Checkout rules popup <span class="settings-page">before customer pays</span></h3>
+        <h3 class="settings-h">4 · Checkout rules popup <span class="settings-page">before customer pays</span></h3>
         ${fieldHint("Popup: eyebrow → title → what you buy → rules → checkbox → button")}
         <label>Small line above title
           <input name="checkoutTermsEyebrow" value="${escapeAttr(s.checkoutTermsEyebrow || "Before you pay")}" />
@@ -691,7 +630,7 @@ function settingsView() {
 
       <!-- ========== 6. SUCCESS ========== -->
       <section class="settings-block" id="sc-success">
-        <h3 class="settings-h">6 · After payment (success page) <span class="settings-page">#/success</span></h3>
+        <h3 class="settings-h">5 · After payment (success page) <span class="settings-page">#/success</span></h3>
         ${fieldHint("Shown after successful checkout with login package")}
         <label>Success heading
           <input name="successTitle" value="${escapeAttr(s.successTitle || "Order delivered")}" />
@@ -709,7 +648,7 @@ function settingsView() {
 
       <!-- ========== 7. FOOTER (every page) ========== -->
       <section class="settings-block" id="sc-footer">
-        <h3 class="settings-h">7 · Footer <span class="settings-page">bottom of every page</span></h3>
+        <h3 class="settings-h">6 · Footer <span class="settings-page">bottom of every page</span></h3>
         <p class="muted settings-lead">Order matches the live footer: blurb → company about → details → disclaimer → copyright.</p>
 
         <div class="settings-sub">
@@ -747,7 +686,7 @@ function settingsView() {
 
       <!-- ========== 8. TERMS ========== -->
       <section class="settings-block" id="sc-terms">
-        <h3 class="settings-h">8 · Terms of Use <span class="settings-page">#/terms</span></h3>
+        <h3 class="settings-h">7 · Terms of Use <span class="settings-page">#/terms</span></h3>
         <div class="grid2">
           <label>Page title<input name="termsTitle" value="${escapeAttr(s.termsTitle || "")}" /></label>
           <label>Last updated<input name="termsUpdated" value="${escapeAttr(s.termsUpdated || "")}" /></label>
@@ -759,7 +698,7 @@ function settingsView() {
 
       <!-- ========== 9. PRIVACY ========== -->
       <section class="settings-block" id="sc-privacy">
-        <h3 class="settings-h">9 · Privacy Policy <span class="settings-page">#/privacy</span></h3>
+        <h3 class="settings-h">8 · Privacy Policy <span class="settings-page">#/privacy</span></h3>
         <div class="grid2">
           <label>Page title<input name="privacyTitle" value="${escapeAttr(s.privacyTitle || "")}" /></label>
           <label>Last updated<input name="privacyUpdated" value="${escapeAttr(s.privacyUpdated || "")}" /></label>
@@ -771,7 +710,7 @@ function settingsView() {
 
       <!-- ========== 10. HELP CHAT ========== -->
       <section class="settings-block" id="sc-chat">
-        <h3 class="settings-h">10 · Help chat bubble <span class="settings-page">bottom-right on the store</span></h3>
+        <h3 class="settings-h">9 · Help chat bubble <span class="settings-page">bottom-right on the store</span></h3>
         <label>Extra FAQ for the assistant
           <textarea name="chatbotFaq" rows="4" placeholder="Optional facts the bot should know…">${escapeHtml(s.chatbotFaq || "")}</textarea>
         </label>
@@ -782,7 +721,7 @@ function settingsView() {
 
       <!-- ========== 11. SEO (not on page body) ========== -->
       <section class="settings-block" id="sc-seo">
-        <h3 class="settings-h">11 · Google / search &amp; social <span class="settings-page">not shown as page text — search results only</span></h3>
+        <h3 class="settings-h">10 · Google / search &amp; social <span class="settings-page">not shown as page text — search results only</span></h3>
         <p class="muted settings-lead">Title &amp; description when people search Google or share a link. Prefer company wording (categories), not product brand lists.</p>
         <label>Google title
           <input name="seoTitle" value="${escapeAttr(s.seoTitle || "")}" />
@@ -805,7 +744,7 @@ function settingsView() {
 
       <!-- ========== 12. BRAND ========== -->
       <section class="settings-block" id="sc-brand">
-        <h3 class="settings-h">12 · Brand &amp; contact <span class="settings-page">site-wide settings</span></h3>
+        <h3 class="settings-h">11 · Brand &amp; contact <span class="settings-page">site-wide settings</span></h3>
         <div class="grid2">
           <label>Site name<input name="siteName" value="${escapeAttr(s.siteName || "")}" /></label>
           <label>Tagline<input name="tagline" value="${escapeAttr(s.tagline || "")}" /></label>
@@ -824,7 +763,7 @@ function settingsView() {
 
       <!-- ========== 13. UI LABELS ========== -->
       <section class="settings-block" id="sc-ui">
-        <h3 class="settings-h">13 · Buttons, menu &amp; small labels <span class="settings-page">grouped like the website</span></h3>
+        <h3 class="settings-h">12 · Buttons, menu &amp; small labels <span class="settings-page">grouped like the website</span></h3>
         <p class="muted settings-lead">Small words on buttons and menus. Grouped by where you see them. Product names stay under Products.</p>
         ${renderUiStringGroups(ui)}
       </section>
