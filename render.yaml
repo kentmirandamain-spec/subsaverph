@@ -23,3 +23,8 @@ services:
         value: "0"
       - key: LIQPAY_TRUST_RETURN
         value: "0"
+      # Set in Render Dashboard → Environment (do not commit the real key)
+      - key: XAI_API_KEY
+        sync: false
+      - key: XAI_MODEL
+        value: "grok-4.5"

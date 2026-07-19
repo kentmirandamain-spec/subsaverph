@@ -10,17 +10,29 @@ Floating chat on the storefront answers product, CapCut rules, payment, and deli
 - **Store & FAQ only** — products, checkout, delivery, rules, refunds, support. Off-topic questions are refused.
 - Tools default **off** (`XAI_CHAT_TOOLS=0`). Optional admin FAQ text: settings key `chatbotFaq`.
 
-## Render / server env
+## Render / server env (live site https://subsaverph.com)
+
+1. Get a key: https://console.x.ai → API keys  
+2. Render Dashboard → your **subsaverph** service → **Environment**  
+3. Add:
+
+| Key | Value |
+|-----|--------|
+| `XAI_API_KEY` | `xai-...` (your secret key) |
+| `XAI_MODEL` | `grok-4.5` (optional) |
+
+4. **Save** → service redeploys  
+5. Check: open the site → Help chat → header should mention Grok / AI when configured  
+6. Or: `GET https://subsaverph.com/api/chat/status` → `"aiConfigured": true`
+
+### Local `.env`
 
 ```
 XAI_API_KEY=xai-...
-# optional:
 XAI_MODEL=grok-4.5
-XAI_BASE_URL=https://api.x.ai/v1
-XAI_CHAT_TOOLS=0
 ```
 
-Get a key: https://console.x.ai — improves store/FAQ answers (still not a general chatbot).
+Copy from `.env.example`, never commit `.env`.
 
 | Mode | When |
 |------|------|
