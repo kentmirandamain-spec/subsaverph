@@ -181,7 +181,12 @@ const FALLBACK_RATES = {
 };
 
 let rates = { ...FALLBACK_RATES };
-let currentCode = localStorage.getItem(CURRENCY_KEY) || "PHP";
+let currentCode = "PHP";
+try {
+  currentCode = localStorage.getItem(CURRENCY_KEY) || "PHP";
+} catch {
+  currentCode = "PHP";
+}
 let ratesSource = "fallback";
 
 export function getCurrencyCode() {
@@ -191,7 +196,11 @@ export function getCurrencyCode() {
 export function setCurrency(code) {
   if (!code) return;
   currentCode = String(code).toUpperCase();
-  localStorage.setItem(CURRENCY_KEY, currentCode);
+  try {
+    localStorage.setItem(CURRENCY_KEY, currentCode);
+  } catch {
+    /* ignore private mode */
+  }
   window.dispatchEvent(new CustomEvent("currency:change", { detail: { code: currentCode } }));
 }
 

@@ -43,6 +43,11 @@ import { queueTranslateDom } from "./translate.js";
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 
+// Hard fallbacks so a failed catalog/import never blanks the store
+if (!Array.isArray(window.DEALS)) window.DEALS = [];
+if (!Array.isArray(window.BRANDS)) window.BRANDS = ["All"];
+if (!Array.isArray(window.CATEGORIES)) window.CATEGORIES = ["All"];
+
 const state = {
   view: "home",
   dealId: null,
@@ -64,6 +69,10 @@ const state = {
   ewalletProvider: "demo",
   paymentMethods: [],
 };
+
+function dealsList() {
+  return Array.isArray(window.DEALS) ? window.DEALS : [];
+}
 
 /** Apply data-i18n labels across static chrome */
 function applyI18n() {
@@ -307,7 +316,7 @@ function closeCart() {
 }
 
 function getDeal(id) {
-  return window.DEALS.find((d) => d.id === id);
+  return dealsList().find((d) => d.id === id);
 }
 
 function off(d) {
@@ -378,7 +387,7 @@ function card(d, highlightQ = "") {
 }
 
 function filtered() {
-  let list = [...window.DEALS];
+  let list = [...dealsList()];
   if (state.category !== "All") list = list.filter((d) => d.category === state.category);
   if (state.brand !== "All") list = list.filter((d) => d.brand === state.brand);
   if (state.query.trim()) {
@@ -404,13 +413,13 @@ function filtered() {
 }
 
 function quickTagsHTML() {
-  const tags = popularQueries(window.DEALS || []);
+  const tags = popularQueries(dealsList());
   return `
     <div class="search-tags" role="list">
       ${tags
         .map(
-          (t) =>
-            `<button type="button" class="search-tag" data-q="${escapeHtml(t)}" role="listitem">${escapeHtml(t)}</button>`
+          (tag) =>
+            `<button type="button" class="search-tag" data-q="${escapeHtml(tag)}" role="listitem">${escapeHtml(tag)}</button>`
         )
         .join("")}
     </div>`;
@@ -436,7 +445,7 @@ function searchBarHTML(placeholder = "Search SuperGrok, Netflix, Canva…") {
 
 function viewSearch() {
   const q = state.query.trim();
-  const results = q ? searchDeals(window.DEALS, q, { limit: 100 }) : [];
+  const results = q ? searchDeals(dealsList(), q, { limit: 100 }) : [];
   return `
     <div class="page">
       <div class="page-inner">
@@ -560,11 +569,12 @@ function heroTitleHtml() {
 }
 
 function viewHome() {
+  const all = dealsList();
   const q = state.query.trim();
-  const matches = q ? searchDeals(window.DEALS || [], q, { limit: 100 }) : [];
-  const top = [...window.DEALS].sort((a, b) => off(b) - off(a)).slice(0, 6);
+  const matches = q ? searchDeals(all, q, { limit: 100 }) : [];
+  const top = [...all].sort((a, b) => off(b) - off(a)).slice(0, 6);
   const s = siteSettings();
-  const brandSet = [...new Set(window.DEALS.map((d) => d.brand).filter(Boolean))];
+  const brandSet = [...new Set(all.map((d) => d.brand).filter(Boolean))];
   const monoMap = { xAI: "SG", Canva: "CV", CapCut: "CC", Netflix: "NF", YouTube: "YT" };
   const brands = brandSet.map((b) => ({
     key: b,
@@ -613,7 +623,7 @@ function viewHome() {
           <a class="btn" href="#/deals">${escapeHtml(t("cta_browse"))}</a>
         </div>
         <div class="meta">
-          <div><strong>${window.DEALS.length}</strong><span>${escapeHtml(t("meta_plans"))}</span></div>
+          <div><strong>${all.length}</strong><span>${escapeHtml(t("meta_plans"))}</span></div>
           <div><strong>5</strong><span>${escapeHtml(t("meta_platforms"))}</span></div>
           <div><strong>${CURRENCY_LIST.length}+</strong><span>${escapeHtml(t("meta_currencies"))}</span></div>
         </div>
@@ -1984,57 +1994,69 @@ function mountPageFx() {
 }
 
 function render() {
-  let html = "";
-  switch (state.view) {
-    case "deals":
-      html = viewDeals();
-      break;
-    case "deal":
-      html = viewDeal();
-      break;
-    case "search":
-      html = viewSearch();
-      break;
-    case "how":
-      html = viewHow();
-      break;
-    case "about":
-      html = viewAbout();
-      break;
-    case "terms":
-      html = viewTerms();
-      break;
-    case "privacy":
-      html = viewPrivacy();
-      break;
-    case "support":
-    case "contact":
-      html = viewSupport();
-      break;
-    case "checkout":
-      html = viewCheckout();
-      break;
-    case "success":
-      html = viewSuccess();
-      break;
-    default:
-      html = viewHome();
-  }
-  $("#app").innerHTML = html;
-  updateBadge();
-  $$("[data-rates]").forEach((el) => {
-    el.textContent = ratesNote();
-  });
-  bindProductSearch();
-  bindSearchTags();
-  mountPageFx();
-  bind();
-  syncGlobalSearchInput();
-  applySiteChrome();
-  applyI18n();
-  // Full-page translation for product text + leftover English
-  if (getLang() !== "en") {
-    queueTranslateDom(document.body, getLang());
+  try {
+    let html = "";
+    switch (state.view) {
+      case "deals":
+        html = viewDeals();
+        break;
+      case "deal":
+        html = viewDeal();
+        break;
+      case "search":
+        html = viewSearch();
+        break;
+      case "how":
+        html = viewHow();
+        break;
+      case "about":
+        html = viewAbout();
+        break;
+      case "terms":
+        html = viewTerms();
+        break;
+      case "privacy":
+        html = viewPrivacy();
+        break;
+      case "support":
+      case "contact":
+        html = viewSupport();
+        break;
+      case "checkout":
+        html = viewCheckout();
+        break;
+      case "success":
+        html = viewSuccess();
+        break;
+      default:
+        html = viewHome();
+    }
+    const root = $("#app");
+    if (!root) return;
+    root.innerHTML = html;
+    updateBadge();
+    $$("[data-rates]").forEach((el) => {
+      el.textContent = ratesNote();
+    });
+    bindProductSearch();
+    bindSearchTags();
+    mountPageFx();
+    bind();
+    syncGlobalSearchInput();
+    applySiteChrome();
+    applyI18n();
+    // Full-page translation for product text + leftover English
+    if (getLang() !== "en") {
+      queueTranslateDom(document.body, getLang());
+    }
+  } catch (err) {
+    console.error("SubSaverPH render error:", err);
+    const root = $("#app");
+    if (root) {
+      root.innerHTML = `<div class="page"><div class="page-inner empty"><h2>Something went wrong</h2><p class="muted">${escapeHtml(
+        String(err && err.message ? err.message : err)
+      )}</p><p class="muted">${dealsList().length} products loaded.</p><a class="btn solid" href="#/deals">Browse deals</a></div></div>`;
+    }
   }
 }
 
@@ -2587,33 +2609,49 @@ function bridgePathToHash() {
 }
 
 async function init() {
-  bridgePathToHash();
-  initPrefs();
-  applyI18n();
-  bindPrefsPanel();
-
-  const yearEl = document.getElementById("footerYear");
-  if (yearEl) yearEl.textContent = String(new Date().getFullYear());
-
-  await loadLiveCatalog();
-  await loadRates();
-  applyI18n();
-  bindGlobalSearch();
-  bindPrefsPanel(); // ensure language list filled after catalog
-
   try {
-    const { mountChatbot } = await import("./chatbot.js?v=free1");
-    mountChatbot();
-    window.__ssphOpenChat = async () => {
-      try {
-        const m = await import("./chatbot.js?v=free1");
-        m.openChatbot?.();
-      } catch {
-        /* ignore */
-      }
-    };
-  } catch {
-    /* chatbot optional */
+    if (!Array.isArray(window.DEALS)) window.DEALS = [];
+    if (!Array.isArray(window.BRANDS)) window.BRANDS = ["All"];
+    if (!Array.isArray(window.CATEGORIES)) window.CATEGORIES = ["All"];
+
+    bridgePathToHash();
+    initPrefs();
+    applyI18n();
+    bindPrefsPanel();
+
+    const yearEl = document.getElementById("footerYear");
+    if (yearEl) yearEl.textContent = String(new Date().getFullYear());
+
+    try {
+      await loadLiveCatalog();
+    } catch (e) {
+      console.warn("catalog load failed, using bundled deals", e);
+    }
+    try {
+      await loadRates();
+    } catch {
+      /* offline rates ok */
+    }
+    applyI18n();
+    bindGlobalSearch();
+    bindPrefsPanel();
+
+    try {
+      const { mountChatbot } = await import("./chatbot.js?v=fix2");
+      mountChatbot();
+      window.__ssphOpenChat = async () => {
+        try {
+          const m = await import("./chatbot.js?v=fix2");
+          m.openChatbot?.();
+        } catch {
+          /* ignore */
+        }
+      };
+    } catch (e) {
+      console.warn("chatbot optional fail", e);
+    }
+  } catch (err) {
+    console.error("SubSaverPH init error:", err);
   }
 
   // Logo + Home nav (and any #/home links) → always go home
@@ -2725,8 +2763,18 @@ async function init() {
     }
   });
 
-  parseRoute();
-  await loadRates();
+  try {
+    parseRoute();
+  } catch (e) {
+    console.error("parseRoute failed", e);
+    state.view = "home";
+    render();
+  }
+  try {
+    await loadRates();
+  } catch {
+    /* ignore */
+  }
   render();
 }
 
@@ -2739,4 +2787,11 @@ window.SubSaverSupport = {
   mailtoSupportUrl,
 };
 
-init();
+init().catch((e) => {
+  console.error("SubSaverPH fatal init:", e);
+  const root = document.getElementById("app");
+  if (root) {
+    root.innerHTML =
+      '<div class="page"><div class="page-inner empty"><h2>Store failed to load</h2><p class="muted">Please hard-refresh (Ctrl+F5). If it continues, contact support.</p><a class="btn solid" href="/">Reload</a></div></div>';
+  }
+});
