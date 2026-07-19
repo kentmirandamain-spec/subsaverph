@@ -321,7 +321,10 @@ function stockView() {
       <td>${s.available}</td>
       <td>${s.sold}</td>
       <td>${s.total}</td>
-      <td><button class="btn ghost" data-stock="${escapeHtml(s.productId)}">Add codes</button></td>
+      <td class="row-actions">
+        <button class="btn ghost" data-stock="${escapeHtml(s.productId)}">Add codes</button>
+        <button class="btn ghost" data-clear-stock="${escapeHtml(s.productId)}" title="Clear available, sold, and total for this product">Clear</button>
+      </td>
     </tr>`
     )
     .join("");
@@ -350,6 +353,10 @@ function stockView() {
   return `
     <div class="top"><h1>Codes / Stock (instant delivery)</h1></div>
     <p class="muted">Load digital codes for each product. Checkout auto-sends an unused code after payment.</p>
+    <div class="row-actions" style="margin-bottom:12px">
+      <button type="button" class="btn ghost" id="clearSoldOnly">Clear sold only</button>
+      <button type="button" class="btn ghost" id="clearAllStock">Clear all stock (available + sold + total)</button>
+    </div>
     ${form}
     <div class="panel" style="overflow:auto">
       <table class="table">
@@ -632,6 +639,57 @@ function bindShell() {
       await loadInventory();
       state.stockProductId = "";
       toast(`Added ${data.added} codes (${data.available} available)`);
+    } catch (err) {
+      toast(err.message, true);
+    }
+  });
+
+  $$("[data-clear-stock]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const pid = btn.dataset.clearStock;
+      if (!confirm(`Clear ALL codes for this product?\nAvailable, sold, and total will become 0.`)) return;
+      try {
+        const data = await api(`/api/admin/inventory/${encodeURIComponent(pid)}`, {
+          method: "DELETE",
+        });
+        if (state.stockProductId === pid) state.stockProductId = "";
+        await loadInventory();
+        toast(`Cleared ${data.removed || 0} codes`);
+      } catch (err) {
+        toast(err.message, true);
+      }
+    });
+  });
+
+  $("#clearSoldOnly")?.addEventListener("click", async () => {
+    if (!confirm("Remove all SOLD codes for every product? Available stock is kept.")) return;
+    try {
+      const data = await api("/api/admin/inventory/clear-all", {
+        method: "POST",
+        body: JSON.stringify({ mode: "sold" }),
+      });
+      await loadInventory();
+      toast(`Removed ${data.removed || 0} sold codes`);
+    } catch (err) {
+      toast(err.message, true);
+    }
+  });
+
+  $("#clearAllStock")?.addEventListener("click", async () => {
+    if (
+      !confirm(
+        "Clear ALL stock for every product?\nAvailable, sold, and total will all become 0. This cannot be undone."
+      )
+    )
+      return;
+    try {
+      const data = await api("/api/admin/inventory/clear-all", {
+        method: "POST",
+        body: JSON.stringify({ mode: "all" }),
+      });
+      state.stockProductId = "";
+      await loadInventory();
+      toast(`Cleared all stock (${data.removed || 0} codes removed)`);
     } catch (err) {
       toast(err.message, true);
     }

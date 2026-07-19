@@ -3295,6 +3295,53 @@ def admin_add_codes(product_id: str):
     )
 
 
+@app.delete("/api/admin/inventory/<product_id>")
+@require_admin
+def admin_clear_product_inventory(product_id: str):
+    """Remove all codes for one product (available + sold → 0)."""
+    inv = load_inventory()
+    removed = len(inv.get(product_id) or [])
+    inv[product_id] = []
+    save_inventory(inv)
+    return jsonify({"ok": True, "productId": product_id, "removed": removed})
+
+
+@app.post("/api/admin/inventory/clear-all")
+@require_admin
+def admin_clear_all_inventory():
+    """
+    Clear stock counts for all products.
+    Body optional: { "mode": "all" | "sold" }
+      all  — wipe every code (available, sold, total → 0)
+      sold — remove only sold rows; keep available stock
+    """
+    data = request.get_json(silent=True) or {}
+    mode = (data.get("mode") or "all").strip().lower()
+    if mode not in ("all", "sold"):
+        return jsonify({"error": "mode must be all or sold"}), 400
+
+    inv = load_inventory()
+    removed = 0
+    if mode == "all":
+        for pid in list(inv.keys()):
+            removed += len(inv.get(pid) or [])
+            inv[pid] = []
+        # Keep keys aligned with products as empty lists
+        for d in load_deals(include_inactive=True):
+            pid = d.get("id")
+            if pid:
+                inv[pid] = []
+    else:
+        for pid, codes in list(inv.items()):
+            if not isinstance(codes, list):
+                continue
+            kept = [c for c in codes if c.get("status", "available") != "sold"]
+            removed += len(codes) - len(kept)
+            inv[pid] = kept
+    save_inventory(inv)
+    return jsonify({"ok": True, "mode": mode, "removed": removed})
+
+
 @app.get("/api/admin/orders")
 @require_admin
 def admin_orders():
