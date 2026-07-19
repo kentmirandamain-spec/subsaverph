@@ -512,21 +512,22 @@ function applySiteChrome() {
   document.querySelectorAll(".footer-meta li span[data-i18n-meta]").forEach((span) => {
     span.textContent = t(span.getAttribute("data-i18n-meta"));
   });
-  // Footer support email → open Gmail compose (not a dead page link)
+  // Footer: Email support always points at Gmail compose (native link, works on Windows)
+  const gmailHref = gmailComposeUrl();
   const supportLabel = document.querySelector("#footerSupportLabel");
   if (supportLabel) {
-    supportLabel.innerHTML = `<a href="${escapeAttr(gmailComposeUrl())}" class="js-email-support" target="_blank" rel="noopener noreferrer">${escapeHtml(support)}</a>`;
+    supportLabel.innerHTML = `<a href="${escapeAttr(gmailHref)}" class="js-email-support" data-support-email target="_blank" rel="noopener noreferrer">${escapeHtml(support)}</a>`;
   }
-  document.querySelectorAll("a[data-support-email]").forEach((a) => {
-    a.setAttribute("href", gmailComposeUrl());
+  document.querySelectorAll("a[data-support-email], a.js-email-support").forEach((a) => {
+    a.setAttribute("href", gmailHref);
     a.setAttribute("target", "_blank");
     a.setAttribute("rel", "noopener noreferrer");
     a.classList.add("js-email-support");
     a.classList.remove("js-go-support");
   });
-  // "Contact support" / form links still go to the support page
+  // Support form page links only
   document.querySelectorAll("a[data-support-link]").forEach((a) => {
-    if (a.classList.contains("js-email-support")) return;
+    if (a.classList.contains("js-email-support") || a.hasAttribute("data-support-email")) return;
     a.setAttribute("href", "#/support");
     a.classList.add("js-go-support");
   });
@@ -947,26 +948,56 @@ function mailtoSupportUrl(opts = {}) {
   return `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 }
 
-/** Open Gmail compose in a new tab (primary). Falls back to mailto if popup blocked. */
+/**
+ * Open Gmail compose.
+ * Windows Chrome/Edge often block window.open(..., "noopener") or return null.
+ * A real <a target="_blank"> click (or same-tab assign) is reliable.
+ */
 function openSupportMail(opts = {}) {
   const gmail = gmailComposeUrl(opts);
   const mail = mailtoSupportUrl(opts);
+
+  // 1) Prefer a synthetic <a> click — keeps user gesture, works with popup blockers better
   try {
-    const win = window.open(gmail, "_blank", "noopener,noreferrer");
-    if (!win) {
-      // Popup blocked — try same-tab Gmail, then mailto
+    const a = document.createElement("a");
+    a.href = gmail;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    a.setAttribute("aria-hidden", "true");
+    a.style.cssText = "position:fixed;left:-9999px;top:0;opacity:0";
+    document.body.appendChild(a);
+    a.click();
+    // Remove after a tick so the click is fully processed
+    setTimeout(() => {
       try {
-        location.href = gmail;
+        a.remove();
       } catch {
-        location.href = mail;
+        /* ignore */
       }
-    }
-  } catch {
+    }, 100);
     try {
-      location.href = gmail;
+      toast("Opening Gmail…");
     } catch {
-      location.href = mail;
+      /* ignore */
     }
+    return false;
+  } catch {
+    /* fall through */
+  }
+
+  // 2) Same-tab Gmail (always works if popups are fully blocked)
+  try {
+    window.location.assign(gmail);
+    return false;
+  } catch {
+    /* fall through */
+  }
+
+  // 3) Last resort: system mail client
+  try {
+    window.location.href = mail;
+  } catch {
+    /* ignore */
   }
   return false;
 }
@@ -1873,16 +1904,34 @@ function bind() {
       });
     });
   });
-  $$(".js-email-support").forEach((el) => {
-    // Order buttons already handled above
+  // In-app email buttons only (footer is handled by body delegate once)
+  const appRoot = $("#app") || document;
+  $$(".js-email-support, a[data-support-email]", appRoot).forEach((el) => {
     if (el.hasAttribute("data-go-support-order")) return;
     el.addEventListener("click", (e) => {
+      // Gmail <a href> → native open (Windows-safe). Buttons → JS open.
+      const href = (el.getAttribute && el.getAttribute("href")) || el.href || "";
+      const isGmailAnchor =
+        el.tagName === "A" &&
+        href &&
+        !href.startsWith("#") &&
+        (href.includes("mail.google.com") || href.startsWith("mailto:"));
+      if (isGmailAnchor) {
+        try {
+          el.setAttribute("href", gmailComposeUrl());
+          el.setAttribute("target", "_blank");
+          el.setAttribute("rel", "noopener noreferrer");
+        } catch {
+          /* ignore */
+        }
+        return; // do not preventDefault
+      }
       e.preventDefault();
       e.stopPropagation();
       openSupportMail();
     });
   });
-  $$("[data-copy-support-email]").forEach((btn) => {
+  $$("[data-copy-support-email]", appRoot).forEach((btn) => {
     btn.addEventListener("click", async (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -1895,8 +1944,9 @@ function bind() {
       }
     });
   });
-  // Support form page (not Gmail)
-  $$("a.js-go-support, button.js-go-support, a[href='#/support'], a[href='#/contact']").forEach((a) => {
+  // Support form page (not Gmail) — only in-app; footer uses body delegate
+  $$("a.js-go-support, button.js-go-support, a[href='#/support'], a[href='#/contact']", appRoot).forEach((a) => {
+    if (a.classList.contains("js-email-support") || a.hasAttribute("data-support-email")) return;
     a.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -2465,10 +2515,30 @@ async function init() {
     if (e.target.closest("[data-copy-support-email]")) return;
     if (e.target.closest("#supportForm")) return;
 
-    const emailBtn = e.target.closest("a.js-email-support, button.js-email-support, a[data-support-email]");
+    const emailBtn = e.target.closest(
+      "a.js-email-support, button.js-email-support, a[data-support-email]"
+    );
     if (emailBtn) {
-      e.preventDefault();
       e.stopPropagation();
+      const href =
+        (emailBtn.getAttribute && emailBtn.getAttribute("href")) || emailBtn.href || "";
+      const isGmailAnchor =
+        emailBtn.tagName === "A" &&
+        href &&
+        !href.startsWith("#") &&
+        (href.includes("mail.google.com") || href.startsWith("mailto:"));
+      if (isGmailAnchor) {
+        // Native <a target=_blank> — do not preventDefault (fixes Windows)
+        try {
+          emailBtn.setAttribute("href", gmailComposeUrl());
+          emailBtn.setAttribute("target", "_blank");
+          emailBtn.setAttribute("rel", "noopener noreferrer");
+        } catch {
+          /* ignore */
+        }
+        return;
+      }
+      e.preventDefault();
       openSupportMail();
       return;
     }
@@ -2477,6 +2547,10 @@ async function init() {
       "a.js-go-support, button.js-go-support, a[href='#/support'], a[href='#/contact'], a[data-support-link]"
     );
     if (go) {
+      // Never steal clicks meant for Gmail links
+      if (go.classList.contains("js-email-support") || go.hasAttribute("data-support-email")) {
+        return;
+      }
       e.preventDefault();
       e.stopPropagation();
       goSupportPage();
