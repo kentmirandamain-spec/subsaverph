@@ -1,7 +1,7 @@
-{
+﻿{
   "name": "SubSaverPH",
   "short_name": "SubSaverPH",
-  "description": "SubSaverPH — Philippines digital subscription storefront. Discounted prepaid plans, multi-currency checkout, instant digital delivery.",
+  "description": "Discounted prepaid subscriptions in the Philippines",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
