@@ -692,7 +692,7 @@ function viewDeals() {
         <div class="layout">
           <aside class="filters">
             <h3>Service</h3>
-            ${window.BRANDS.map(
+            ${(Array.isArray(window.BRANDS) ? window.BRANDS : ["All"]).map(
               (b) => `
               <label class="radio">
                 <input type="radio" name="brand" value="${b}" ${state.brand === b ? "checked" : ""} />
@@ -700,11 +700,11 @@ function viewDeals() {
               </label>`
             ).join("")}
             <h3 style="margin-top:20px">Category</h3>
-            ${window.CATEGORIES.map(
-              (c) => `
+            ${(Array.isArray(window.CATEGORIES) ? window.CATEGORIES : ["All"]).map(
+              (cat) => `
               <label class="radio">
-                <input type="radio" name="cat" value="${c}" ${state.category === c ? "checked" : ""} />
-                <span>${c}</span>
+                <input type="radio" name="cat" value="${cat}" ${state.category === cat ? "checked" : ""} />
+                <span>${cat}</span>
               </label>`
             ).join("")}
           </aside>
