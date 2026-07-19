@@ -626,16 +626,6 @@ function viewHome() {
         </div>
         <div class="grid">${top.map(card).join("")}</div>
       </div>
-    </section>
-
-    <section class="mission">
-      <div class="mission-line"></div>
-      <div class="mission-inner">
-        <p class="eyebrow">${escapeHtml(t("why_prefix"))} ${escapeHtml(s.siteName || "SubSaverPH")}</p>
-        <h2>${escapeHtml(c("mission_title", "missionTitle"))}</h2>
-        <p>${escapeHtml(c("mission_text", "missionText"))}</p>
-        <a class="btn solid" href="#/deals">${escapeHtml(t("cta_browse"))}</a>
-      </div>
     </section>`;
 }
 

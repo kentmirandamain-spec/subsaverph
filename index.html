@@ -128,7 +128,7 @@
   }
   </script>
 
-  <link rel="stylesheet" href="css/styles.css?v=support-ui4" />
+  <link rel="stylesheet" href="css/styles.css?v=nomission-cart2" />
 </head>
 <body class="galaxy">
   <!-- Fixed galaxy layers (pure CSS stars + nebulae) -->
@@ -154,7 +154,6 @@
         <a href="#/home" data-nav-home data-i18n="nav_home">Home</a>
         <a href="#/deals" data-i18n="nav_deals">Deals</a>
         <a href="#/search" data-i18n="nav_search">Search</a>
-        <a href="#/how" data-i18n="nav_mission">Mission</a>
         <a href="#/checkout" data-i18n="nav_checkout">Checkout</a>
       </nav>
       <div class="nav-search" id="globalSearch">
@@ -213,8 +212,13 @@
             </div>
           </div>
         </div>
-        <button type="button" id="cartBtn" class="icon" aria-label="Cart" data-i18n-aria="nav_cart">
-          ▤
+        <button type="button" id="cartBtn" class="icon cart-icon-btn" aria-label="Cart" data-i18n-aria="nav_cart" title="Cart / Checkout">
+          <svg class="cart-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M6 6h15l-1.5 9h-12z"/>
+            <path d="M6 6 5 3H2"/>
+            <circle cx="9" cy="20" r="1.25" fill="currentColor" stroke="none"/>
+            <circle cx="18" cy="20" r="1.25" fill="currentColor" stroke="none"/>
+          </svg>
           <span id="cartBadge" class="badge" hidden>0</span>
         </button>
         <button type="button" id="menuBtn" class="icon menu" aria-label="Menu" data-i18n-aria="nav_menu">☰</button>
@@ -362,7 +366,7 @@
   <div id="toast" class="toast" role="status"></div>
 
   <script src="data/deals.js"></script>
-  <script type="module" src="js/app.js?v=support-ui4"></script>
+  <script type="module" src="js/app.js?v=nomission-cart2"></script>
   <!-- Live data loads from /api/catalog when server.py is running -->
 </body>
 </html>
