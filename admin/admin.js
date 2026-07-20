@@ -97,7 +97,7 @@ function shell(content) {
         <h2>SubSaverPH</h2>
         <button type="button" data-tab="deals" class="${state.tab === "deals" ? "active" : ""}">Products</button>
         <button type="button" data-tab="stock" class="${state.tab === "stock" ? "active" : ""}">Codes / Stock</button>
-        <button type="button" data-tab="orders" class="${state.tab === "orders" ? "active" : ""}">Orders</button>
+        <button type="button" data-tab="orders" class="${state.tab === "orders" ? "active" : ""}">Orders / Sales</button>
         <button type="button" data-tab="support" class="${state.tab === "support" ? "active" : ""}">Support inbox</button>
         <button type="button" data-tab="emailtest" class="${state.tab === "emailtest" ? "active" : ""}">★ Test email</button>
         <button type="button" data-tab="settings" class="${state.tab === "settings" ? "active" : ""}">Site content</button>
@@ -941,35 +941,187 @@ function stockView() {
     </div>`;
 }
 
+function money(n, currency = "PHP") {
+  const v = Number(n) || 0;
+  const cur = (currency || "PHP").toUpperCase();
+  try {
+    return new Intl.NumberFormat("en-PH", {
+      style: "currency",
+      currency: cur,
+      maximumFractionDigits: 2,
+    }).format(v);
+  } catch {
+    return `${v.toFixed(2)} ${cur}`;
+  }
+}
+
+/** Paid orders only — sold units, revenue, profit (sell − product cost). */
+function buildSalesReport(orders, deals) {
+  const dealById = Object.fromEntries((deals || []).map((d) => [d.id, d]));
+  const paidStatuses = new Set(["paid", "completed", "succeeded", "complete", "success"]);
+  const paid = (orders || []).filter((o) => paidStatuses.has(String(o.status || "").toLowerCase()));
+
+  /** @type {Record<string, { id: string, name: string, brand: string, units: number, revenue: number, cost: number, profit: number, currency: string, orders: number }>} */
+  const byProduct = {};
+  /** @type {Record<string, { revenue: number, cost: number, profit: number, units: number, orders: number }>} */
+  const byCurrency = {};
+  let totalOrders = paid.length;
+
+  for (const o of paid) {
+    const currency = String(o.currency || "PHP").toUpperCase();
+    if (!byCurrency[currency]) {
+      byCurrency[currency] = { revenue: 0, cost: 0, profit: 0, units: 0, orders: 0 };
+    }
+    byCurrency[currency].orders += 1;
+
+    const items = Array.isArray(o.items) ? o.items : [];
+    for (const item of items) {
+      const id = String(item.id || item.productId || item.name || "unknown");
+      const name = String(item.name || id);
+      const brand = String(item.brand || dealById[id]?.brand || "");
+      const qty = Math.max(
+        1,
+        Number(item.qty) ||
+          (Array.isArray(item.codes) && item.codes.length) ||
+          (Array.isArray(item.credentials) && item.credentials.length) ||
+          1
+      );
+      const unitPrice = Number(item.price);
+      const price = Number.isFinite(unitPrice)
+        ? unitPrice
+        : Number(dealById[id]?.price) || 0;
+      const unitCost = Number(dealById[id]?.cost);
+      const costEach = Number.isFinite(unitCost) ? unitCost : 0;
+      const rev = price * qty;
+      const costTotal = costEach * qty;
+      const profit = rev - costTotal;
+
+      if (!byProduct[id]) {
+        byProduct[id] = {
+          id,
+          name,
+          brand,
+          units: 0,
+          revenue: 0,
+          cost: 0,
+          profit: 0,
+          currency,
+          orders: 0,
+        };
+      }
+      const row = byProduct[id];
+      row.units += qty;
+      row.revenue += rev;
+      row.cost += costTotal;
+      row.profit += profit;
+      row.orders += 1;
+      // Prefer PHP when mixed; keep first currency otherwise
+      if (currency === "PHP") row.currency = "PHP";
+
+      byCurrency[currency].revenue += rev;
+      byCurrency[currency].cost += costTotal;
+      byCurrency[currency].profit += profit;
+      byCurrency[currency].units += qty;
+    }
+  }
+
+  const products = Object.values(byProduct).sort((a, b) => b.units - a.units || b.revenue - a.revenue);
+  return { paid, totalOrders, products, byCurrency };
+}
+
+function salesChecklistHtml(report) {
+  const { products, byCurrency, totalOrders } = report;
+  const currencies = Object.keys(byCurrency).sort((a, b) => (a === "PHP" ? -1 : b === "PHP" ? 1 : a.localeCompare(b)));
+
+  const summaryCards = currencies.length
+    ? currencies
+        .map((cur) => {
+          const t = byCurrency[cur];
+          return `
+          <div class="sales-card">
+            <div class="sales-card-label">${escapeHtml(cur)} totals</div>
+            <div class="sales-card-row"><span>Orders</span><strong>${t.orders}</strong></div>
+            <div class="sales-card-row"><span>Units sold</span><strong>${t.units}</strong></div>
+            <div class="sales-card-row"><span>Revenue</span><strong>${escapeHtml(money(t.revenue, cur))}</strong></div>
+            <div class="sales-card-row"><span>Cost</span><strong>${escapeHtml(money(t.cost, cur))}</strong></div>
+            <div class="sales-card-row sales-profit"><span>Profit</span><strong>${escapeHtml(money(t.profit, cur))}</strong></div>
+          </div>`;
+        })
+        .join("")
+    : `<div class="sales-card"><div class="muted">No paid sales yet.</div></div>`;
+
+  const checklist = products.length
+    ? products
+        .map((p) => {
+          const cur = p.currency || "PHP";
+          return `
+        <label class="sales-check-item">
+          <input type="checkbox" checked disabled />
+          <span class="sales-check-body">
+            <strong>${escapeHtml(p.name)}</strong>
+            <span class="muted">${escapeHtml(p.brand || p.id)} · ${p.units} sold · ${p.orders} order(s)</span>
+            <span class="sales-check-money">
+              Rev ${escapeHtml(money(p.revenue, cur))}
+              · Cost ${escapeHtml(money(p.cost, cur))}
+              · <em>Profit ${escapeHtml(money(p.profit, cur))}</em>
+            </span>
+          </span>
+        </label>`;
+        })
+        .join("")
+    : `<p class="muted" style="margin:0">No products sold yet. Paid orders will appear here automatically.</p>`;
+
+  return `
+    <div class="panel sales-panel">
+      <h2 class="sales-h">Sales checklist &amp; profit</h2>
+      <p class="muted" style="margin-top:0">Auto-built from <strong>paid</strong> orders. Profit = sell price − product <strong>Your cost</strong> (set on each product). If cost is 0, profit equals revenue.</p>
+      <div class="sales-summary">
+        <div class="sales-card sales-card-wide">
+          <div class="sales-card-label">All paid orders</div>
+          <div class="sales-big">${totalOrders}</div>
+          <div class="muted">${products.length} product type(s) sold</div>
+        </div>
+        ${summaryCards}
+      </div>
+      <h3 class="settings-h" style="margin-top:18px">Products bought &amp; sold</h3>
+      <div class="sales-checklist" role="list">
+        ${checklist}
+      </div>
+    </div>`;
+}
+
 function ordersView() {
+  const report = buildSalesReport(state.orders || [], state.deals || []);
   const rows = (state.orders || [])
     .map((o) => {
-      const codes = (o.items || [])
-        .map((i) => `${i.name}: ${(i.codes || []).join(", ")}`)
-        .join(" · ");
-      const mail = o.emailSent
-        ? "emailed"
-        : o.emailDetail
-          ? "email fail"
-          : "—";
+      const items = o.items || [];
+      const lineTotal = items.reduce((sum, i) => {
+        const qty = Math.max(1, Number(i.qty) || (i.codes || []).length || 1);
+        return sum + (Number(i.price) || 0) * qty;
+      }, 0);
+      const codes = items.map((i) => `${i.name}: ${(i.codes || []).join(", ")}`).join(" · ");
+      const mail = o.emailSent ? "emailed" : o.emailDetail ? "email fail" : "—";
+      const cur = o.currency || "PHP";
       return `
       <tr>
         <td><strong>${escapeHtml(o.id)}</strong><div class="muted">${escapeHtml(o.createdAt || "")}</div></td>
         <td>${escapeHtml(o.email)}<div class="muted">${escapeHtml(o.name || "")}</div></td>
         <td><span class="badge">${escapeHtml(o.status || "")}</span>
           <div class="muted">${escapeHtml(mail)}</div></td>
-        <td class="muted" style="max-width:280px;word-break:break-all">${escapeHtml(codes)}</td>
+        <td><strong>${escapeHtml(money(lineTotal, cur))}</strong>
+          <div class="muted" style="max-width:280px;word-break:break-all">${escapeHtml(codes)}</div></td>
       </tr>`;
     })
     .join("");
 
   return `
-    <div class="top"><h1>Orders</h1></div>
-    ${testInvoicePanel({ title: "Send test invoice email", margin: "margin-bottom:16px" })}
-    <p class="muted">Paid orders with delivered codes.</p>
+    <div class="top"><h1>Orders / Sales</h1></div>
+    ${salesChecklistHtml(report)}
+    ${testInvoicePanel({ title: "Send test invoice email", margin: "margin:16px 0" })}
+    <p class="muted">All orders (newest first). Checklist above updates automatically when status is paid.</p>
     <div class="panel" style="overflow:auto">
       <table class="table">
-        <thead><tr><th>Order</th><th>Customer</th><th>Status</th><th>Codes delivered</th></tr></thead>
+        <thead><tr><th>Order</th><th>Customer</th><th>Status</th><th>Amount / codes</th></tr></thead>
         <tbody>${rows || `<tr><td colspan="4" class="muted">No orders yet.</td></tr>`}</tbody>
       </table>
     </div>`;
@@ -1012,6 +1164,7 @@ function emptyDeal() {
     monogram: "XX",
     price: 0,
     original: 0,
+    cost: 0,
     priceBase: "PHP",
     period: "month",
     duration: "",
@@ -1052,8 +1205,13 @@ function dealModal(deal) {
           <label>Monogram<input name="monogram" maxlength="3" value="${escapeAttr(deal.monogram)}" /></label>
         </div>
         <div class="grid3">
-          <label>Price<input name="price" type="number" step="0.01" value="${escapeAttr(deal.price)}" /></label>
-          <label>Retail / original<input name="original" type="number" step="0.01" value="${escapeAttr(deal.original)}" /></label>
+          <label>Sell price (customer pays)<input name="price" type="number" step="0.01" value="${escapeAttr(deal.price)}" /></label>
+          <label>Retail / original (strikethrough)<input name="original" type="number" step="0.01" value="${escapeAttr(deal.original)}" /></label>
+          <label>Your cost (for profit)
+            <input name="cost" type="number" step="0.01" value="${escapeAttr(deal.cost ?? 0)}" placeholder="What you paid for stock" />
+          </label>
+        </div>
+        <div class="grid3">
           <label>Price base currency
             <select name="priceBase">
               <option value="PHP" ${deal.priceBase === "PHP" ? "selected" : ""}>PHP</option>
@@ -1061,6 +1219,8 @@ function dealModal(deal) {
               <option value="EUR" ${deal.priceBase === "EUR" ? "selected" : ""}>EUR</option>
             </select>
           </label>
+          <label></label>
+          <label></label>
         </div>
         <div class="grid3">
           <label>Period<input name="period" value="${escapeAttr(deal.period)}" placeholder="7 days / month" /></label>
@@ -1116,6 +1276,7 @@ function formToDeal(fd, existing) {
     monogram: fd.get("monogram"),
     price: fd.get("price"),
     original: fd.get("original"),
+    cost: fd.get("cost"),
     priceBase: fd.get("priceBase"),
     period: fd.get("period"),
     duration: fd.get("duration"),

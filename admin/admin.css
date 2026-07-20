@@ -429,9 +429,130 @@ textarea { min-height: 90px; resize: vertical; }
   text-transform: none;
 }
 
+/* Sales checklist & profit (Orders tab) */
+.sales-panel {
+  margin-bottom: 8px;
+}
+
+.sales-h {
+  margin: 0 0 8px;
+  font-size: 1rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.sales-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.sales-card {
+  border: 1px solid var(--line);
+  background: #0a0a0a;
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+
+.sales-card-wide {
+  grid-column: span 1;
+}
+
+.sales-card-label {
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--mute);
+  margin-bottom: 8px;
+}
+
+.sales-card-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 0.88rem;
+  margin-bottom: 4px;
+  color: var(--mute);
+}
+
+.sales-card-row strong {
+  color: var(--text);
+  font-weight: 650;
+}
+
+.sales-card-row.sales-profit {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+  color: var(--ok);
+}
+
+.sales-card-row.sales-profit strong {
+  color: var(--ok);
+  font-size: 1.05rem;
+}
+
+.sales-big {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.1;
+  margin: 4px 0;
+}
+
+.sales-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.sales-check-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #0a0a0a;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 0.9rem;
+  color: var(--text);
+  cursor: default;
+}
+
+.sales-check-item input[type="checkbox"] {
+  margin-top: 4px;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--ok);
+  flex-shrink: 0;
+}
+
+.sales-check-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.sales-check-money {
+  font-size: 0.85rem;
+  color: var(--mute);
+}
+
+.sales-check-money em {
+  font-style: normal;
+  color: var(--ok);
+  font-weight: 650;
+}
+
 @media (max-width: 800px) {
   .shell { grid-template-columns: 1fr; }
   .side { border-right: none; border-bottom: 1px solid var(--line); }
   .grid2, .grid3 { grid-template-columns: 1fr; }
   .ui-strings-grid { grid-template-columns: 1fr; }
+  .sales-summary { grid-template-columns: 1fr; }
 }

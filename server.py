@@ -3687,7 +3687,8 @@ def admin_clear_all_inventory():
 @app.get("/api/admin/orders")
 @require_admin
 def admin_orders():
-    return jsonify({"orders": load_orders()[:100]})
+    orders = load_orders()[:500]
+    return jsonify({"orders": orders, "total": len(load_orders())})
 
 
 @app.post("/api/admin/test-invoice")
@@ -3910,6 +3911,7 @@ def normalize_deal(data: dict, deal_id: str) -> dict:
         "monogram": (data.get("monogram") or "XX").strip()[:3].upper(),
         "price": num(data.get("price"), 0),
         "original": num(data.get("original"), 0),
+        "cost": num(data.get("cost"), 0),
         "priceBase": (data.get("priceBase") or "USD").strip().upper() or "USD",
         "period": (data.get("period") or "month").strip(),
         "duration": (data.get("duration") or "").strip(),
