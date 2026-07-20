@@ -941,39 +941,39 @@ function stockView() {
     </div>`;
 }
 
-function money(n, currency = "PHP") {
+/** Always format as Philippine Peso (Orders / Sales is PHP-only). */
+function money(n) {
   const v = Number(n) || 0;
-  const cur = (currency || "PHP").toUpperCase();
   try {
     return new Intl.NumberFormat("en-PH", {
       style: "currency",
-      currency: cur,
+      currency: "PHP",
       maximumFractionDigits: 2,
     }).format(v);
   } catch {
-    return `${v.toFixed(2)} ${cur}`;
+    return `₱${v.toFixed(2)}`;
   }
 }
 
-/** Paid orders only — sold units, revenue, profit (sell − product cost). */
+/**
+ * Paid orders only (PHP) — sold units, revenue, profit (sell − product cost).
+ * All amounts are treated as PHP for a single peso report.
+ */
 function buildSalesReport(orders, deals) {
   const dealById = Object.fromEntries((deals || []).map((d) => [d.id, d]));
   const paidStatuses = new Set(["paid", "completed", "succeeded", "complete", "success"]);
-  const paid = (orders || []).filter((o) => paidStatuses.has(String(o.status || "").toLowerCase()));
+  const paid = (orders || []).filter((o) => {
+    if (!paidStatuses.has(String(o.status || "").toLowerCase())) return false;
+    // Orders / Sales report is PHP-only
+    const cur = String(o.currency || "PHP").toUpperCase();
+    return cur === "PHP" || !o.currency;
+  });
 
-  /** @type {Record<string, { id: string, name: string, brand: string, units: number, revenue: number, cost: number, profit: number, currency: string, orders: number }>} */
+  /** @type {Record<string, { id: string, name: string, brand: string, units: number, revenue: number, cost: number, profit: number, orders: number }>} */
   const byProduct = {};
-  /** @type {Record<string, { revenue: number, cost: number, profit: number, units: number, orders: number }>} */
-  const byCurrency = {};
-  let totalOrders = paid.length;
+  const totals = { revenue: 0, cost: 0, profit: 0, units: 0, orders: paid.length };
 
   for (const o of paid) {
-    const currency = String(o.currency || "PHP").toUpperCase();
-    if (!byCurrency[currency]) {
-      byCurrency[currency] = { revenue: 0, cost: 0, profit: 0, units: 0, orders: 0 };
-    }
-    byCurrency[currency].orders += 1;
-
     const items = Array.isArray(o.items) ? o.items : [];
     for (const item of items) {
       const id = String(item.id || item.productId || item.name || "unknown");
@@ -1005,7 +1005,6 @@ function buildSalesReport(orders, deals) {
           revenue: 0,
           cost: 0,
           profit: 0,
-          currency,
           orders: 0,
         };
       }
@@ -1015,69 +1014,59 @@ function buildSalesReport(orders, deals) {
       row.cost += costTotal;
       row.profit += profit;
       row.orders += 1;
-      // Prefer PHP when mixed; keep first currency otherwise
-      if (currency === "PHP") row.currency = "PHP";
 
-      byCurrency[currency].revenue += rev;
-      byCurrency[currency].cost += costTotal;
-      byCurrency[currency].profit += profit;
-      byCurrency[currency].units += qty;
+      totals.revenue += rev;
+      totals.cost += costTotal;
+      totals.profit += profit;
+      totals.units += qty;
     }
   }
 
   const products = Object.values(byProduct).sort((a, b) => b.units - a.units || b.revenue - a.revenue);
-  return { paid, totalOrders, products, byCurrency };
+  return { paid, totalOrders: totals.orders, products, totals };
 }
 
 function salesChecklistHtml(report) {
-  const { products, byCurrency, totalOrders } = report;
-  const currencies = Object.keys(byCurrency).sort((a, b) => (a === "PHP" ? -1 : b === "PHP" ? 1 : a.localeCompare(b)));
+  const { products, totals, totalOrders } = report;
+  const t = totals || { revenue: 0, cost: 0, profit: 0, units: 0 };
 
-  const summaryCards = currencies.length
-    ? currencies
-        .map((cur) => {
-          const t = byCurrency[cur];
-          return `
+  const summaryCards = `
           <div class="sales-card">
-            <div class="sales-card-label">${escapeHtml(cur)} totals</div>
-            <div class="sales-card-row"><span>Orders</span><strong>${t.orders}</strong></div>
+            <div class="sales-card-label">PHP totals</div>
+            <div class="sales-card-row"><span>Orders</span><strong>${totalOrders}</strong></div>
             <div class="sales-card-row"><span>Units sold</span><strong>${t.units}</strong></div>
-            <div class="sales-card-row"><span>Revenue</span><strong>${escapeHtml(money(t.revenue, cur))}</strong></div>
-            <div class="sales-card-row"><span>Cost</span><strong>${escapeHtml(money(t.cost, cur))}</strong></div>
-            <div class="sales-card-row sales-profit"><span>Profit</span><strong>${escapeHtml(money(t.profit, cur))}</strong></div>
+            <div class="sales-card-row"><span>Revenue</span><strong>${escapeHtml(money(t.revenue))}</strong></div>
+            <div class="sales-card-row"><span>Cost</span><strong>${escapeHtml(money(t.cost))}</strong></div>
+            <div class="sales-card-row sales-profit"><span>Profit</span><strong>${escapeHtml(money(t.profit))}</strong></div>
           </div>`;
-        })
-        .join("")
-    : `<div class="sales-card"><div class="muted">No paid sales yet.</div></div>`;
 
   const checklist = products.length
     ? products
-        .map((p) => {
-          const cur = p.currency || "PHP";
-          return `
+        .map(
+          (p) => `
         <label class="sales-check-item">
           <input type="checkbox" checked disabled />
           <span class="sales-check-body">
             <strong>${escapeHtml(p.name)}</strong>
             <span class="muted">${escapeHtml(p.brand || p.id)} · ${p.units} sold · ${p.orders} order(s)</span>
             <span class="sales-check-money">
-              Rev ${escapeHtml(money(p.revenue, cur))}
-              · Cost ${escapeHtml(money(p.cost, cur))}
-              · <em>Profit ${escapeHtml(money(p.profit, cur))}</em>
+              Rev ${escapeHtml(money(p.revenue))}
+              · Cost ${escapeHtml(money(p.cost))}
+              · <em>Profit ${escapeHtml(money(p.profit))}</em>
             </span>
           </span>
-        </label>`;
-        })
+        </label>`
+        )
         .join("")
-    : `<p class="muted" style="margin:0">No products sold yet. Paid orders will appear here automatically.</p>`;
+    : `<p class="muted" style="margin:0">No PHP products sold yet. Paid PHP orders will appear here automatically.</p>`;
 
   return `
     <div class="panel sales-panel">
-      <h2 class="sales-h">Sales checklist &amp; profit</h2>
-      <p class="muted" style="margin-top:0">Auto-built from <strong>paid</strong> orders. Profit = sell price − product <strong>Your cost</strong> (set on each product). If cost is 0, profit equals revenue.</p>
+      <h2 class="sales-h">Sales checklist &amp; profit (PHP)</h2>
+      <p class="muted" style="margin-top:0">All amounts in <strong>₱ Philippine Peso</strong> from paid PHP orders. Profit = sell price − product <strong>Your cost</strong>. If cost is 0, profit equals revenue.</p>
       <div class="sales-summary">
         <div class="sales-card sales-card-wide">
-          <div class="sales-card-label">All paid orders</div>
+          <div class="sales-card-label">Paid orders (PHP)</div>
           <div class="sales-big">${totalOrders}</div>
           <div class="muted">${products.length} product type(s) sold</div>
         </div>
@@ -1101,14 +1090,13 @@ function ordersView() {
       }, 0);
       const codes = items.map((i) => `${i.name}: ${(i.codes || []).join(", ")}`).join(" · ");
       const mail = o.emailSent ? "emailed" : o.emailDetail ? "email fail" : "—";
-      const cur = o.currency || "PHP";
       return `
       <tr>
         <td><strong>${escapeHtml(o.id)}</strong><div class="muted">${escapeHtml(o.createdAt || "")}</div></td>
         <td>${escapeHtml(o.email)}<div class="muted">${escapeHtml(o.name || "")}</div></td>
         <td><span class="badge">${escapeHtml(o.status || "")}</span>
           <div class="muted">${escapeHtml(mail)}</div></td>
-        <td><strong>${escapeHtml(money(lineTotal, cur))}</strong>
+        <td><strong>${escapeHtml(money(lineTotal))}</strong>
           <div class="muted" style="max-width:280px;word-break:break-all">${escapeHtml(codes)}</div></td>
       </tr>`;
     })
@@ -1117,7 +1105,7 @@ function ordersView() {
   return `
     <div class="top"><h1>Orders / Sales</h1></div>
     ${salesChecklistHtml(report)}
-    <p class="muted">All orders (newest first). Checklist above updates automatically when status is paid.</p>
+    <p class="muted">All orders (newest first). Amounts shown in ₱ PHP. Checklist uses paid PHP orders only.</p>
     <div class="panel" style="overflow:auto">
       <table class="table">
         <thead><tr><th>Order</th><th>Customer</th><th>Status</th><th>Amount / codes</th></tr></thead>
