@@ -1117,7 +1117,6 @@ function ordersView() {
   return `
     <div class="top"><h1>Orders / Sales</h1></div>
     ${salesChecklistHtml(report)}
-    ${testInvoicePanel({ title: "Send test invoice email", margin: "margin:16px 0" })}
     <p class="muted">All orders (newest first). Checklist above updates automatically when status is paid.</p>
     <div class="panel" style="overflow:auto">
       <table class="table">
