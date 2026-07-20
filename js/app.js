@@ -555,14 +555,65 @@ function heroTitleHtml() {
   return escapeHtml(raw).replace(/\\n/g, "<br/>").replace(/\n/g, "<br/>");
 }
 
+/** Shared Deals / View all UI (same style on /#/deals and homepage scroll). */
+function dealsCatalogBlockHTML() {
+  const list = filtered();
+  return `
+        <p class="eyebrow">${escapeHtml(t("eyebrow_catalog"))}</p>
+        <h1 class="page-title">${escapeHtml(t("page_deals"))}</h1>
+        <p class="muted">${list.length} plan${list.length === 1 ? "" : "s"} · currency <strong>${getCurrencyCode()}</strong></p>
+
+        ${searchBarHTML()}
+
+        <div class="toolbar">
+          <div id="pageFxMount"></div>
+          <select id="sortSelect" class="field-select" aria-label="Sort">
+            <option value="savings" ${state.sort === "savings" ? "selected" : ""}>Highest savings</option>
+            <option value="price" ${state.sort === "price" ? "selected" : ""}>Lowest price</option>
+            <option value="name" ${state.sort === "name" ? "selected" : ""}>Name A–Z</option>
+          </select>
+        </div>
+        <p class="rates" data-rates>${ratesNote()}</p>
+
+        <div class="layout">
+          <aside class="filters">
+            <h3>Service</h3>
+            ${(Array.isArray(window.BRANDS) ? window.BRANDS : ["All"]).map(
+              (b) => `
+              <label class="radio">
+                <input type="radio" name="brand" value="${b}" ${state.brand === b ? "checked" : ""} />
+                <span>${b === "All" ? "All services" : b === "xAI" ? "SuperGrok (xAI)" : b}</span>
+              </label>`
+            ).join("")}
+            <h3 style="margin-top:20px">Category</h3>
+            ${(Array.isArray(window.CATEGORIES) ? window.CATEGORIES : ["All"]).map(
+              (cat) => `
+              <label class="radio">
+                <input type="radio" name="cat" value="${cat}" ${state.category === cat ? "checked" : ""} />
+                <span>${cat}</span>
+              </label>`
+            ).join("")}
+          </aside>
+          <div>
+            ${list.length ? `<div class="grid">${list.map((d) => card(d, state.query)).join("")}</div>` : `<div class="empty">No plans match. Try another search.</div>`}
+          </div>
+        </div>`;
+}
+
 function viewHome() {
   const all = dealsList();
   const q = state.query.trim();
   const matches = q ? searchDeals(all, q, { limit: 100 }) : [];
-  const top = [...all].sort((a, b) => off(b) - off(a)).slice(0, 6);
-  const s = siteSettings();
   const brandSet = [...new Set(all.map((d) => d.brand).filter(Boolean))];
-  const monoMap = { xAI: "SG", Canva: "CV", CapCut: "CC", Netflix: "NF", YouTube: "YT" };
+  const monoMap = {
+    xAI: "SG",
+    Canva: "CV",
+    CapCut: "CC",
+    Netflix: "NF",
+    YouTube: "YT",
+    Duolingo: "DU",
+    Spotify: "SP",
+  };
   const brands = brandSet.map((b) => ({
     key: b,
     mono: monoMap[b] || (b.slice(0, 2) || "XX").toUpperCase(),
@@ -611,7 +662,7 @@ function viewHome() {
         </div>
         <div class="meta">
           <div><strong>${all.length}</strong><span>${escapeHtml(t("meta_plans"))}</span></div>
-          <div><strong>5</strong><span>${escapeHtml(t("meta_platforms"))}</span></div>
+          <div><strong>${brands.length}</strong><span>${escapeHtml(t("meta_platforms"))}</span></div>
           <div><strong>${CURRENCY_LIST.length}+</strong><span>${escapeHtml(t("meta_currencies"))}</span></div>
         </div>
       </div>
@@ -643,62 +694,22 @@ function viewHome() {
             )
             .join("")}
         </div>
-        <div class="section-head">
-          <div>
-            <p class="eyebrow">${escapeHtml(t("eyebrow_catalog"))}</p>
-            <h2>${escapeHtml(c("catalog_title", "catalogTitle"))}</h2>
-          </div>
-          <a href="#/deals" class="link">${escapeHtml(t("view_all"))}</a>
-        </div>
-        <div class="grid">${top.map(card).join("")}</div>
+      </div>
+    </section>
+
+    <!-- Full View all / Deals UI (same design as #/deals) when users scroll -->
+    <section class="section home-view-all" id="view-all-deals">
+      <div class="section-inner page-inner home-deals-inner">
+        ${dealsCatalogBlockHTML()}
       </div>
     </section>`;
 }
 
 function viewDeals() {
-  const list = filtered();
   return `
     <div class="page">
       <div class="page-inner">
-        <p class="eyebrow">${escapeHtml(t("eyebrow_catalog"))}</p>
-        <h1 class="page-title">${escapeHtml(t("page_deals"))}</h1>
-        <p class="muted">${list.length} plan${list.length === 1 ? "" : "s"} · currency <strong>${getCurrencyCode()}</strong></p>
-
-        ${searchBarHTML()}
-
-        <div class="toolbar">
-          <div id="pageFxMount"></div>
-          <select id="sortSelect" class="field-select" aria-label="Sort">
-            <option value="savings" ${state.sort === "savings" ? "selected" : ""}>Highest savings</option>
-            <option value="price" ${state.sort === "price" ? "selected" : ""}>Lowest price</option>
-            <option value="name" ${state.sort === "name" ? "selected" : ""}>Name A–Z</option>
-          </select>
-        </div>
-        <p class="rates" data-rates>${ratesNote()}</p>
-
-        <div class="layout">
-          <aside class="filters">
-            <h3>Service</h3>
-            ${(Array.isArray(window.BRANDS) ? window.BRANDS : ["All"]).map(
-              (b) => `
-              <label class="radio">
-                <input type="radio" name="brand" value="${b}" ${state.brand === b ? "checked" : ""} />
-                <span>${b === "All" ? "All services" : b === "xAI" ? "SuperGrok (xAI)" : b}</span>
-              </label>`
-            ).join("")}
-            <h3 style="margin-top:20px">Category</h3>
-            ${(Array.isArray(window.CATEGORIES) ? window.CATEGORIES : ["All"]).map(
-              (cat) => `
-              <label class="radio">
-                <input type="radio" name="cat" value="${cat}" ${state.category === cat ? "checked" : ""} />
-                <span>${cat}</span>
-              </label>`
-            ).join("")}
-          </aside>
-          <div>
-            ${list.length ? `<div class="grid">${list.map((d) => card(d, state.query)).join("")}</div>` : `<div class="empty">No plans match. Try another search.</div>`}
-          </div>
-        </div>
+        ${dealsCatalogBlockHTML()}
       </div>
     </div>`;
 }
