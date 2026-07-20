@@ -559,21 +559,10 @@ function viewHome() {
   const all = dealsList();
   const q = state.query.trim();
   const matches = q ? searchDeals(all, q, { limit: 100 }) : [];
-  // Full catalog on the homepage when users scroll (not just top 6)
-  const catalog = [...all].sort((a, b) => off(b) - off(a));
+  const top = [...all].sort((a, b) => off(b) - off(a)).slice(0, 6);
+  const s = siteSettings();
   const brandSet = [...new Set(all.map((d) => d.brand).filter(Boolean))];
-  const categorySet = [...new Set(all.map((d) => d.category).filter(Boolean))].sort((a, b) =>
-    String(a).localeCompare(String(b))
-  );
-  const monoMap = {
-    xAI: "SG",
-    Canva: "CV",
-    CapCut: "CC",
-    Netflix: "NF",
-    YouTube: "YT",
-    Duolingo: "DU",
-    Spotify: "SP",
-  };
+  const monoMap = { xAI: "SG", Canva: "CV", CapCut: "CC", Netflix: "NF", YouTube: "YT" };
   const brands = brandSet.map((b) => ({
     key: b,
     mono: monoMap[b] || (b.slice(0, 2) || "XX").toUpperCase(),
@@ -606,28 +595,6 @@ function viewHome() {
     </div>`;
   }
 
-  // Deals grouped by category for full scroll catalog
-  const byCategory = new Map();
-  for (const d of catalog) {
-    const cat = d.category || "Other";
-    if (!byCategory.has(cat)) byCategory.set(cat, []);
-    byCategory.get(cat).push(d);
-  }
-  const categoryBlocks = [...byCategory.entries()]
-    .map(
-      ([cat, list]) => `
-        <div class="home-cat-block" id="cat-${escapeAttr(String(cat).replace(/\s+/g, "-").toLowerCase())}">
-          <div class="section-head" style="margin-top:28px">
-            <div>
-              <p class="eyebrow">${escapeHtml(t("eyebrow_catalog") || "Catalog")}</p>
-              <h3 class="home-cat-title">${escapeHtml(cat)} · ${list.length}</h3>
-            </div>
-          </div>
-          <div class="grid">${list.map((d) => card(d)).join("")}</div>
-        </div>`
-    )
-    .join("");
-
   return `
     <section class="hero">
       <div class="hero-glow"></div>
@@ -644,7 +611,7 @@ function viewHome() {
         </div>
         <div class="meta">
           <div><strong>${all.length}</strong><span>${escapeHtml(t("meta_plans"))}</span></div>
-          <div><strong>${brands.length}</strong><span>${escapeHtml(t("meta_platforms"))}</span></div>
+          <div><strong>5</strong><span>${escapeHtml(t("meta_platforms"))}</span></div>
           <div><strong>${CURRENCY_LIST.length}+</strong><span>${escapeHtml(t("meta_currencies"))}</span></div>
         </div>
       </div>
@@ -664,7 +631,6 @@ function viewHome() {
             <p class="eyebrow">${escapeHtml(t("eyebrow_platforms"))}</p>
             <h2>${escapeHtml(c("platforms_title", "platformsTitle"))}</h2>
           </div>
-          <span class="muted">${brands.length} services</span>
         </div>
         <div class="brands">
           ${brands
@@ -677,39 +643,14 @@ function viewHome() {
             )
             .join("")}
         </div>
-
-        <div class="section-head" style="margin-top:36px">
-          <div>
-            <p class="eyebrow">Categories</p>
-            <h2>Shop by category</h2>
-          </div>
-          <span class="muted">${categorySet.length} categories</span>
-        </div>
-        <div class="brands home-categories">
-          ${categorySet
-            .map((cat) => {
-              const count = all.filter((d) => d.category === cat).length;
-              const mono = (String(cat).slice(0, 2) || "??").toUpperCase();
-              return `
-            <button type="button" class="brand-tile" data-category="${escapeAttr(cat)}">
-              <div class="mono">${escapeHtml(mono)}</div>
-              <div class="name">${escapeHtml(cat)}</div>
-              <div class="muted" style="font-size:0.75rem;margin-top:4px">${count} plan${count === 1 ? "" : "s"}</div>
-            </button>`;
-            })
-            .join("")}
-        </div>
-
-        <div class="section-head" style="margin-top:36px">
+        <div class="section-head">
           <div>
             <p class="eyebrow">${escapeHtml(t("eyebrow_catalog"))}</p>
             <h2>${escapeHtml(c("catalog_title", "catalogTitle"))}</h2>
           </div>
-          <span class="muted">${catalog.length} deals</span>
+          <a href="#/deals" class="link">${escapeHtml(t("view_all"))}</a>
         </div>
-        <div class="grid home-all-deals">${catalog.map((d) => card(d)).join("")}</div>
-
-        ${categoryBlocks}
+        <div class="grid">${top.map(card).join("")}</div>
       </div>
     </section>`;
 }
@@ -2307,16 +2248,6 @@ function bind() {
     btn.addEventListener("click", () => {
       state.brand = btn.dataset.brand;
       state.category = "All";
-      state.query = "";
-      location.hash = "#/deals";
-      parseRoute();
-    });
-  });
-
-  $$("[data-category]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      state.category = btn.dataset.category || "All";
-      state.brand = "All";
       state.query = "";
       location.hash = "#/deals";
       parseRoute();
