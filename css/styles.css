@@ -1421,14 +1421,30 @@ html[data-theme="light"] .badge {
   opacity: 0.65;
 }
 
-/* BRAND ROW — text monograms only */
+/* BRAND / CATEGORY ROW — text monograms only */
 .brands {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
   gap: 1px;
   background: var(--line);
   border: 1px solid var(--line);
   margin-bottom: 40px;
+}
+
+.home-cat-title {
+  font-family: var(--display);
+  font-size: 1.1rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.home-all-deals {
+  margin-bottom: 12px;
+}
+
+.home-cat-block {
+  margin-top: 8px;
 }
 
 .brand-tile {
