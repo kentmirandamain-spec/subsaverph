@@ -15,11 +15,16 @@ const state = {
   stockCodes: [],
   orders: [],
   supportMessages: [],
-  /** Orders/Sales P&L focus: day | week | month | all */
-  salesPeriod: "day",
+  /**
+   * Orders/Sales P&L navigation:
+   * salesYear → pick year; salesView months|weeks|days; salesKey optional sub-period
+   */
+  salesYear: new Date().getFullYear(),
+  salesView: "months", // months | weeks | days
+  salesKey: null, // e.g. "2026-07" | "2026-07-14" (week Mon) | "2026-07-20" (day)
   /** Invoice search (order id, email, name, product, code) */
   orderSearch: "",
-  /** Search within monthly P&L invoices / products */
+  /** Search within period invoices / products */
   monthSearch: "",
 };
 
@@ -1040,22 +1045,107 @@ function orderEventDate(o) {
   return Number.isFinite(t) ? new Date(t) : null;
 }
 
-function periodRange(period, now = new Date()) {
-  if (period === "day") {
-    return { from: startOfLocalDay(now), to: endOfLocalDay(now), label: "Today" };
-  }
-  if (period === "week") {
-    return { from: startOfLocalWeek(now), to: endOfLocalDay(now), label: "This week" };
-  }
-  if (period === "month") {
-    return { from: startOfLocalMonth(now), to: endOfLocalDay(now), label: "This month" };
-  }
-  return { from: null, to: null, label: "All time" };
+function localIsoDay(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
-function filterOrdersByPeriod(orders, period) {
-  const { from, to } = periodRange(period);
-  if (!from) return orders || [];
+function parseLocalIsoDay(iso) {
+  const m = String(iso || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return null;
+  return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 0, 0, 0, 0);
+}
+
+function fmtShort(d) {
+  return d.toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" });
+}
+
+function collectSalesYears(orders) {
+  const years = new Set([new Date().getFullYear()]);
+  for (const o of orders || []) {
+    const d = orderEventDate(o);
+    if (d) years.add(d.getFullYear());
+  }
+  return [...years].sort((a, b) => b - a);
+}
+
+/** Active P&L date range from year + months/weeks/days selection. */
+function activeSalesRange() {
+  const year = Number(state.salesYear) || new Date().getFullYear();
+  const view = state.salesView || "months";
+  const key = state.salesKey;
+
+  if (!key) {
+    const from = new Date(year, 0, 1, 0, 0, 0, 0);
+    const to = endOfLocalDay(new Date(year, 11, 31));
+    return { from, to, label: `Year ${year}`, year, view, key: null };
+  }
+
+  if (view === "months") {
+    // key: YYYY-MM
+    const m = String(key).match(/^(\d{4})-(\d{2})$/);
+    if (m) {
+      const y = Number(m[1]);
+      const mo = Number(m[2]) - 1;
+      const from = new Date(y, mo, 1, 0, 0, 0, 0);
+      const to = endOfLocalDay(new Date(y, mo + 1, 0));
+      return {
+        from,
+        to,
+        label: from.toLocaleDateString("en-PH", { month: "long", year: "numeric" }),
+        year,
+        view,
+        key,
+      };
+    }
+  }
+
+  if (view === "weeks") {
+    // key: Monday ISO day
+    const mon = parseLocalIsoDay(key);
+    if (mon) {
+      const from = startOfLocalDay(mon);
+      const to = endOfLocalDay(new Date(from.getFullYear(), from.getMonth(), from.getDate() + 6));
+      return {
+        from,
+        to,
+        label: `Week ${fmtShort(from)} – ${fmtShort(to)}`,
+        year,
+        view,
+        key,
+      };
+    }
+  }
+
+  if (view === "days") {
+    const day = parseLocalIsoDay(key);
+    if (day) {
+      const from = startOfLocalDay(day);
+      return {
+        from,
+        to: endOfLocalDay(from),
+        label: from.toLocaleDateString("en-PH", {
+          weekday: "short",
+          month: "long",
+          day: "numeric",
+          year: "numeric",
+        }),
+        year,
+        view,
+        key,
+      };
+    }
+  }
+
+  const from = new Date(year, 0, 1, 0, 0, 0, 0);
+  const to = endOfLocalDay(new Date(year, 11, 31));
+  return { from, to, label: `Year ${year}`, year, view, key: null };
+}
+
+function filterOrdersByRange(orders, from, to) {
+  if (!from || !to) return orders || [];
   return (orders || []).filter((o) => {
     const d = orderEventDate(o);
     if (!d) return false;
@@ -1063,32 +1153,74 @@ function filterOrdersByPeriod(orders, period) {
   });
 }
 
-function formatPeriodRange(period) {
-  const { from, to, label } = periodRange(period);
-  if (!from) return label;
-  const fmt = (d) =>
-    d.toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" });
-  if (period === "day") return `${label} · ${fmt(from)}`;
-  return `${label} · ${fmt(from)} – ${fmt(to)}`;
+function monthsInYear(year) {
+  return Array.from({ length: 12 }, (_, i) => {
+    const from = new Date(year, i, 1);
+    return {
+      key: `${year}-${String(i + 1).padStart(2, "0")}`,
+      label: from.toLocaleDateString("en-PH", { month: "short" }),
+      full: from.toLocaleDateString("en-PH", { month: "long" }),
+      from,
+      to: endOfLocalDay(new Date(year, i + 1, 0)),
+    };
+  });
+}
+
+function weeksInYear(year) {
+  const weeks = [];
+  let mon = startOfLocalWeek(new Date(year, 0, 1));
+  // If week starts in previous year, still include if it overlaps year
+  const yearEnd = endOfLocalDay(new Date(year, 11, 31));
+  let guard = 0;
+  while (mon <= yearEnd && guard < 60) {
+    const to = endOfLocalDay(new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + 6));
+    if (to.getFullYear() >= year && mon.getFullYear() <= year) {
+      weeks.push({
+        key: localIsoDay(mon),
+        label: `${fmtShort(mon)} – ${fmtShort(to)}`,
+        from: startOfLocalDay(mon),
+        to,
+      });
+    }
+    mon = new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + 7);
+    guard += 1;
+  }
+  return weeks;
+}
+
+function daysInYear(year, limit = 62) {
+  // Prefer days with activity; fall back to recent days of year
+  const days = [];
+  const end = new Date();
+  if (end.getFullYear() > year) {
+    end.setFullYear(year, 11, 31);
+  } else if (end.getFullYear() < year) {
+    end.setFullYear(year, 0, 1);
+  }
+  const start = new Date(year, 0, 1);
+  for (let d = startOfLocalDay(end); d >= start && days.length < limit; d = new Date(d.getFullYear(), d.getMonth(), d.getDate() - 1)) {
+    days.push({
+      key: localIsoDay(d),
+      label: d.toLocaleDateString("en-PH", { weekday: "short", month: "short", day: "numeric" }),
+      from: startOfLocalDay(d),
+      to: endOfLocalDay(d),
+    });
+  }
+  return days;
 }
 
 /**
- * PHP P&L: paid sales count; refunded sales are deducted from net revenue/profit.
- * Gross = paid + refunded history; Net = paid only; Refunds line = refunded totals.
- * @param {object[]} orders
- * @param {object[]} deals
- * @param {"day"|"week"|"month"|"all"} [period]
+ * PHP P&L for a date range. Refunds deducted from net.
  */
-function buildSalesReport(orders, deals, period = "all") {
+function buildSalesReportRange(orders, deals, from, to, label = "") {
   const dealById = Object.fromEntries((deals || []).map((d) => [d.id, d]));
   const paidStatuses = new Set(["paid", "completed", "succeeded", "complete", "success"]);
   const refundStatuses = new Set(["refunded", "refund", "reversed", "chargeback"]);
 
-  const scoped = filterOrdersByPeriod((orders || []).filter(isPhpOrder), period);
+  const scoped = filterOrdersByRange((orders || []).filter(isPhpOrder), from, to);
   const paid = scoped.filter((o) => paidStatuses.has(orderStatusKey(o)));
   const refunded = scoped.filter((o) => refundStatuses.has(orderStatusKey(o)));
 
-  /** @type {Record<string, { id: string, name: string, brand: string, units: number, revenue: number, cost: number, profit: number, orders: number, refundedUnits: number, refundedAmount: number }>} */
   const byProduct = {};
   const totals = {
     revenue: 0,
@@ -1169,35 +1301,16 @@ function buildSalesReport(orders, deals, period = "all") {
     .filter((p) => p.units > 0 || p.refundedUnits > 0)
     .sort((a, b) => b.units - a.units || b.revenue - a.revenue);
 
-  const range = periodRange(period);
   return {
-    period,
-    periodLabel: formatPeriodRange(period),
+    periodLabel: label,
     paid,
     refunded,
     totalOrders: totals.orders,
     products,
     totals,
-    from: range.from,
-    to: range.to,
+    from,
+    to,
   };
-}
-
-function pnlCardHtml(title, report, active) {
-  const t = report.totals || {};
-  const profitClass = (t.profit || 0) < 0 ? "sales-loss" : "";
-  return `
-    <button type="button" class="sales-card sales-pnl-card ${active ? "active" : ""}" data-sales-period="${escapeAttr(report.period)}" title="Show ${escapeAttr(title)} detail">
-      <div class="sales-card-label">${escapeHtml(title)}</div>
-      <div class="muted sales-pnl-range">${escapeHtml(report.periodLabel || "")}</div>
-      <div class="sales-card-row"><span>Orders</span><strong>${report.totalOrders || 0}</strong></div>
-      <div class="sales-card-row"><span>Units</span><strong>${t.units || 0}</strong></div>
-      <div class="sales-card-row"><span>Gross</span><strong>${escapeHtml(money(t.grossRevenue))}</strong></div>
-      <div class="sales-card-row sales-refund"><span>Refunds</span><strong>− ${escapeHtml(money(t.refunds))}</strong></div>
-      <div class="sales-card-row"><span>Net revenue</span><strong>${escapeHtml(money(t.revenue))}</strong></div>
-      <div class="sales-card-row"><span>Cost</span><strong>${escapeHtml(money(t.cost))}</strong></div>
-      <div class="sales-card-row sales-profit ${profitClass}"><span>Net profit</span><strong>${escapeHtml(money(t.profit))}</strong></div>
-    </button>`;
 }
 
 function productMatchesSearch(p, qRaw) {
@@ -1209,7 +1322,12 @@ function productMatchesSearch(p, qRaw) {
   return q.split(/\s+/).every((tok) => blob.includes(tok));
 }
 
-function salesChecklistHtml(report, periodReports) {
+function miniPnlLine(report) {
+  const t = report.totals || {};
+  return `Orders ${report.totalOrders || 0} · Profit ${money(t.profit)}`;
+}
+
+function salesChecklistHtml(report, allOrders, deals) {
   const { products, totals, totalOrders, periodLabel } = report;
   const t = totals || {
     revenue: 0,
@@ -1221,25 +1339,15 @@ function salesChecklistHtml(report, periodReports) {
     refundUnits: 0,
     grossRevenue: 0,
   };
-  const period = state.salesPeriod || "day";
+  const year = Number(state.salesYear) || new Date().getFullYear();
+  const view = state.salesView || "months";
+  const key = state.salesKey;
+  const years = collectSalesYears(allOrders);
   const monthQ = (state.monthSearch || "").trim();
-  const isMonth = period === "month";
-  const tabs = [
-    { id: "day", label: "Daily" },
-    { id: "week", label: "Weekly" },
-    { id: "month", label: "Monthly" },
-    { id: "all", label: "All time" },
-  ]
-    .map(
-      (tab) =>
-        `<button type="button" class="sales-period-tab ${period === tab.id ? "active" : ""}" data-sales-period="${tab.id}">${tab.label}</button>`
-    )
-    .join("");
 
-  const filteredProducts =
-    isMonth && monthQ
-      ? (products || []).filter((p) => productMatchesSearch(p, monthQ))
-      : products || [];
+  const filteredProducts = monthQ
+    ? (products || []).filter((p) => productMatchesSearch(p, monthQ))
+    : products || [];
 
   const checklist = filteredProducts.length
     ? filteredProducts
@@ -1264,59 +1372,129 @@ function salesChecklistHtml(report, periodReports) {
         })
         .join("")
     : `<p class="muted" style="margin:0">${
-        isMonth && monthQ
-          ? `No monthly products match “${escapeHtml(monthQ)}”.`
+        monthQ
+          ? `No products match “${escapeHtml(monthQ)}”.`
           : "No PHP sales in this period. Paid PHP orders will appear here automatically."
       }</p>`;
 
-  const dayR = periodReports.day;
-  const weekR = periodReports.week;
-  const monthR = periodReports.month;
+  const yearBtns = years
+    .map(
+      (y) =>
+        `<button type="button" class="sales-year-btn ${y === year ? "active" : ""}" data-sales-year="${y}">${y}</button>`
+    )
+    .join("");
 
-  const monthlySearchBox = isMonth
-    ? `
-      <div class="month-search-box">
-        <label class="order-search-label">Search monthly invoices &amp; products
-          <input
-            id="adminMonthSearch"
-            type="search"
-            placeholder="Order ID, email, customer, product name…"
-            value="${escapeAttr(state.monthSearch || "")}"
-            autocomplete="off"
-          />
-        </label>
-        <p class="muted" style="margin:8px 0 0">
-          Filters this month’s product checklist and invoice list below.
-          ${monthQ ? `Query: <strong>${escapeHtml(monthQ)}</strong>` : "Leave empty to show all monthly sales."}
-        </p>
-      </div>`
-    : "";
+  const viewTabs = [
+    { id: "months", label: "Months" },
+    { id: "weeks", label: "Weeks" },
+    { id: "days", label: "Days" },
+  ]
+    .map(
+      (tab) =>
+        `<button type="button" class="sales-period-tab ${view === tab.id ? "active" : ""}" data-sales-view="${tab.id}">${tab.label}</button>`
+    )
+    .join("");
+
+  let optionChips = "";
+  if (view === "months") {
+    optionChips = monthsInYear(year)
+      .map((m) => {
+        const r = buildSalesReportRange(allOrders, deals, m.from, m.to, m.full);
+        const active = key === m.key;
+        return `<button type="button" class="sales-option-chip ${active ? "active" : ""}" data-sales-key="${escapeAttr(m.key)}" title="${escapeAttr(miniPnlLine(r))}">
+          <strong>${escapeHtml(m.label)}</strong>
+          <span class="muted">${r.totalOrders} ord · ${escapeHtml(money(r.totals.profit))}</span>
+        </button>`;
+      })
+      .join("");
+  } else if (view === "weeks") {
+    optionChips = weeksInYear(year)
+      .map((w) => {
+        const r = buildSalesReportRange(allOrders, deals, w.from, w.to, w.label);
+        const active = key === w.key;
+        return `<button type="button" class="sales-option-chip ${active ? "active" : ""}" data-sales-key="${escapeAttr(w.key)}" title="${escapeAttr(miniPnlLine(r))}">
+          <strong>${escapeHtml(w.label)}</strong>
+          <span class="muted">${r.totalOrders} ord · ${escapeHtml(money(r.totals.profit))}</span>
+        </button>`;
+      })
+      .join("");
+  } else {
+    optionChips = daysInYear(year)
+      .map((d) => {
+        const r = buildSalesReportRange(allOrders, deals, d.from, d.to, d.label);
+        const active = key === d.key;
+        return `<button type="button" class="sales-option-chip ${active ? "active" : ""}" data-sales-key="${escapeAttr(d.key)}" title="${escapeAttr(miniPnlLine(r))}">
+          <strong>${escapeHtml(d.label)}</strong>
+          <span class="muted">${r.totalOrders} ord · ${escapeHtml(money(r.totals.profit))}</span>
+        </button>`;
+      })
+      .join("");
+  }
+
+  const profitClass = (t.profit || 0) < 0 ? "sales-loss" : "";
 
   return `
     <div class="panel sales-panel">
       <h2 class="sales-h">P&amp;L (PHP)</h2>
       <p class="muted" style="margin-top:0">
-        Daily / weekly / monthly profit &amp; loss. Amounts in <strong>₱</strong>.
-        Net profit = paid sales − cost; refunds are deducted from gross.
-        Click a period card or tab to filter the product checklist.
+        Pick a <strong>year</strong>, then choose <strong>Months</strong>, <strong>Weeks</strong>, or <strong>Days</strong>.
+        Amounts in ₱. Refunds are deducted from net profit.
       </p>
-      <div class="sales-summary sales-pnl-grid">
-        ${pnlCardHtml("Daily", dayR, period === "day")}
-        ${pnlCardHtml("Weekly", weekR, period === "week")}
-        ${pnlCardHtml("Monthly", monthR, period === "month")}
+
+      <div class="sales-year-row">
+        <span class="sales-year-label">Year</span>
+        <div class="sales-year-btns">${yearBtns}</div>
       </div>
-      <div class="sales-period-tabs" role="tablist" aria-label="P&L period">
-        ${tabs}
-      </div>
-      <div class="sales-period-detail">
-        <h3 class="settings-h" style="margin:0 0 6px">Detail · ${escapeHtml(periodLabel || "")}</h3>
-        <p class="muted" style="margin:0 0 12px">
-          ${totalOrders} paid order(s) · ${t.units || 0} unit(s) ·
-          Net revenue ${escapeHtml(money(t.revenue))} ·
-          Net profit <strong class="${(t.profit || 0) < 0 ? "sales-loss" : ""}">${escapeHtml(money(t.profit))}</strong>
-          ${t.refundOrders ? ` · ${t.refundOrders} refund(s) (−${escapeHtml(money(t.refunds))})` : ""}
+
+      <div class="sales-year-panel">
+        <div class="sales-year-panel-head">
+          <h3 class="settings-h" style="margin:0">${year}</h3>
+          <div class="sales-period-tabs" role="tablist" aria-label="Period type">
+            ${viewTabs}
+          </div>
+        </div>
+        <p class="muted" style="margin:8px 0 10px">
+          ${
+            view === "months"
+              ? "Click a month for that month’s P&amp;L."
+              : view === "weeks"
+                ? "Click a week for that week’s P&amp;L."
+                : "Click a day for that day’s P&amp;L."
+          }
+          ${!key ? ` Showing full year ${year} until you pick one.` : ""}
         </p>
-        ${monthlySearchBox}
+        <div class="sales-option-grid">${optionChips || `<p class="muted">No periods.</p>`}</div>
+      </div>
+
+      <div class="sales-summary" style="margin-top:16px">
+        <div class="sales-card sales-card-wide">
+          <div class="sales-card-label">${escapeHtml(periodLabel || "")}</div>
+          <div class="sales-big">${totalOrders}</div>
+          <div class="muted">paid orders (net)</div>
+        </div>
+        <div class="sales-card">
+          <div class="sales-card-label">PHP P&amp;L</div>
+          <div class="sales-card-row"><span>Units</span><strong>${t.units || 0}</strong></div>
+          <div class="sales-card-row"><span>Gross</span><strong>${escapeHtml(money(t.grossRevenue))}</strong></div>
+          <div class="sales-card-row sales-refund"><span>Refunds</span><strong>− ${escapeHtml(money(t.refunds))}</strong></div>
+          <div class="sales-card-row"><span>Net revenue</span><strong>${escapeHtml(money(t.revenue))}</strong></div>
+          <div class="sales-card-row"><span>Cost</span><strong>${escapeHtml(money(t.cost))}</strong></div>
+          <div class="sales-card-row sales-profit ${profitClass}"><span>Net profit</span><strong>${escapeHtml(money(t.profit))}</strong></div>
+        </div>
+      </div>
+
+      <div class="sales-period-detail" style="margin-top:14px">
+        <div class="month-search-box">
+          <label class="order-search-label">Search invoices &amp; products in this period
+            <input
+              id="adminMonthSearch"
+              type="search"
+              placeholder="Order ID, email, customer, product name…"
+              value="${escapeAttr(state.monthSearch || "")}"
+              autocomplete="off"
+            />
+          </label>
+        </div>
         <h3 class="settings-h" style="margin-top:12px">Products bought &amp; sold (net of refunds)</h3>
         <div class="sales-checklist" role="list">
           ${checklist}
@@ -1370,33 +1548,21 @@ function orderMatchesSearch(o, qRaw) {
 function ordersView() {
   const allOrders = state.orders || [];
   const deals = state.deals || [];
-  const period = state.salesPeriod || "day";
+  const range = activeSalesRange();
+  const report = buildSalesReportRange(allOrders, deals, range.from, range.to, range.label);
   const q = (state.orderSearch || "").trim();
-  const monthQ = (state.monthSearch || "").trim();
+  const periodQ = (state.monthSearch || "").trim();
   const searching = q.length > 0;
-  const monthSearching = period === "month" && monthQ.length > 0;
-  const periodReports = {
-    day: buildSalesReport(allOrders, deals, "day"),
-    week: buildSalesReport(allOrders, deals, "week"),
-    month: buildSalesReport(allOrders, deals, "month"),
-    all: buildSalesReport(allOrders, deals, "all"),
-  };
-  const report = periodReports[period] || periodReports.day;
-  const periodOrders = filterOrdersByPeriod(allOrders, period === "all" ? "all" : period);
-  // Global invoice search across all; monthly search stays inside this month
-  let baseList;
+  const periodSearching = !searching && periodQ.length > 0;
+  const periodOrders = filterOrdersByRange(allOrders, range.from, range.to);
+
   let list;
   if (searching) {
-    baseList = allOrders;
-    list = baseList.filter((o) => orderMatchesSearch(o, q));
-  } else if (period === "month") {
-    baseList = periodOrders;
-    list = monthSearching
-      ? baseList.filter((o) => orderMatchesSearch(o, monthQ))
-      : baseList;
+    list = allOrders.filter((o) => orderMatchesSearch(o, q));
+  } else if (periodSearching) {
+    list = periodOrders.filter((o) => orderMatchesSearch(o, periodQ));
   } else {
-    baseList = period === "all" ? allOrders : periodOrders;
-    list = baseList;
+    list = periodOrders;
   }
 
   const rows = list
@@ -1429,21 +1595,19 @@ function ordersView() {
 
   const emptyMsg = searching
     ? `No invoices match “${escapeHtml(q)}”.`
-    : monthSearching
-      ? `No monthly invoices match “${escapeHtml(monthQ)}”.`
+    : periodSearching
+      ? `No invoices match “${escapeHtml(periodQ)}” in ${escapeHtml(range.label)}.`
       : "No orders in this period.";
 
   const globalSearchHint = searching
     ? `Showing <strong>${list.length}</strong> match(es) across all invoices`
-    : period === "month"
-      ? monthSearching
-        ? `Monthly matches: <strong>${list.length}</strong> (this month only)`
-        : `This month · <strong>${list.length}</strong> invoice(s). Use the monthly search box above to filter.`
-      : `Orders in selected period (${escapeHtml(report.periodLabel || "")}) · <strong>${list.length}</strong> shown`;
+    : periodSearching
+      ? `<strong>${list.length}</strong> match(es) in ${escapeHtml(range.label)}`
+      : `Period: <strong>${escapeHtml(range.label)}</strong> · <strong>${list.length}</strong> invoice(s)`;
 
   return `
     <div class="top"><h1>Orders / Sales</h1></div>
-    ${salesChecklistHtml(report, periodReports)}
+    ${salesChecklistHtml(report, allOrders, deals)}
     <div class="panel order-search-panel">
       <label class="order-search-label">Search all invoices
         <input
@@ -1692,11 +1856,32 @@ function bindShell() {
     });
   });
 
-  $$("[data-sales-period]").forEach((btn) => {
+  $$("[data-sales-year]").forEach((btn) => {
     btn.addEventListener("click", () => {
-      const p = btn.dataset.salesPeriod;
-      if (!p || !["day", "week", "month", "all"].includes(p)) return;
-      state.salesPeriod = p;
+      const y = Number(btn.dataset.salesYear);
+      if (!Number.isFinite(y)) return;
+      state.salesYear = y;
+      state.salesKey = null; // whole year until a month/week/day is picked
+      render();
+    });
+  });
+
+  $$("[data-sales-view]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const v = btn.dataset.salesView;
+      if (!v || !["months", "weeks", "days"].includes(v)) return;
+      state.salesView = v;
+      state.salesKey = null;
+      render();
+    });
+  });
+
+  $$("[data-sales-key]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const k = btn.dataset.salesKey;
+      if (!k) return;
+      // toggle off if same key clicked again → whole year
+      state.salesKey = state.salesKey === k ? null : k;
       render();
     });
   });
@@ -1854,8 +2039,6 @@ function bindShell() {
 
   $("#adminMonthSearch")?.addEventListener("input", (e) => {
     state.monthSearch = e.target.value;
-    // Prefer monthly view while searching monthly invoices
-    if (state.salesPeriod !== "month") state.salesPeriod = "month";
     const keep = e.target.selectionStart;
     render();
     const again = $("#adminMonthSearch");
