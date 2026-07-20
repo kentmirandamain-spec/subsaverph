@@ -105,11 +105,223 @@ def seo_friendly_headers(resp):
     return resp
 
 
+def _esc_html(s: str) -> str:
+    return (
+        str(s or "")
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace('"', "&quot;")
+    )
+
+
+def _esc_attr(s: str) -> str:
+    return _esc_html(s).replace("\n", " ").replace("\r", "")
+
+
+def _set_meta_content(html: str, selector_attr: str, content: str) -> str:
+    """Replace content="..." for a meta/link tag that contains selector_attr (e.g. name=\"description\")."""
+    if not content:
+        return html
+    # Match attribute then content= (either order of attrs is hard; match content= on same tag)
+    pat = re.compile(
+        rf'(<meta\b[^>]*?{selector_attr}[^>]*?\bcontent=")([^"]*)(")',
+        re.I,
+    )
+    if pat.search(html):
+        return pat.sub(rf"\g<1>{_esc_attr(content)}\g<3>", html, count=1)
+    pat2 = re.compile(
+        rf'(<meta\b[^>]*?\bcontent=")([^"]*)("[^>]*?{selector_attr}[^>]*>)',
+        re.I,
+    )
+    if pat2.search(html):
+        return pat2.sub(rf"\g<1>{_esc_attr(content)}\g<3>", html, count=1)
+    return html
+
+
+def _build_seo_bootstrap_inner(s: dict) -> str:
+    """HTML for crawler-visible homepage body from admin SEO settings."""
+    h1 = (s.get("seoH1") or "").strip() or "SubSaverPH — Discounted Subscriptions in the Philippines"
+    intro = (s.get("seoIntro") or "").strip() or (
+        "SubSaverPH is an online store for discounted prepaid digital subscriptions "
+        "in the Philippines."
+    )
+    why_title = (s.get("seoWhyTitle") or "").strip() or "Why shop SubSaverPH"
+    why_raw = (s.get("seoWhyItems") or "").strip()
+    if why_raw:
+        why_items = [ln.strip() for ln in why_raw.splitlines() if ln.strip()]
+    else:
+        why_items = [
+            "PHP-friendly prepaid plans for popular AI, design, video, and streaming tools",
+            "Multi-currency price display with checkout for Filipino shoppers",
+            "Instant digital delivery of access codes after successful payment",
+            "Clear product pages with duration, stock, and fine print",
+        ]
+    popular_title = (s.get("seoPopularTitle") or "").strip() or "Popular deals"
+    popular_raw = (s.get("seoPopularItems") or "").strip()
+    if popular_raw:
+        popular_items = [ln.strip() for ln in popular_raw.splitlines() if ln.strip()]
+    else:
+        popular_items = [
+            "**SuperGrok 7 Days** — discounted SuperGrok access in the Philippines",
+            "**SuperGrok 1 Month** — full SuperGrok prepaid monthly plan",
+            "**Canva Pro** — design tools at outlet rates",
+            "**CapCut Pro** — video editing subscription",
+            "**Netflix** — prepaid streaming plans",
+            "**YouTube Premium** — ad-free video and Music discount PH",
+        ]
+    faq_title = (s.get("seoFaqTitle") or "").strip() or "FAQ"
+    faq_raw = (s.get("seoFaq") or "").strip()
+    # Blocks separated by blank line; first line = question, rest = answer
+    faq_blocks = []
+    if faq_raw:
+        for block in re.split(r"\n\s*\n", faq_raw):
+            lines = [ln.strip() for ln in block.splitlines() if ln.strip()]
+            if not lines:
+                continue
+            q = lines[0]
+            a = " ".join(lines[1:]) if len(lines) > 1 else ""
+            faq_blocks.append((q, a))
+    if not faq_blocks:
+        faq_blocks = [
+            (
+                "What is SubSaverPH?",
+                "SubSaverPH is a Philippines online store for discounted prepaid digital subscriptions "
+                "(SuperGrok, Canva, CapCut, Netflix, YouTube Premium) with digital delivery after payment.",
+            ),
+            (
+                "How do I pay?",
+                "Use the methods shown at checkout — often card, GCash, Maya, GrabPay, ShopeePay, PayPal, or crypto when enabled.",
+            ),
+            (
+                "When do I get my login?",
+                "Right after successful payment on the success page: credentials, features, instructions, and rules. "
+                "Email is sent when configured.",
+            ),
+            (
+                "CapCut rules?",
+                "Login on the CapCut mobile app first; for PC scan the QR after mobile login. Do not log out. "
+                "Max 2 devices — a 3rd can lose access (not refundable).",
+            ),
+        ]
+    browse_title = (s.get("seoBrowseTitle") or "").strip() or "Browse"
+    browse_text = (s.get("seoBrowseText") or "").strip() or (
+        "All deals · FAQ · Support · SuperGrok 1 Month · CapCut Pro"
+    )
+    contact_title = (s.get("seoContactTitle") or "").strip() or "Contact"
+    contact_text = (s.get("seoContactText") or "").strip() or (
+        "Contact support. Website: https://subsaverph.com/. Service area: Philippines (online)."
+    )
+    disclaimer = (s.get("seoDisclaimer") or "").strip() or (
+        "SubSaverPH is not affiliated with xAI, Canva, CapCut, Netflix, YouTube, or Google. "
+        "Product names are trademarks of their respective owners."
+    )
+
+    def bullets(items):
+        out = []
+        for it in items:
+            # allow **bold**
+            esc = _esc_html(it)
+            esc = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", esc)
+            out.append(f"<li>{esc}</li>")
+        return "\n".join(out)
+
+    faq_html = []
+    for q, a in faq_blocks:
+        faq_html.append(f"<h3>{_esc_html(q)}</h3>\n<p>{_esc_html(a)}</p>")
+
+    return f"""      <div class="page-inner" id="seoBootstrap">
+        <h1>{_esc_html(h1)}</h1>
+        <p>
+          {_esc_html(intro)}
+        </p>
+        <h2>{_esc_html(why_title)}</h2>
+        <ul>
+          {bullets(why_items)}
+        </ul>
+        <h2>{_esc_html(popular_title)}</h2>
+        <ul>
+          {bullets(popular_items)}
+        </ul>
+        <h2>{_esc_html(faq_title)}</h2>
+        {chr(10).join(faq_html)}
+        <h2>{_esc_html(browse_title)}</h2>
+        <p>
+          {_esc_html(browse_text)}
+        </p>
+        <h2>{_esc_html(contact_title)}</h2>
+        <p>
+          {_esc_html(contact_text)}
+        </p>
+        <p>
+          {_esc_html(disclaimer)}
+        </p>
+      </div>"""
+
+
+def _inject_seo_into_index(html: str) -> str:
+    """Apply admin SEO settings to the storefront index HTML (meta + crawler body)."""
+    s = load_settings() or {}
+    title = (s.get("seoTitle") or "").strip()
+    desc = (s.get("seoDescription") or "").strip()
+    keywords = (s.get("seoKeywords") or "").strip()
+    og_title = (s.get("seoOgTitle") or title or "").strip()
+    og_desc = (s.get("seoOgDescription") or desc or "").strip()
+
+    if title:
+        html = re.sub(
+            r"<title>[^<]*</title>",
+            f"<title>{_esc_html(title)}</title>",
+            html,
+            count=1,
+            flags=re.I,
+        )
+    if desc:
+        html = _set_meta_content(html, r'name=["\']description["\']', desc)
+    if keywords:
+        html = _set_meta_content(html, r'name=["\']keywords["\']', keywords)
+    if og_title:
+        html = _set_meta_content(html, r'property=["\']og:title["\']', og_title)
+        html = _set_meta_content(html, r'name=["\']twitter:title["\']', og_title)
+    if og_desc:
+        html = _set_meta_content(html, r'property=["\']og:description["\']', og_desc)
+        html = _set_meta_content(html, r'name=["\']twitter:description["\']', og_desc)
+
+    # Crawler-visible body (seo-bootstrap)
+    inner = _build_seo_bootstrap_inner(s)
+    html = re.sub(
+        r'(<article\b[^>]*\bseo-bootstrap\b[^>]*>)(.*?)(</article>)',
+        rf"\1\n{inner}\n  \3",
+        html,
+        count=1,
+        flags=re.I | re.S,
+    )
+
+    # noscript fallback
+    noscript = (s.get("seoNoscript") or "").strip()
+    if noscript:
+        html = re.sub(
+            r"(<noscript>\s*<div\b[^>]*>\s*<h1>[^<]*</h1>\s*)<p>[^<]*</p>",
+            rf"\1<p>{_esc_html(noscript)}</p>",
+            html,
+            count=1,
+            flags=re.I | re.S,
+        )
+
+    return html
+
+
 def _serve_html(filename: str, folder: Path | None = None):
     """Serve HTML as a real webpage (no Content-Disposition filename)."""
     base = folder or ROOT
     path = base / filename
     html = path.read_text(encoding="utf-8")
+    # Inject live SEO settings into the public storefront only
+    if filename == "index.html" and (folder is None or Path(folder) == ROOT):
+        try:
+            html = _inject_seo_into_index(html)
+        except Exception:
+            pass
     resp = make_response(html)
     resp.headers["Content-Type"] = "text/html; charset=utf-8"
     resp.headers["X-Robots-Tag"] = "index, follow, max-image-preview:large, max-snippet:-1"

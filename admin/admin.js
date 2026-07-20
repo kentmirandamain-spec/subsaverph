@@ -719,25 +719,82 @@ function settingsView() {
         </label>
       </section>
 
-      <!-- ========== 11. SEO (not on page body) ========== -->
+      <!-- ========== 10. SEO (Google + crawler page text) ========== -->
       <section class="settings-block" id="sc-seo">
-        <h3 class="settings-h">10 · Google / search &amp; social <span class="settings-page">not shown as page text — search results only</span></h3>
-        <p class="muted settings-lead">Title &amp; description when people search Google or share a link. Prefer company wording (categories), not product brand lists.</p>
-        <label>Google title
-          <input name="seoTitle" value="${escapeAttr(s.seoTitle || "")}" />
-        </label>
-        <label>Google description
-          <textarea name="seoDescription" rows="3">${escapeHtml(s.seoDescription || "")}</textarea>
-        </label>
-        <label>Keywords (comma-separated)
-          <input name="seoKeywords" value="${escapeAttr(s.seoKeywords || "")}" />
-        </label>
-        <div class="grid2">
-          <label>Share title (Facebook / Messenger)
-            <input name="seoOgTitle" value="${escapeAttr(s.seoOgTitle || "")}" />
+        <h3 class="settings-h">10 · Google / search &amp; social <span class="settings-page">search results + crawler text on the homepage</span></h3>
+        <p class="muted settings-lead">Edit what Google and link previews show. Changes apply live after <strong>Save all</strong> (hard-refresh the storefront). Prefer company wording (categories), not product brand lists.</p>
+
+        <div class="settings-sub">
+          <h4 class="settings-sub-h">Search result &amp; browser tab</h4>
+          ${fieldHint("Blue title + grey snippet in Google; also the browser tab title")}
+          <label>Google / page title
+            <input name="seoTitle" value="${escapeAttr(s.seoTitle || "")}" maxlength="70" />
           </label>
-          <label>Share description
-            <input name="seoOgDescription" value="${escapeAttr(s.seoOgDescription || "")}" />
+          <label>Google description (meta)
+            <textarea name="seoDescription" rows="3" maxlength="320">${escapeHtml(s.seoDescription || "")}</textarea>
+          </label>
+          <label>Keywords (comma-separated)
+            <input name="seoKeywords" value="${escapeAttr(s.seoKeywords || "")}" />
+          </label>
+        </div>
+
+        <div class="settings-sub">
+          <h4 class="settings-sub-h">Share preview (Facebook, Messenger, X / Twitter)</h4>
+          ${fieldHint("Leave blank to reuse Google title &amp; description")}
+          <div class="grid2">
+            <label>Share title
+              <input name="seoOgTitle" value="${escapeAttr(s.seoOgTitle || "")}" />
+            </label>
+            <label>Share description
+              <input name="seoOgDescription" value="${escapeAttr(s.seoOgDescription || "")}" />
+            </label>
+          </div>
+        </div>
+
+        <div class="settings-sub">
+          <h4 class="settings-sub-h">Crawler homepage text (SEO body)</h4>
+          ${fieldHint("HTML Googlebot reads before JavaScript loads. Shoppers with JS see the normal store UI instead.")}
+          <label>Main heading (H1)
+            <input name="seoH1" value="${escapeAttr(s.seoH1 || "")}" />
+          </label>
+          <label>Intro paragraph
+            <textarea name="seoIntro" rows="4">${escapeHtml(s.seoIntro || "")}</textarea>
+          </label>
+          <label>“Why shop” section title
+            <input name="seoWhyTitle" value="${escapeAttr(s.seoWhyTitle || "")}" />
+          </label>
+          <label>Why-shop bullets <span class="muted">(one line = one bullet)</span>
+            <textarea name="seoWhyItems" rows="5">${escapeHtml(s.seoWhyItems || "")}</textarea>
+          </label>
+          <label>“Popular deals” section title
+            <input name="seoPopularTitle" value="${escapeAttr(s.seoPopularTitle || "")}" />
+          </label>
+          <label>Popular deals list <span class="muted">(one line each; use **name** for bold)</span>
+            <textarea name="seoPopularItems" rows="7">${escapeHtml(s.seoPopularItems || "")}</textarea>
+          </label>
+          <label>FAQ section title
+            <input name="seoFaqTitle" value="${escapeAttr(s.seoFaqTitle || "")}" />
+          </label>
+          <label>FAQ blocks <span class="muted">(first line = question, next lines = answer; blank line between Q&amp;As)</span>
+            <textarea name="seoFaq" rows="12">${escapeHtml(s.seoFaq || "")}</textarea>
+          </label>
+          <label>Browse section title
+            <input name="seoBrowseTitle" value="${escapeAttr(s.seoBrowseTitle || "")}" />
+          </label>
+          <label>Browse line
+            <input name="seoBrowseText" value="${escapeAttr(s.seoBrowseText || "")}" />
+          </label>
+          <label>Contact section title
+            <input name="seoContactTitle" value="${escapeAttr(s.seoContactTitle || "")}" />
+          </label>
+          <label>Contact paragraph
+            <textarea name="seoContactText" rows="2">${escapeHtml(s.seoContactText || "")}</textarea>
+          </label>
+          <label>Affiliation disclaimer
+            <textarea name="seoDisclaimer" rows="2">${escapeHtml(s.seoDisclaimer || "")}</textarea>
+          </label>
+          <label>No-JavaScript message
+            <textarea name="seoNoscript" rows="2">${escapeHtml(s.seoNoscript || "")}</textarea>
           </label>
         </div>
       </section>
