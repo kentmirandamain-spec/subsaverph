@@ -885,8 +885,7 @@ function accountView() {
       <label>Current password<input type="password" name="current" required /></label>
       <label>New password<input type="password" name="newPassword" required minlength="6" /></label>
       <button class="btn" type="submit">Update password</button>
-    </form>
-    ${testInvoicePanel({ margin: "margin-top:16px" })}`;
+    </form>`;
 }
 
 function stockView() {
