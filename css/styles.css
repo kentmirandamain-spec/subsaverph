@@ -1136,6 +1136,58 @@ html[data-theme="light"] .prefs-panel {
   background: rgba(255, 255, 255, 0.03);
 }
 
+/* All deals catalog search — full width, aligned with toolbar + grid */
+.deals-search {
+  width: 100%;
+  margin: 20px 0 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+}
+
+.deals-search .product-search,
+.deals-search .product-search.large {
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.deals-search .product-search input {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100%;
+  line-height: 1.4;
+}
+
+.deals-search .product-search .search-icon {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  line-height: 1;
+}
+
+.deals-search .product-search .search-clear,
+.deals-search .product-search .search-go {
+  flex-shrink: 0;
+  align-self: center;
+  margin-left: 0;
+}
+
+.deals-search .search-tags {
+  width: 100%;
+  margin: 12px 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
 .php-tag {
   font-size: 0.72rem;
   letter-spacing: 0.08em;
@@ -1441,10 +1493,17 @@ html[data-theme="light"] .badge {
   width: min(var(--max), calc(100% - 40px));
   margin: 0 auto;
   max-width: var(--max);
+  /* section-inner already centers width — avoid page-inner nav padding here */
+  padding-top: 0;
 }
 
 .home-deals-inner .page-title {
   margin-top: 0;
+}
+
+/* Don't stack nav offset twice on normal pages (.page already pads for the header) */
+.page .page-inner {
+  padding-top: 0;
 }
 
 .brand-tile {
@@ -3442,6 +3501,18 @@ html[data-theme="light"] .cred-value {
 
   .product-search .search-go {
     width: 100%;
+  }
+
+  .deals-search .product-search.large {
+    flex-wrap: nowrap;
+  }
+
+  .deals-search .product-search .search-go {
+    width: auto;
+  }
+
+  .deals-search .product-search {
+    padding: 12px 14px;
   }
 
   .card {

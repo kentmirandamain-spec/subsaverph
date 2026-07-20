@@ -573,7 +573,7 @@ function settingsView() {
 
         <div class="settings-sub">
           <h4 class="settings-sub-h">Platforms section</h4>
-          ${fieldHint("“Select a service” heading above brand chips")}
+          ${fieldHint("Optional heading above brand chips (leave blank to hide)")}
           <label>Section title
             <input name="platformsTitle" value="${escapeAttr(s.platformsTitle || "")}" />
           </label>

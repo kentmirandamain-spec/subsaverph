@@ -566,7 +566,9 @@ function dealsCatalogBlockHTML() {
         <h1 class="page-title">${escapeHtml(t("page_deals"))}</h1>
         <p class="muted">${list.length} plan${list.length === 1 ? "" : "s"} · currency <strong>${getCurrencyCode()}</strong></p>
 
-        ${searchBarHTML()}
+        <div class="deals-search">
+          ${searchBarHTML()}
+        </div>
 
         <div class="toolbar">
           <div id="pageFxMount"></div>
@@ -683,7 +685,12 @@ function viewHome() {
         <div class="section-head">
           <div>
             <p class="eyebrow">${escapeHtml(t("eyebrow_platforms"))}</p>
-            <h2>${escapeHtml(c("platforms_title", "platformsTitle"))}</h2>
+            ${(() => {
+              const platformsTitle = c("platforms_title", "platformsTitle");
+              return platformsTitle
+                ? `<h2>${escapeHtml(platformsTitle)}</h2>`
+                : "";
+            })()}
           </div>
         </div>
         <div class="brands">
@@ -702,7 +709,7 @@ function viewHome() {
 
     <!-- Same All deals arrangement as #/deals — visible when scrolling the main page -->
     <section class="section home-view-all" id="view-all-deals">
-      <div class="section-inner page-inner home-deals-inner">
+      <div class="section-inner home-deals-inner">
         ${dealsCatalogBlockHTML()}
       </div>
     </section>`;

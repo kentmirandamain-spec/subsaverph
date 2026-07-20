@@ -111,7 +111,7 @@ const EN = {
   hero_eyebrow: "SubSaverPH · Subscription access",
   hero_title: "Premium\nplans.\nLower\ncost.",
   hero_lead: "Prepaid access to premium subscriptions at outlet rates. Checkout in any currency.",
-  platforms_title: "Select a service",
+  platforms_title: "",
   catalog_title: "Highest savings",
   mission_title: "Stack subscriptions without stacking full price",
   mission_text: "AI, Design, Video, and Streaming plans at outlet rates.",
