@@ -2622,11 +2622,11 @@ async function init() {
     bindPrefsPanel();
 
     try {
-      const { mountChatbot } = await import("./chatbot.js?v=status1");
+      const { mountChatbot } = await import("./chatbot.js?v=nocapcut1");
       mountChatbot();
       window.__ssphOpenChat = async () => {
         try {
-          const m = await import("./chatbot.js?v=status1");
+          const m = await import("./chatbot.js?v=nocapcut1");
           m.openChatbot?.();
         } catch {
           /* ignore */

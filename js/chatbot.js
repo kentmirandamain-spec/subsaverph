@@ -127,11 +127,10 @@ export function mountChatbot() {
           </svg>
         </div>
         <h3 class="ssph-chat-welcome-title">How can we help?</h3>
-        <p class="ssph-chat-welcome-text">Ask about products, prices, payment, login after pay, account rules, or refunds.</p>
+        <p class="ssph-chat-welcome-text">Ask about products, prices, payment, login after pay, or refunds.</p>
       </div>
       <div class="ssph-chat-suggestions" role="list">
         <button type="button" data-suggest="Hi, I need help choosing a product">Need help</button>
-        <button type="button" data-suggest="What are CapCut account rules?">CapCut rules</button>
         <button type="button" data-suggest="How do I receive my login after payment?">After payment</button>
         <button type="button" data-suggest="How do refunds work?">Refunds</button>
         <button type="button" data-suggest="What products do you sell and roughly how much?">Products</button>

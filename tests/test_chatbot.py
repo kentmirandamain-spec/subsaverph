@@ -15,11 +15,26 @@ import chatbot  # noqa: E402
 
 
 class ChatbotTests(unittest.TestCase):
-    def test_fallback_capcut_rules(self):
-        reply = chatbot._fallback_reply("What are CapCut account rules?")
-        self.assertIn("log out", reply.lower().replace("logout", "log out"))
-        self.assertIn("2", reply)
-        self.assertIn("mobile", reply.lower())
+    def test_fallback_capcut_no_rules(self):
+        deals = [
+            {
+                "id": "capcut-pro",
+                "name": "CapCut Pro",
+                "brand": "CapCut",
+                "active": True,
+                "price": 5.99,
+                "priceBase": "USD",
+                "duration": "12 months",
+            }
+        ]
+        reply = chatbot._fallback_reply(
+            "What are CapCut account rules?",
+            deals=deals,
+            settings={},
+        )
+        self.assertIn("CapCut", reply)
+        self.assertNotIn("log out", reply.lower().replace("logout", "log out"))
+        self.assertNotIn("max 2 devices", reply.lower())
 
     def test_fallback_refund(self):
         reply = chatbot._fallback_reply("Can I get a refund?")
@@ -42,8 +57,9 @@ class ChatbotTests(unittest.TestCase):
         ]
         prompt = chatbot.system_prompt(deals, {"siteName": "SubSaverPH"})
         self.assertIn("CapCut Pro", prompt)
-        self.assertIn("Do NOT log out", prompt)
-        self.assertIn("Login on mobile app", prompt)
+        # CapCut rules/instructions stay off the help desk prompt
+        self.assertNotIn("Do NOT log out", prompt)
+        self.assertNotIn("Login on mobile app", prompt)
         self.assertIn("not affiliated", prompt.lower())
         self.assertIn("customer support", prompt.lower())
         self.assertIn("out of scope", prompt.lower())

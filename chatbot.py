@@ -91,11 +91,14 @@ def build_catalog_brief(deals: list[dict]) -> str:
         feats = d.get("includes") or []
         if isinstance(feats, list) and feats:
             lines.append("  Features: " + "; ".join(str(x) for x in feats[:8]))
+        # CapCut device/logout rules stay on product page & delivery package only — not help desk
+        brand_blob = f"{d.get('brand') or ''} {d.get('id') or ''} {d.get('name') or ''}".lower()
+        is_capcut = "capcut" in brand_blob or "cap cut" in brand_blob
         notes = (d.get("importantNotes") or "").strip()
         howto = (d.get("howToRedeem") or "").strip()
-        if notes:
+        if notes and not is_capcut:
             lines.append(f"  Rules: {notes[:500]}")
-        if howto:
+        if howto and not is_capcut:
             lines.append(f"  Instructions: {howto[:500]}")
     return "\n".join(lines) if lines else "(no live products listed)"
 
@@ -120,14 +123,14 @@ Answer ALL customer questions about this store, products, payment, delivery, rul
 - Product recommendations, prices, stock, features, duration
 - Brands: SuperGrok, Canva, CapCut, Netflix, YouTube Premium, etc.
 - Checkout & payment (card, GCash, Maya, GrabPay, ShopeePay, PayPal, crypto when shown)
-- After payment: login credentials, instructions, features, rules on success page/email
-- Account / product rules (especially CapCut)
+- After payment: login credentials, instructions, features on success page/email
 - Refunds, Order ID, how to contact support
 - Using the website: cart, currency, deals, support form
 - About company / terms / privacy at a high level
 
 ## Out of scope
 Only refuse topics unrelated to SubSaverPH shopping (homework, coding unrelated to the store, news, medical/legal advice). When refusing, still offer 2 store questions they can ask and point to Support ({support}) for order issues.
+Do **not** list or teach CapCut device/logout rules in chat — product-specific rules are only on the product page and delivery package after payment.
 
 ## Style
 - Friendly customer service tone; short paragraphs or bullets
@@ -139,7 +142,6 @@ Only refuse topics unrelated to SubSaverPH shopping (homework, coding unrelated 
 - Never invent login credentials or claim payment succeeded without customer already having Order ID / success page
 - Never invent live order status — ask Order ID → Support page or {support}
 - Refunds: generally non-refundable once credentials delivered, except defective or not delivered
-- CapCut: Do NOT log out. Max 2 devices. 3rd can lose access (not refundable). Mobile login first; PC via QR after mobile login
 - Not affiliated with xAI, Canva, CapCut, Netflix, YouTube, Google
 - Human support: {support} · /support · https://subsaverph.com/
 
@@ -266,12 +268,12 @@ def _looks_like_store_question(user_text: str, deals: list[dict] | None = None) 
 def _offtopic_reply(support: str = "support@subsaverph.com") -> str:
     return (
         "I’m here to help with **SubSaverPH customer questions** — products, prices, checkout, "
-        "delivery after payment, account rules, and refunds.\n\n"
+        "delivery after payment, and refunds.\n\n"
         "Try asking:\n"
-        "• What CapCut plans do you have and what are the rules?\n"
+        "• What CapCut or SuperGrok plans do you have?\n"
         "• How do I get my login after I pay?\n"
         "• How do refunds work?\n"
-        "• Is SuperGrok available and how much is it?\n\n"
+        "• What payment methods do you accept?\n\n"
         f"For a human agent, open **Support** or email {support} with your **Order ID**."
     )
 
@@ -340,13 +342,13 @@ def _customer_assist_reply(
     ):
         live = [d for d in deals if d.get("active", True)][:6]
         lines = [
-            "Hi! I’m the **SubSaverPH customer assistant**. I can help with products, payment, delivery, rules, and refunds.",
+            "Hi! I’m the **SubSaverPH customer assistant**. I can help with products, payment, delivery, and refunds.",
             "",
             "Popular questions:",
-            "• CapCut rules after purchase",
             "• How login delivery works after payment",
             "• Refund policy",
             "• What’s in stock and how much",
+            "• Payment methods (card, GCash, Maya…)",
             "",
         ]
         if live:
@@ -356,39 +358,23 @@ def _customer_assist_reply(
         lines.append(f"Ask me anything about the store — or contact **{support}** with your Order ID for human help.")
         return "\n".join(lines)
 
-    # CapCut — prices vs rules
+    # CapCut — plans/prices only (no device/logout rules in help desk)
     if "capcut" in t or "cap cut" in t:
         matched = _match_products(t, deals) or [
             d
             for d in deals
-            if d.get("active", True) and "capcut" in str(d.get("brand") or "").lower() + str(d.get("id") or "").lower()
+            if d.get("active", True)
+            and "capcut" in str(d.get("brand") or "").lower() + str(d.get("id") or "").lower()
         ]
-        wants_price = any(
-            k in t for k in ("price", "magkano", "how much", "cost", "stock", "available", "buy", "plan")
+        parts: list[str] = ["**CapCut plans**"]
+        if matched:
+            parts.extend(_format_product_line(d) for d in matched)
+        else:
+            parts.append("Open **Deals** and filter CapCut for current prices.")
+        parts.append("")
+        parts.append(
+            "Open a CapCut product page for full details, then **Add to cart** → **Checkout**."
         )
-        wants_rules = any(
-            k in t for k in ("rule", "logout", "log out", "device", "instruction", "how to use", "qr", "pc")
-        )
-        parts: list[str] = []
-        if wants_price or not wants_rules:
-            parts.append("**CapCut plans**")
-            if matched:
-                parts.extend(_format_product_line(d) for d in matched)
-            else:
-                parts.append("Open **Deals** and filter CapCut for current prices.")
-            parts.append("")
-        if wants_rules or not wants_price:
-            parts.extend(
-                [
-                    "**CapCut rules & how to use (after payment)**",
-                    "1. Log in on the **CapCut mobile app** with the credentials from your delivery package.",
-                    "2. For **PC**: stay logged in on mobile → open CapCut on PC → **scan the QR** with mobile.",
-                    "3. **Do not log out** — you may lose access permanently.",
-                    "4. **Max 2 devices** — a 3rd login can remove access (**not refundable**).",
-                    "5. Don’t change password, email, or billing.",
-                    "",
-                ]
-            )
         parts.append(f"Need help after payment? Support with Order ID → {support}")
         return "\n".join(parts)
 
@@ -396,8 +382,7 @@ def _customer_assist_reply(
         return (
             "**Refunds**\n"
             "• Digital access is generally **non-refundable** once login details are delivered.\n"
-            "• Exceptions: product is **defective** or **not delivered**.\n"
-            "• CapCut: logout or using more than 2 devices is **not** a refund reason.\n\n"
+            "• Exceptions: product is **defective** or **not delivered**.\n\n"
             f"Contact Support with your **Order ID**: {support} or the Support page on the site."
         )
 
@@ -449,7 +434,7 @@ def _customer_assist_reply(
             "• **Features** included\n"
             "• **Instructions** how to use\n"
             "• **Rules** you must follow\n\n"
-            "Save credentials immediately. Follow product rules (especially CapCut: no logout, max 2 devices).\n"
+            "Save credentials immediately and follow the instructions in your delivery package.\n"
             f"Missing login after a successful pay? Contact **{support}** with your **Order ID**."
         )
 
@@ -483,8 +468,10 @@ def _customer_assist_reply(
             feats = d.get("includes") or []
             if isinstance(feats, list) and feats:
                 lines.append("  Features: " + ", ".join(str(x) for x in feats[:5]))
+            brand_blob = f"{d.get('brand') or ''} {d.get('id') or ''} {d.get('name') or ''}".lower()
+            is_capcut = "capcut" in brand_blob or "cap cut" in brand_blob
             howto = (d.get("howToRedeem") or "").strip()
-            if howto and matched:
+            if howto and matched and not is_capcut:
                 first = howto.splitlines()[0].strip()
                 if first:
                     lines.append(f"  Start: {first}")
@@ -507,7 +494,6 @@ def _customer_assist_reply(
         "• Products & prices\n"
         "• Payment / GCash / checkout\n"
         "• Login delivery after payment\n"
-        "• CapCut & other product rules\n"
         "• Refunds & Order ID support\n\n"
         f"Ask me one of those — or email **{support}** for a human agent."
     )
