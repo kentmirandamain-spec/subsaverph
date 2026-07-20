@@ -641,6 +641,27 @@ textarea { min-height: 90px; resize: vertical; }
   padding-top: 4px;
 }
 
+.order-search-panel {
+  margin: 12px 0;
+}
+
+.order-search-label {
+  margin: 0;
+  text-transform: none;
+  letter-spacing: 0.02em;
+  font-size: 0.8rem;
+  color: var(--mute);
+}
+
+.order-search-label input {
+  margin-top: 6px;
+  width: 100%;
+  max-width: 560px;
+  font-size: 0.95rem;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
 @media (max-width: 900px) {
   .sales-pnl-grid {
     grid-template-columns: 1fr;

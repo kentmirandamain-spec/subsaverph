@@ -17,6 +17,8 @@ const state = {
   supportMessages: [],
   /** Orders/Sales P&L focus: day | week | month | all */
   salesPeriod: "day",
+  /** Invoice search (order id, email, name, product, code) */
+  orderSearch: "",
 };
 
 function friendlyApiError(status, raw, data) {
@@ -1281,10 +1283,54 @@ function salesChecklistHtml(report, periodReports) {
     </div>`;
 }
 
+/** Match invoices by order id, customer, product, codes, provider ref, status. */
+function orderMatchesSearch(o, qRaw) {
+  const q = String(qRaw || "")
+    .trim()
+    .toLowerCase();
+  if (!q) return true;
+  const parts = [
+    o.id,
+    o.email,
+    o.name,
+    o.status,
+    o.currency,
+    o.method,
+    o.paymentMode,
+    o.providerRef,
+    o.stripeSessionId,
+    o.stripePaymentIntent,
+    o.createdAt,
+    o.refundedAt,
+    o.message,
+  ];
+  for (const item of o.items || []) {
+    parts.push(item.id, item.name, item.brand, item.category, item.price, item.qty);
+    if (Array.isArray(item.codes)) parts.push(...item.codes);
+    if (Array.isArray(item.credentials)) {
+      for (const c of item.credentials) {
+        if (c && typeof c === "object") {
+          parts.push(c.username, c.password, c.code, c.raw);
+        } else {
+          parts.push(c);
+        }
+      }
+    }
+  }
+  const blob = parts
+    .filter((x) => x != null && String(x).length)
+    .join(" ")
+    .toLowerCase();
+  // Support multi-word: all tokens must match
+  return q.split(/\s+/).every((tok) => blob.includes(tok));
+}
+
 function ordersView() {
   const allOrders = state.orders || [];
   const deals = state.deals || [];
   const period = state.salesPeriod || "day";
+  const q = (state.orderSearch || "").trim();
+  const searching = q.length > 0;
   const periodReports = {
     day: buildSalesReport(allOrders, deals, "day"),
     week: buildSalesReport(allOrders, deals, "week"),
@@ -1293,8 +1339,11 @@ function ordersView() {
   };
   const report = periodReports[period] || periodReports.day;
   const periodOrders = filterOrdersByPeriod(allOrders, period === "all" ? "all" : period);
+  // Search looks across all invoices when typing; otherwise list follows period
+  const baseList = searching ? allOrders : period === "all" ? allOrders : periodOrders;
+  const list = baseList.filter((o) => orderMatchesSearch(o, q));
 
-  const rows = (period === "all" ? allOrders : periodOrders)
+  const rows = list
     .map((o) => {
       const st = orderStatusKey(o);
       const isRefunded = st === "refunded" || st === "refund" || st === "reversed" || st === "chargeback";
@@ -1322,14 +1371,36 @@ function ordersView() {
     })
     .join("");
 
+  const emptyMsg = searching
+    ? `No invoices match “${escapeHtml(q)}”.`
+    : "No orders in this period.";
+
   return `
     <div class="top"><h1>Orders / Sales</h1></div>
     ${salesChecklistHtml(report, periodReports)}
-    <p class="muted">Orders in selected period (${escapeHtml(report.periodLabel || "")}). Mark refunded to deduct from PHP P&amp;L.</p>
+    <div class="panel order-search-panel">
+      <label class="order-search-label">Search invoices
+        <input
+          id="adminOrderSearch"
+          type="search"
+          placeholder="Order ID, email, customer name, product, login code, status…"
+          value="${escapeAttr(state.orderSearch || "")}"
+          autocomplete="off"
+        />
+      </label>
+      <p class="muted" style="margin:8px 0 0">
+        ${
+          searching
+            ? `Showing <strong>${list.length}</strong> match(es) across all invoices`
+            : `Orders in selected period (${escapeHtml(report.periodLabel || "")}) · <strong>${list.length}</strong> shown`
+        }.
+        Mark refunded to deduct from PHP P&amp;L.
+      </p>
+    </div>
     <div class="panel" style="overflow:auto">
       <table class="table">
-        <thead><tr><th>Order</th><th>Customer</th><th>Status</th><th>Amount / codes</th></tr></thead>
-        <tbody>${rows || `<tr><td colspan="4" class="muted">No orders in this period.</td></tr>`}</tbody>
+        <thead><tr><th>Order / invoice</th><th>Customer</th><th>Status</th><th>Amount / codes</th></tr></thead>
+        <tbody>${rows || `<tr><td colspan="4" class="muted">${emptyMsg}</td></tr>`}</tbody>
       </table>
     </div>`;
 }
@@ -1694,6 +1765,21 @@ function bindShell() {
     const keep = e.target.selectionStart;
     render();
     const again = $("#adminProductSearch");
+    if (again) {
+      again.focus();
+      try {
+        again.setSelectionRange(keep, keep);
+      } catch {
+        /* ignore */
+      }
+    }
+  });
+
+  $("#adminOrderSearch")?.addEventListener("input", (e) => {
+    state.orderSearch = e.target.value;
+    const keep = e.target.selectionStart;
+    render();
+    const again = $("#adminOrderSearch");
     if (again) {
       again.focus();
       try {
