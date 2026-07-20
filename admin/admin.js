@@ -955,25 +955,75 @@ function money(n) {
   }
 }
 
+function isPhpOrder(o) {
+  const cur = String(o?.currency || "PHP").toUpperCase();
+  return cur === "PHP" || !o?.currency;
+}
+
+function orderLineTotal(o) {
+  const items = Array.isArray(o?.items) ? o.items : [];
+  return items.reduce((sum, i) => {
+    const qty = Math.max(
+      1,
+      Number(i.qty) ||
+        (Array.isArray(i.codes) && i.codes.length) ||
+        (Array.isArray(i.credentials) && i.credentials.length) ||
+        1
+    );
+    return sum + (Number(i.price) || 0) * qty;
+  }, 0);
+}
+
+function orderStatusKey(o) {
+  return String(o?.status || "").toLowerCase();
+}
+
 /**
- * Paid orders only (PHP) — sold units, revenue, profit (sell − product cost).
- * All amounts are treated as PHP for a single peso report.
+ * PHP P&L: paid sales count; refunded sales are deducted from net revenue/profit.
+ * Gross = paid + refunded history; Net = paid only; Refunds line = refunded totals.
  */
 function buildSalesReport(orders, deals) {
   const dealById = Object.fromEntries((deals || []).map((d) => [d.id, d]));
   const paidStatuses = new Set(["paid", "completed", "succeeded", "complete", "success"]);
-  const paid = (orders || []).filter((o) => {
-    if (!paidStatuses.has(String(o.status || "").toLowerCase())) return false;
-    // Orders / Sales report is PHP-only
-    const cur = String(o.currency || "PHP").toUpperCase();
-    return cur === "PHP" || !o.currency;
-  });
+  const refundStatuses = new Set(["refunded", "refund", "reversed", "chargeback"]);
 
-  /** @type {Record<string, { id: string, name: string, brand: string, units: number, revenue: number, cost: number, profit: number, orders: number }>} */
+  const phpOrders = (orders || []).filter(isPhpOrder);
+  const paid = phpOrders.filter((o) => paidStatuses.has(orderStatusKey(o)));
+  const refunded = phpOrders.filter((o) => refundStatuses.has(orderStatusKey(o)));
+
+  /** @type {Record<string, { id: string, name: string, brand: string, units: number, revenue: number, cost: number, profit: number, orders: number, refundedUnits: number, refundedAmount: number }>} */
   const byProduct = {};
-  const totals = { revenue: 0, cost: 0, profit: 0, units: 0, orders: paid.length };
+  const totals = {
+    revenue: 0,
+    cost: 0,
+    profit: 0,
+    units: 0,
+    orders: paid.length,
+    refunds: 0,
+    refundOrders: refunded.length,
+    refundUnits: 0,
+    grossRevenue: 0,
+  };
 
-  for (const o of paid) {
+  function ensureProduct(id, name, brand) {
+    if (!byProduct[id]) {
+      byProduct[id] = {
+        id,
+        name,
+        brand,
+        units: 0,
+        revenue: 0,
+        cost: 0,
+        profit: 0,
+        orders: 0,
+        refundedUnits: 0,
+        refundedAmount: 0,
+      };
+    }
+    return byProduct[id];
+  }
+
+  function walkItems(o, mode) {
     const items = Array.isArray(o.items) ? o.items : [];
     for (const item of items) {
       const id = String(item.id || item.productId || item.name || "unknown");
@@ -987,92 +1037,128 @@ function buildSalesReport(orders, deals) {
           1
       );
       const unitPrice = Number(item.price);
-      const price = Number.isFinite(unitPrice)
-        ? unitPrice
-        : Number(dealById[id]?.price) || 0;
+      const price = Number.isFinite(unitPrice) ? unitPrice : Number(dealById[id]?.price) || 0;
       const unitCost = Number(dealById[id]?.cost);
       const costEach = Number.isFinite(unitCost) ? unitCost : 0;
       const rev = price * qty;
       const costTotal = costEach * qty;
-      const profit = rev - costTotal;
+      const row = ensureProduct(id, name, brand);
 
-      if (!byProduct[id]) {
-        byProduct[id] = {
-          id,
-          name,
-          brand,
-          units: 0,
-          revenue: 0,
-          cost: 0,
-          profit: 0,
-          orders: 0,
-        };
+      if (mode === "paid") {
+        // Net sale
+        row.units += qty;
+        row.revenue += rev;
+        row.cost += costTotal;
+        row.profit += rev - costTotal;
+        row.orders += 1;
+        totals.revenue += rev;
+        totals.cost += costTotal;
+        totals.profit += rev - costTotal;
+        totals.units += qty;
+        totals.grossRevenue += rev;
+      } else if (mode === "refunded") {
+        // Refunded: show on product line but exclude from net revenue/profit (money returned)
+        row.refundedUnits += qty;
+        row.refundedAmount += rev;
+        totals.refunds += rev;
+        totals.refundUnits += qty;
+        totals.grossRevenue += rev;
       }
-      const row = byProduct[id];
-      row.units += qty;
-      row.revenue += rev;
-      row.cost += costTotal;
-      row.profit += profit;
-      row.orders += 1;
-
-      totals.revenue += rev;
-      totals.cost += costTotal;
-      totals.profit += profit;
-      totals.units += qty;
     }
   }
 
-  const products = Object.values(byProduct).sort((a, b) => b.units - a.units || b.revenue - a.revenue);
-  return { paid, totalOrders: totals.orders, products, totals };
+  for (const o of paid) walkItems(o, "paid");
+  for (const o of refunded) walkItems(o, "refunded");
+
+  // Net profit = net revenue − net cost − (already applied sunk cost on refunds)
+  // totals.profit already = paid profit − refunded cost
+
+  const products = Object.values(byProduct)
+    .filter((p) => p.units > 0 || p.refundedUnits > 0)
+    .sort((a, b) => b.units - a.units || b.revenue - a.revenue);
+
+  return {
+    paid,
+    refunded,
+    totalOrders: totals.orders,
+    products,
+    totals,
+  };
 }
 
 function salesChecklistHtml(report) {
   const { products, totals, totalOrders } = report;
-  const t = totals || { revenue: 0, cost: 0, profit: 0, units: 0 };
+  const t = totals || {
+    revenue: 0,
+    cost: 0,
+    profit: 0,
+    units: 0,
+    refunds: 0,
+    refundOrders: 0,
+    refundUnits: 0,
+    grossRevenue: 0,
+  };
+  const netRevenue = t.revenue;
+  const profitClass = t.profit < 0 ? "sales-loss" : "";
 
   const summaryCards = `
           <div class="sales-card">
-            <div class="sales-card-label">PHP totals</div>
-            <div class="sales-card-row"><span>Orders</span><strong>${totalOrders}</strong></div>
-            <div class="sales-card-row"><span>Units sold</span><strong>${t.units}</strong></div>
-            <div class="sales-card-row"><span>Revenue</span><strong>${escapeHtml(money(t.revenue))}</strong></div>
+            <div class="sales-card-label">PHP P&amp;L</div>
+            <div class="sales-card-row"><span>Paid orders</span><strong>${totalOrders}</strong></div>
+            <div class="sales-card-row"><span>Units sold (net)</span><strong>${t.units}</strong></div>
+            <div class="sales-card-row"><span>Gross sales</span><strong>${escapeHtml(money(t.grossRevenue))}</strong></div>
+            <div class="sales-card-row sales-refund"><span>Refunds</span><strong>− ${escapeHtml(money(t.refunds))}</strong></div>
+            <div class="sales-card-row"><span>Net revenue</span><strong>${escapeHtml(money(netRevenue))}</strong></div>
             <div class="sales-card-row"><span>Cost</span><strong>${escapeHtml(money(t.cost))}</strong></div>
-            <div class="sales-card-row sales-profit"><span>Profit</span><strong>${escapeHtml(money(t.profit))}</strong></div>
+            <div class="sales-card-row sales-profit ${profitClass}"><span>Net profit</span><strong>${escapeHtml(money(t.profit))}</strong></div>
+            ${
+              t.refundOrders
+                ? `<div class="muted" style="margin-top:8px;font-size:0.78rem">${t.refundOrders} refund(s) · ${t.refundUnits} unit(s) deducted</div>`
+                : ""
+            }
           </div>`;
 
   const checklist = products.length
     ? products
-        .map(
-          (p) => `
+        .map((p) => {
+          const refundNote =
+            p.refundedUnits > 0
+              ? ` · <span class="sales-refund-tag">${p.refundedUnits} refunded (−${escapeHtml(money(p.refundedAmount))})</span>`
+              : "";
+          return `
         <label class="sales-check-item">
           <input type="checkbox" checked disabled />
           <span class="sales-check-body">
             <strong>${escapeHtml(p.name)}</strong>
-            <span class="muted">${escapeHtml(p.brand || p.id)} · ${p.units} sold · ${p.orders} order(s)</span>
+            <span class="muted">${escapeHtml(p.brand || p.id)} · ${p.units} sold (net) · ${p.orders} paid order(s)${refundNote}</span>
             <span class="sales-check-money">
               Rev ${escapeHtml(money(p.revenue))}
               · Cost ${escapeHtml(money(p.cost))}
-              · <em>Profit ${escapeHtml(money(p.profit))}</em>
+              · <em class="${p.profit < 0 ? "sales-loss" : ""}">Profit ${escapeHtml(money(p.profit))}</em>
             </span>
           </span>
-        </label>`
-        )
+        </label>`;
+        })
         .join("")
     : `<p class="muted" style="margin:0">No PHP products sold yet. Paid PHP orders will appear here automatically.</p>`;
 
   return `
     <div class="panel sales-panel">
-      <h2 class="sales-h">Sales checklist &amp; profit (PHP)</h2>
-      <p class="muted" style="margin-top:0">All amounts in <strong>₱ Philippine Peso</strong> from paid PHP orders. Profit = sell price − product <strong>Your cost</strong>. If cost is 0, profit equals revenue.</p>
+      <h2 class="sales-h">Sales checklist &amp; P&amp;L (PHP)</h2>
+      <p class="muted" style="margin-top:0">
+        Amounts in <strong>₱</strong>. <strong>Net profit</strong> = paid sales − product cost.
+        <strong>Refunds</strong> are deducted from gross sales (not counted in net revenue or profit).
+        Use <strong>Mark refunded</strong> on an order below to update the P&amp;L.
+      </p>
       <div class="sales-summary">
         <div class="sales-card sales-card-wide">
-          <div class="sales-card-label">Paid orders (PHP)</div>
+          <div class="sales-card-label">Paid orders (net)</div>
           <div class="sales-big">${totalOrders}</div>
-          <div class="muted">${products.length} product type(s) sold</div>
+          <div class="muted">${products.length} product type(s) · ${t.refundOrders || 0} refund(s)</div>
         </div>
         ${summaryCards}
       </div>
-      <h3 class="settings-h" style="margin-top:18px">Products bought &amp; sold</h3>
+      <h3 class="settings-h" style="margin-top:18px">Products bought &amp; sold (net of refunds)</h3>
       <div class="sales-checklist" role="list">
         ${checklist}
       </div>
@@ -1083,20 +1169,27 @@ function ordersView() {
   const report = buildSalesReport(state.orders || [], state.deals || []);
   const rows = (state.orders || [])
     .map((o) => {
-      const items = o.items || [];
-      const lineTotal = items.reduce((sum, i) => {
-        const qty = Math.max(1, Number(i.qty) || (i.codes || []).length || 1);
-        return sum + (Number(i.price) || 0) * qty;
-      }, 0);
-      const codes = items.map((i) => `${i.name}: ${(i.codes || []).join(", ")}`).join(" · ");
+      const st = orderStatusKey(o);
+      const isRefunded = st === "refunded" || st === "refund" || st === "reversed" || st === "chargeback";
+      const isPaid = ["paid", "completed", "succeeded", "complete", "success"].includes(st);
+      const lineTotal = orderLineTotal(o);
+      const codes = (o.items || []).map((i) => `${i.name}: ${(i.codes || []).join(", ")}`).join(" · ");
       const mail = o.emailSent ? "emailed" : o.emailDetail ? "email fail" : "—";
+      const badgeClass = isRefunded ? "badge badge-refund" : "badge";
+      let actions = "";
+      if (isPaid) {
+        actions = `<button type="button" class="btn ghost btn-sm" data-order-status="refunded" data-order-id="${escapeAttr(o.id)}">Mark refunded</button>`;
+      } else if (isRefunded) {
+        actions = `<button type="button" class="btn ghost btn-sm" data-order-status="paid" data-order-id="${escapeAttr(o.id)}">Undo refund</button>`;
+      }
       return `
-      <tr>
+      <tr class="${isRefunded ? "row-refunded" : ""}">
         <td><strong>${escapeHtml(o.id)}</strong><div class="muted">${escapeHtml(o.createdAt || "")}</div></td>
         <td>${escapeHtml(o.email)}<div class="muted">${escapeHtml(o.name || "")}</div></td>
-        <td><span class="badge">${escapeHtml(o.status || "")}</span>
-          <div class="muted">${escapeHtml(mail)}</div></td>
-        <td><strong>${escapeHtml(money(lineTotal))}</strong>
+        <td><span class="${badgeClass}">${escapeHtml(o.status || "")}</span>
+          <div class="muted">${escapeHtml(mail)}</div>
+          ${actions ? `<div style="margin-top:6px">${actions}</div>` : ""}</td>
+        <td><strong class="${isRefunded ? "sales-loss" : ""}">${isRefunded ? "− " : ""}${escapeHtml(money(lineTotal))}</strong>
           <div class="muted" style="max-width:280px;word-break:break-all">${escapeHtml(codes)}</div></td>
       </tr>`;
     })
@@ -1105,7 +1198,7 @@ function ordersView() {
   return `
     <div class="top"><h1>Orders / Sales</h1></div>
     ${salesChecklistHtml(report)}
-    <p class="muted">All orders (newest first). Amounts shown in ₱ PHP. Checklist uses paid PHP orders only.</p>
+    <p class="muted">All orders (newest first). Mark refunded to deduct from PHP P&amp;L above.</p>
     <div class="panel" style="overflow:auto">
       <table class="table">
         <thead><tr><th>Order</th><th>Customer</th><th>Status</th><th>Amount / codes</th></tr></thead>
@@ -1336,6 +1429,29 @@ function bindShell() {
         toast(err.message, true);
       }
       render();
+    });
+  });
+
+  $$("[data-order-status]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const id = btn.dataset.orderId;
+      const status = btn.dataset.orderStatus;
+      if (!id || !status) return;
+      const label = status === "refunded" ? "Mark this order as refunded? It will be deducted from P&L." : "Restore this order to paid?";
+      if (!confirm(label)) return;
+      btn.disabled = true;
+      try {
+        await api(`/api/admin/orders/${encodeURIComponent(id)}/status`, {
+          method: "POST",
+          body: JSON.stringify({ status }),
+        });
+        await loadOrders();
+        toast(status === "refunded" ? "Order refunded — deducted from P&L" : "Order restored to paid");
+        render();
+      } catch (err) {
+        toast(err.message, true);
+        btn.disabled = false;
+      }
     });
   });
 

@@ -549,6 +549,35 @@ textarea { min-height: 90px; resize: vertical; }
   font-weight: 650;
 }
 
+.sales-card-row.sales-refund,
+.sales-refund-tag {
+  color: var(--danger);
+}
+
+.sales-card-row.sales-refund strong {
+  color: var(--danger);
+}
+
+.sales-loss,
+.sales-check-money em.sales-loss,
+.sales-card-row.sales-profit.sales-loss strong {
+  color: var(--danger) !important;
+}
+
+.badge-refund {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.row-refunded {
+  opacity: 0.85;
+}
+
+.btn-sm {
+  padding: 6px 10px;
+  font-size: 0.68rem;
+}
+
 @media (max-width: 800px) {
   .shell { grid-template-columns: 1fr; }
   .side { border-right: none; border-bottom: 1px solid var(--line); }

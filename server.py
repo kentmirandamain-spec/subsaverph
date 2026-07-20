@@ -3691,6 +3691,39 @@ def admin_orders():
     return jsonify({"orders": orders, "total": len(load_orders())})
 
 
+@app.post("/api/admin/orders/<order_id>/status")
+@require_admin
+def admin_order_set_status(order_id: str):
+    """
+    Mark an order paid or refunded for P&L.
+    Body: { "status": "paid" | "refunded" }
+    Refunded sales are deducted from Orders/Sales profit.
+    """
+    data = request.get_json(silent=True) or {}
+    new_status = str(data.get("status") or "").strip().lower()
+    if new_status not in ("paid", "refunded"):
+        return jsonify({"error": "status must be paid or refunded"}), 400
+
+    oid = str(order_id or "").strip()
+    orders = load_orders()
+    found = None
+    for i, o in enumerate(orders):
+        if str(o.get("id") or "") == oid:
+            orders[i] = {**o, "status": new_status}
+            if new_status == "refunded":
+                orders[i]["refundedAt"] = __import__("datetime").datetime.utcnow().strftime(
+                    "%Y-%m-%dT%H:%M:%S.%fZ"
+                )
+            elif "refundedAt" in orders[i]:
+                orders[i].pop("refundedAt", None)
+            found = orders[i]
+            break
+    if not found:
+        return jsonify({"error": "Order not found"}), 404
+    save_orders(orders)
+    return jsonify({"ok": True, "order": found})
+
+
 @app.post("/api/admin/test-invoice")
 @require_admin
 def admin_test_invoice():
