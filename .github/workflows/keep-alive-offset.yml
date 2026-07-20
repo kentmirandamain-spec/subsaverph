@@ -1,11 +1,10 @@
-# Second keep-alive staggered ~2.5 min after the main one (when GitHub schedules both).
-# Reduces sleep risk if the primary cron is delayed.
+# Second keep-alive staggered from the main workflow.
+# Uses the custom domain only.
 
 name: Keep Render awake (offset)
 
 on:
   schedule:
-    # At :02, :07, :12, … (offset from */5 which hits :00, :05, …)
     - cron: "2,7,12,17,22,27,32,37,42,47,52,57 * * * *"
   workflow_dispatch:
 
@@ -17,17 +16,15 @@ jobs:
       - name: Ping health
         run: |
           set -e
-          for URL in \
-            "https://subsaverph.com/api/health" \
-            "https://subsaverph.onrender.com/api/health"
-          do
-            echo "Pinging $URL"
-            if curl -fsS --max-time 50 -H "User-Agent: SubSaverPH-KeepAlive/1.0" "$URL"; then
-              echo ""
-              echo "OK — $URL"
-              exit 0
-            fi
-            sleep 8
-          done
+          URL="${{ vars.KEEP_ALIVE_URL }}"
+          if [ -z "$URL" ]; then
+            URL="https://subsaverph.com/api/health"
+          fi
+          echo "Pinging $URL"
+          if curl -fsS --max-time 50 -H "User-Agent: SubSaverPH-KeepAlive/1.0" "$URL"; then
+            echo ""
+            echo "OK — $URL"
+            exit 0
+          fi
           echo "Offset ping failed (non-fatal if primary workflow succeeds)"
           exit 1

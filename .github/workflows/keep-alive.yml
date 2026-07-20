@@ -1,17 +1,15 @@
 # Keep SubSaverPH awake on Render free tier.
-# Pings health every ~5 minutes so the free instance does not sleep.
+# Pings the custom domain health URL every ~5 minutes.
 # Site runs on Render — your PC / admin login can be offline.
 #
 # True zero-cold-start 24/7: Render Dashboard → Instance Type → Starter (~$7/mo)
-# or set plan: starter in render.yaml
 
 name: Keep Render awake
 
 on:
   schedule:
-    # Every 5 minutes (GitHub may delay a few minutes under load)
     - cron: "*/5 * * * *"
-  workflow_dispatch: # manual "Run workflow" button
+  workflow_dispatch:
 
 jobs:
   ping:
@@ -21,40 +19,22 @@ jobs:
       - name: Ping store health (keep free instance awake)
         run: |
           set -e
-          # Custom domain first (canonical), then Render hostname as backup
-          URLS=(
-            "${{ vars.KEEP_ALIVE_URL }}"
-            "https://subsaverph.com/api/health"
-            "https://subsaverph.onrender.com/api/health"
-          )
+          # Prefer repo variable if set; default to production custom domain
+          URL="${{ vars.KEEP_ALIVE_URL }}"
+          if [ -z "$URL" ]; then
+            URL="https://subsaverph.com/api/health"
+          fi
 
-          # Deduplicate empty / repeated URLs
-          SEEN=""
-          OK=0
-          for RAW in "${URLS[@]}"; do
-            URL="$(echo "$RAW" | xargs)"
-            [ -z "$URL" ] && continue
-            case " $SEEN " in
-              *" $URL "*) continue ;;
-            esac
-            SEEN="$SEEN $URL"
-
-            echo "==== Pinging $URL ===="
-            for i in 1 2 3 4 5 6; do
-              if curl -fsS --max-time 55 -H "User-Agent: SubSaverPH-KeepAlive/1.0" "$URL"; then
-                echo ""
-                echo "OK (attempt $i) — $URL"
-                OK=1
-                break
-              fi
-              echo "Attempt $i failed for $URL — retry in 12s (cold start?)"
-              sleep 12
-            done
-            if [ "$OK" -eq 1 ]; then
-              # One successful wake is enough for Render free tier
+          echo "==== Pinging $URL ===="
+          for i in 1 2 3 4 5 6; do
+            if curl -fsS --max-time 55 -H "User-Agent: SubSaverPH-KeepAlive/1.0" "$URL"; then
+              echo ""
+              echo "OK (attempt $i) — $URL"
               exit 0
             fi
+            echo "Attempt $i failed — retry in 12s (cold start?)"
+            sleep 12
           done
 
-          echo "All health URLs failed — site may be down or redeploying"
+          echo "Health ping failed — site may be down or redeploying"
           exit 1

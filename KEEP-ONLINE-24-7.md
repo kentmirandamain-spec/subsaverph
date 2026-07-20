@@ -30,10 +30,9 @@ Two GitHub Actions ping your health URL on a staggered schedule:
 | Keep Render awake | `.github/workflows/keep-alive.yml` | every ~5 min |
 | Keep Render awake (offset) | `.github/workflows/keep-alive-offset.yml` | every ~5 min, offset by 2–3 min |
 
-They hit:
+They hit the **custom domain** only:
 
 - `https://subsaverph.com/api/health`
-- `https://subsaverph.onrender.com/api/health`
 
 ### Enable / verify (one-time)
 
@@ -87,7 +86,7 @@ Then commit + push and redeploy.
 
 | Check | URL |
 |--------|-----|
-| Health | https://subsaverph.com/api/health |
+| Health (uptime bot) | https://subsaverph.com/api/health |
 | Store | https://subsaverph.com/ |
 | Admin | https://subsaverph.com/admin |
 | GitHub Actions | https://github.com/kentmirandamain-spec/subsaverph/actions |
