@@ -3514,9 +3514,10 @@ def admin_create_deal():
     return jsonify({"ok": True, "deal": deal}), 201
 
 
-@app.put("/api/admin/deals/<deal_id>")
+@app.route("/api/admin/deals/<deal_id>", methods=["PUT", "POST"])
 @require_admin
 def admin_update_deal(deal_id: str):
+    """PUT or POST (POST works better through some Cloudflare setups)."""
     data = request.get_json(silent=True) or {}
     deals = load_deals(include_inactive=True)
     for i, d in enumerate(deals):
@@ -3528,9 +3529,11 @@ def admin_update_deal(deal_id: str):
     return jsonify({"error": "Deal not found"}), 404
 
 
-@app.delete("/api/admin/deals/<deal_id>")
+@app.route("/api/admin/deals/<deal_id>", methods=["DELETE"])
+@app.post("/api/admin/deals/<deal_id>/delete")
 @require_admin
 def admin_delete_deal(deal_id: str):
+    """DELETE or POST …/delete (POST avoids Cloudflare 405 on DELETE)."""
     deals = load_deals(include_inactive=True)
     new_deals = [d for d in deals if d.get("id") != deal_id]
     if len(new_deals) == len(deals):
@@ -3539,9 +3542,10 @@ def admin_delete_deal(deal_id: str):
     return jsonify({"ok": True})
 
 
-@app.put("/api/admin/settings")
+@app.route("/api/admin/settings", methods=["PUT", "POST"])
 @require_admin
 def admin_update_settings():
+    """PUT or POST — POST is preferred via Cloudflare (avoids 405 on PUT)."""
     data = request.get_json(silent=True) or {}
     current = load_settings()
     for k, v in data.items():
@@ -3637,10 +3641,11 @@ def admin_add_codes(product_id: str):
     )
 
 
-@app.delete("/api/admin/inventory/<product_id>")
+@app.route("/api/admin/inventory/<product_id>", methods=["DELETE"])
+@app.post("/api/admin/inventory/<product_id>/clear")
 @require_admin
 def admin_clear_product_inventory(product_id: str):
-    """Remove all codes for one product (available + sold → 0)."""
+    """Remove all codes for one product (available + sold → 0). POST …/clear for Cloudflare."""
     inv = load_inventory()
     removed = len(inv.get(product_id) or [])
     inv[product_id] = []

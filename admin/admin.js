@@ -27,6 +27,12 @@ function friendlyApiError(status, raw, data) {
     text.includes("cf-error") ||
     text.includes("Cloudflare") ||
     text.includes("Attention Required");
+  if (status === 405) {
+    return (
+      `HTTP 405 (method not allowed) — hard-refresh (Ctrl+F5) to load the latest admin, then try again. ` +
+      `If it continues: Cloudflare Dashboard → Security → turn Bot Fight Mode off, Security Level Medium.`
+    );
+  }
   if (looksHtml) {
     return (
       `Host/Cloudflare returned an error page (HTTP ${status || "?"}) instead of API JSON. ` +
@@ -40,8 +46,15 @@ function friendlyApiError(status, raw, data) {
   ).slice(0, 500);
 }
 
+/**
+ * Admin API helper. Mutations use POST (Cloudflare sometimes returns HTML 405 for PUT/DELETE).
+ */
 async function api(path, opts = {}) {
-  const headers = { "Content-Type": "application/json", Accept: "application/json", ...(opts.headers || {}) };
+  const headers = {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+    ...(opts.headers || {}),
+  };
   let res;
   try {
     res = await fetch(path, {
@@ -1606,8 +1619,9 @@ function bindShell() {
       const pid = btn.dataset.clearStock;
       if (!confirm(`Clear ALL codes for this product?\nAvailable, sold, and total will become 0.`)) return;
       try {
-        const data = await api(`/api/admin/inventory/${encodeURIComponent(pid)}`, {
-          method: "DELETE",
+        const data = await api(`/api/admin/inventory/${encodeURIComponent(pid)}/clear`, {
+          method: "POST",
+          body: "{}",
         });
         if (state.stockProductId === pid) state.stockProductId = "";
         await loadInventory();
@@ -1691,8 +1705,9 @@ function bindShell() {
     btn.addEventListener("click", async () => {
       if (!confirm("Delete this product from the live site?")) return;
       try {
-        await api(`/api/admin/deals/${encodeURIComponent(btn.dataset.del)}`, {
-          method: "DELETE",
+        await api(`/api/admin/deals/${encodeURIComponent(btn.dataset.del)}/delete`, {
+          method: "POST",
+          body: "{}",
         });
         await loadAll();
         toast("Product deleted");
@@ -1723,7 +1738,7 @@ function bindShell() {
         await api("/api/admin/deals", { method: "POST", body: JSON.stringify(payload) });
       } else {
         await api(`/api/admin/deals/${encodeURIComponent(state.editing.id)}`, {
-          method: "PUT",
+          method: "POST",
           body: JSON.stringify(payload),
         });
       }
@@ -1750,7 +1765,7 @@ function bindShell() {
     payload.uiStrings = uiStrings;
     try {
       const data = await api("/api/admin/settings", {
-        method: "PUT",
+        method: "POST",
         body: JSON.stringify(payload),
       });
       state.settings = data.settings;
