@@ -717,37 +717,54 @@ textarea { min-height: 90px; resize: vertical; }
   padding-top: 4px;
 }
 
-.order-search-panel {
-  margin: 12px 0;
-}
-
-.order-search-label {
-  margin: 0;
-  text-transform: none;
-  letter-spacing: 0.02em;
-  font-size: 0.8rem;
-  color: var(--mute);
-}
-
-.order-search-label input {
-  margin-top: 6px;
-  width: 100%;
-  max-width: 560px;
-  font-size: 0.95rem;
-  letter-spacing: 0;
-  text-transform: none;
-}
-
-.month-search-box {
+/* Shared invoice search (period + all invoices) — same look everywhere */
+.invoice-search-box {
   margin: 0 0 14px;
   padding: 14px 14px 12px;
   border: 1px solid var(--line);
   border-radius: 10px;
   background: #0a0a0a;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
-.month-search-box .order-search-label input {
+.invoice-search-box-panel {
+  margin: 12px 0;
+}
+
+.invoice-search-label {
+  margin: 0;
+  padding: 0;
+  text-transform: none;
+  letter-spacing: 0.02em;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--mute);
+}
+
+.invoice-search-input {
+  margin: 0;
+  width: 100%;
   max-width: 100%;
+  font-size: 0.95rem;
+  letter-spacing: 0;
+  text-transform: none;
+  padding: 10px 12px;
+  background: #000;
+  border: 1px solid var(--line);
+  color: var(--text);
+  border-radius: 8px;
+  outline: none;
+}
+
+.invoice-search-input:focus {
+  border-color: #666;
+}
+
+.invoice-search-hint {
+  margin: 2px 0 0;
+  font-size: 0.85rem;
 }
 
 @media (max-width: 900px) {

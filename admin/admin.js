@@ -1484,16 +1484,19 @@ function salesChecklistHtml(report, allOrders, deals) {
       </div>
 
       <div class="sales-period-detail" style="margin-top:14px">
-        <div class="month-search-box">
-          <label class="order-search-label">Search invoices &amp; products in this period
-            <input
-              id="adminMonthSearch"
-              type="search"
-              placeholder="Order ID, email, customer, product name…"
-              value="${escapeAttr(state.monthSearch || "")}"
-              autocomplete="off"
-            />
-          </label>
+        <div class="invoice-search-box">
+          <label class="invoice-search-label" for="adminMonthSearch">Search invoices in this period</label>
+          <input
+            id="adminMonthSearch"
+            class="invoice-search-input"
+            type="search"
+            placeholder="Order ID, email, customer name, product, login code, status…"
+            value="${escapeAttr(state.monthSearch || "")}"
+            autocomplete="off"
+          />
+          <p class="muted invoice-search-hint">
+            Filters products and invoices for <strong>${escapeHtml(periodLabel || "this period")}</strong>.
+          </p>
         </div>
         <h3 class="settings-h" style="margin-top:12px">Products bought &amp; sold (net of refunds)</h3>
         <div class="sales-checklist" role="list">
@@ -1608,17 +1611,17 @@ function ordersView() {
   return `
     <div class="top"><h1>Orders / Sales</h1></div>
     ${salesChecklistHtml(report, allOrders, deals)}
-    <div class="panel order-search-panel">
-      <label class="order-search-label">Search all invoices
-        <input
-          id="adminOrderSearch"
-          type="search"
-          placeholder="Order ID, email, customer name, product, login code, status…"
-          value="${escapeAttr(state.orderSearch || "")}"
-          autocomplete="off"
-        />
-      </label>
-      <p class="muted" style="margin:8px 0 0">
+    <div class="panel invoice-search-box invoice-search-box-panel">
+      <label class="invoice-search-label" for="adminOrderSearch">Search all invoices</label>
+      <input
+        id="adminOrderSearch"
+        class="invoice-search-input"
+        type="search"
+        placeholder="Order ID, email, customer name, product, login code, status…"
+        value="${escapeAttr(state.orderSearch || "")}"
+        autocomplete="off"
+      />
+      <p class="muted invoice-search-hint">
         ${globalSearchHint}.
         Mark refunded to deduct from PHP P&amp;L.
       </p>
