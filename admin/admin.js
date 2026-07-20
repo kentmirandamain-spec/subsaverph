@@ -16,12 +16,15 @@ const state = {
   orders: [],
   supportMessages: [],
   /**
-   * Orders/Sales P&L navigation:
-   * salesYear → pick year; salesView months|weeks|days; salesKey optional sub-period
+   * Orders/Sales drill-down: Year → Month → Week → Day
+   * salesMonthKey: "YYYY-MM"
+   * salesWeekKey: Monday as "YYYY-MM-DD"
+   * salesDayKey: "YYYY-MM-DD"
    */
   salesYear: new Date().getFullYear(),
-  salesView: "months", // months | weeks | days
-  salesKey: null, // e.g. "2026-07" | "2026-07-14" (week Mon) | "2026-07-20" (day)
+  salesMonthKey: null,
+  salesWeekKey: null,
+  salesDayKey: null,
   /** Invoice search (order id, email, name, product, code) */
   orderSearch: "",
   /** Search within period invoices / products */
@@ -1071,56 +1074,15 @@ function collectSalesYears(orders) {
   return [...years].sort((a, b) => b - a);
 }
 
-/** Active P&L date range from year + months/weeks/days selection. */
+/** Active P&L range: Year → Month → Week → Day (deepest wins). */
 function activeSalesRange() {
   const year = Number(state.salesYear) || new Date().getFullYear();
-  const view = state.salesView || "months";
-  const key = state.salesKey;
+  const dayKey = state.salesDayKey;
+  const weekKey = state.salesWeekKey;
+  const monthKey = state.salesMonthKey;
 
-  if (!key) {
-    const from = new Date(year, 0, 1, 0, 0, 0, 0);
-    const to = endOfLocalDay(new Date(year, 11, 31));
-    return { from, to, label: `Year ${year}`, year, view, key: null };
-  }
-
-  if (view === "months") {
-    // key: YYYY-MM
-    const m = String(key).match(/^(\d{4})-(\d{2})$/);
-    if (m) {
-      const y = Number(m[1]);
-      const mo = Number(m[2]) - 1;
-      const from = new Date(y, mo, 1, 0, 0, 0, 0);
-      const to = endOfLocalDay(new Date(y, mo + 1, 0));
-      return {
-        from,
-        to,
-        label: from.toLocaleDateString("en-PH", { month: "long", year: "numeric" }),
-        year,
-        view,
-        key,
-      };
-    }
-  }
-
-  if (view === "weeks") {
-    // key: Monday ISO day
-    const mon = parseLocalIsoDay(key);
-    if (mon) {
-      const from = startOfLocalDay(mon);
-      const to = endOfLocalDay(new Date(from.getFullYear(), from.getMonth(), from.getDate() + 6));
-      return {
-        from,
-        to,
-        label: `Week ${fmtShort(from)} – ${fmtShort(to)}`,
-        year,
-        view,
-        key,
-      };
-    }
-  }
-
-  if (view === "days") {
-    const day = parseLocalIsoDay(key);
+  if (dayKey) {
+    const day = parseLocalIsoDay(dayKey);
     if (day) {
       const from = startOfLocalDay(day);
       return {
@@ -1133,15 +1095,46 @@ function activeSalesRange() {
           year: "numeric",
         }),
         year,
-        view,
-        key,
+        level: "day",
+      };
+    }
+  }
+
+  if (weekKey) {
+    const mon = parseLocalIsoDay(weekKey);
+    if (mon) {
+      const from = startOfLocalDay(mon);
+      const to = endOfLocalDay(new Date(from.getFullYear(), from.getMonth(), from.getDate() + 6));
+      return {
+        from,
+        to,
+        label: `Week ${fmtShort(from)} – ${fmtShort(to)}`,
+        year,
+        level: "week",
+      };
+    }
+  }
+
+  if (monthKey) {
+    const m = String(monthKey).match(/^(\d{4})-(\d{2})$/);
+    if (m) {
+      const y = Number(m[1]);
+      const mo = Number(m[2]) - 1;
+      const from = new Date(y, mo, 1, 0, 0, 0, 0);
+      const to = endOfLocalDay(new Date(y, mo + 1, 0));
+      return {
+        from,
+        to,
+        label: from.toLocaleDateString("en-PH", { month: "long", year: "numeric" }),
+        year,
+        level: "month",
       };
     }
   }
 
   const from = new Date(year, 0, 1, 0, 0, 0, 0);
   const to = endOfLocalDay(new Date(year, 11, 31));
-  return { from, to, label: `Year ${year}`, year, view, key: null };
+  return { from, to, label: `Year ${year}`, year, level: "year" };
 }
 
 function filterOrdersByRange(orders, from, to) {
@@ -1166,19 +1159,22 @@ function monthsInYear(year) {
   });
 }
 
-function weeksInYear(year) {
+/** Weeks that overlap a given calendar month. */
+function weeksInMonth(year, monthIndex) {
+  const monthStart = new Date(year, monthIndex, 1, 0, 0, 0, 0);
+  const monthEnd = endOfLocalDay(new Date(year, monthIndex + 1, 0));
+  let mon = startOfLocalWeek(monthStart);
   const weeks = [];
-  let mon = startOfLocalWeek(new Date(year, 0, 1));
-  // If week starts in previous year, still include if it overlaps year
-  const yearEnd = endOfLocalDay(new Date(year, 11, 31));
   let guard = 0;
-  while (mon <= yearEnd && guard < 60) {
-    const to = endOfLocalDay(new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + 6));
-    if (to.getFullYear() >= year && mon.getFullYear() <= year) {
+  while (mon <= monthEnd && guard < 10) {
+    const from = startOfLocalDay(mon);
+    const to = endOfLocalDay(new Date(from.getFullYear(), from.getMonth(), from.getDate() + 6));
+    // Include week if it overlaps this month
+    if (to >= monthStart && from <= monthEnd) {
       weeks.push({
-        key: localIsoDay(mon),
-        label: `${fmtShort(mon)} – ${fmtShort(to)}`,
-        from: startOfLocalDay(mon),
+        key: localIsoDay(from),
+        label: `${fmtShort(from)} – ${fmtShort(to)}`,
+        from,
         to,
       });
     }
@@ -1188,17 +1184,13 @@ function weeksInYear(year) {
   return weeks;
 }
 
-function daysInYear(year, limit = 62) {
-  // Prefer days with activity; fall back to recent days of year
+/** Days inside a week (Mon–Sun). */
+function daysInWeek(weekMondayIso) {
+  const mon = parseLocalIsoDay(weekMondayIso);
+  if (!mon) return [];
   const days = [];
-  const end = new Date();
-  if (end.getFullYear() > year) {
-    end.setFullYear(year, 11, 31);
-  } else if (end.getFullYear() < year) {
-    end.setFullYear(year, 0, 1);
-  }
-  const start = new Date(year, 0, 1);
-  for (let d = startOfLocalDay(end); d >= start && days.length < limit; d = new Date(d.getFullYear(), d.getMonth(), d.getDate() - 1)) {
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + i);
     days.push({
       key: localIsoDay(d),
       label: d.toLocaleDateString("en-PH", { weekday: "short", month: "short", day: "numeric" }),
@@ -1327,6 +1319,14 @@ function miniPnlLine(report) {
   return `Orders ${report.totalOrders || 0} · Profit ${money(t.profit)}`;
 }
 
+function chipHtml(opts) {
+  const { key, attr, label, report, active } = opts;
+  return `<button type="button" class="sales-option-chip ${active ? "active" : ""}" ${attr}="${escapeAttr(key)}" title="${escapeAttr(miniPnlLine(report))}">
+    <strong>${escapeHtml(label)}</strong>
+    <span class="muted">${report.totalOrders} ord · ${escapeHtml(money(report.totals.profit))}</span>
+  </button>`;
+}
+
 function salesChecklistHtml(report, allOrders, deals) {
   const { products, totals, totalOrders, periodLabel } = report;
   const t = totals || {
@@ -1340,8 +1340,9 @@ function salesChecklistHtml(report, allOrders, deals) {
     grossRevenue: 0,
   };
   const year = Number(state.salesYear) || new Date().getFullYear();
-  const view = state.salesView || "months";
-  const key = state.salesKey;
+  const monthKey = state.salesMonthKey;
+  const weekKey = state.salesWeekKey;
+  const dayKey = state.salesDayKey;
   const years = collectSalesYears(allOrders);
   const monthQ = (state.monthSearch || "").trim();
 
@@ -1384,51 +1385,99 @@ function salesChecklistHtml(report, allOrders, deals) {
     )
     .join("");
 
-  const viewTabs = [
-    { id: "months", label: "Months" },
-    { id: "weeks", label: "Weeks" },
-    { id: "days", label: "Days" },
-  ]
-    .map(
-      (tab) =>
-        `<button type="button" class="sales-period-tab ${view === tab.id ? "active" : ""}" data-sales-view="${tab.id}">${tab.label}</button>`
-    )
-    .join("");
+  // Breadcrumb: Year > Month > Week > Day
+  const crumbs = [];
+  crumbs.push(
+    `<button type="button" class="sales-crumb ${!monthKey ? "active" : ""}" data-sales-crumb="year">${year}</button>`
+  );
+  if (monthKey) {
+    const mm = String(monthKey).match(/^(\d{4})-(\d{2})$/);
+    const monthName = mm
+      ? new Date(Number(mm[1]), Number(mm[2]) - 1, 1).toLocaleDateString("en-PH", {
+          month: "long",
+        })
+      : monthKey;
+    crumbs.push(`<span class="sales-crumb-sep">›</span>`);
+    crumbs.push(
+      `<button type="button" class="sales-crumb ${monthKey && !weekKey ? "active" : ""}" data-sales-crumb="month">${escapeHtml(monthName)}</button>`
+    );
+  }
+  if (weekKey) {
+    const mon = parseLocalIsoDay(weekKey);
+    const weekLabel = mon ? `Week ${fmtShort(mon)}` : weekKey;
+    crumbs.push(`<span class="sales-crumb-sep">›</span>`);
+    crumbs.push(
+      `<button type="button" class="sales-crumb ${weekKey && !dayKey ? "active" : ""}" data-sales-crumb="week">${escapeHtml(weekLabel)}</button>`
+    );
+  }
+  if (dayKey) {
+    const d = parseLocalIsoDay(dayKey);
+    const dayLabel = d
+      ? d.toLocaleDateString("en-PH", { month: "short", day: "numeric" })
+      : dayKey;
+    crumbs.push(`<span class="sales-crumb-sep">›</span>`);
+    crumbs.push(
+      `<button type="button" class="sales-crumb active" data-sales-crumb="day">${escapeHtml(dayLabel)}</button>`
+    );
+  }
 
+  // Drill-down chips: year→months, month→weeks, week→days
+  let stepTitle = "Months";
+  let stepHint = "Click a month to see its weeks.";
   let optionChips = "";
-  if (view === "months") {
+
+  if (!monthKey) {
+    stepTitle = "Months";
+    stepHint = "Click a month to open its weeks.";
     optionChips = monthsInYear(year)
       .map((m) => {
         const r = buildSalesReportRange(allOrders, deals, m.from, m.to, m.full);
-        const active = key === m.key;
-        return `<button type="button" class="sales-option-chip ${active ? "active" : ""}" data-sales-key="${escapeAttr(m.key)}" title="${escapeAttr(miniPnlLine(r))}">
-          <strong>${escapeHtml(m.label)}</strong>
-          <span class="muted">${r.totalOrders} ord · ${escapeHtml(money(r.totals.profit))}</span>
-        </button>`;
+        return chipHtml({
+          key: m.key,
+          attr: "data-sales-month",
+          label: m.full,
+          report: r,
+          active: false,
+        });
       })
       .join("");
-  } else if (view === "weeks") {
-    optionChips = weeksInYear(year)
+  } else if (!weekKey) {
+    const mm = String(monthKey).match(/^(\d{4})-(\d{2})$/);
+    const y = mm ? Number(mm[1]) : year;
+    const mo = mm ? Number(mm[2]) - 1 : 0;
+    stepTitle = "Weeks";
+    stepHint = "Click a week to open its days.";
+    optionChips = weeksInMonth(y, mo)
       .map((w) => {
         const r = buildSalesReportRange(allOrders, deals, w.from, w.to, w.label);
-        const active = key === w.key;
-        return `<button type="button" class="sales-option-chip ${active ? "active" : ""}" data-sales-key="${escapeAttr(w.key)}" title="${escapeAttr(miniPnlLine(r))}">
-          <strong>${escapeHtml(w.label)}</strong>
-          <span class="muted">${r.totalOrders} ord · ${escapeHtml(money(r.totals.profit))}</span>
-        </button>`;
+        return chipHtml({
+          key: w.key,
+          attr: "data-sales-week",
+          label: w.label,
+          report: r,
+          active: false,
+        });
+      })
+      .join("");
+  } else if (!dayKey) {
+    stepTitle = "Days";
+    stepHint = "Click a day for that day’s P&amp;L.";
+    optionChips = daysInWeek(weekKey)
+      .map((d) => {
+        const r = buildSalesReportRange(allOrders, deals, d.from, d.to, d.label);
+        return chipHtml({
+          key: d.key,
+          attr: "data-sales-day",
+          label: d.label,
+          report: r,
+          active: false,
+        });
       })
       .join("");
   } else {
-    optionChips = daysInYear(year)
-      .map((d) => {
-        const r = buildSalesReportRange(allOrders, deals, d.from, d.to, d.label);
-        const active = key === d.key;
-        return `<button type="button" class="sales-option-chip ${active ? "active" : ""}" data-sales-key="${escapeAttr(d.key)}" title="${escapeAttr(miniPnlLine(r))}">
-          <strong>${escapeHtml(d.label)}</strong>
-          <span class="muted">${r.totalOrders} ord · ${escapeHtml(money(r.totals.profit))}</span>
-        </button>`;
-      })
-      .join("");
+    stepTitle = "Day selected";
+    stepHint = "P&amp;L below is for this day. Use the breadcrumb to go back.";
+    optionChips = `<p class="muted" style="margin:0">Selected day · use breadcrumb to pick another week or month.</p>`;
   }
 
   const profitClass = (t.profit || 0) < 0 ? "sales-loss" : "";
@@ -1437,7 +1486,7 @@ function salesChecklistHtml(report, allOrders, deals) {
     <div class="panel sales-panel">
       <h2 class="sales-h">P&amp;L (PHP)</h2>
       <p class="muted" style="margin-top:0">
-        Pick a <strong>year</strong>, then choose <strong>Months</strong>, <strong>Weeks</strong>, or <strong>Days</strong>.
+        <strong>Year → Month → Week → Day</strong>. Click to drill down.
         Amounts in ₱. Refunds are deducted from net profit.
       </p>
 
@@ -1447,22 +1496,9 @@ function salesChecklistHtml(report, allOrders, deals) {
       </div>
 
       <div class="sales-year-panel">
-        <div class="sales-year-panel-head">
-          <h3 class="settings-h" style="margin:0">${year}</h3>
-          <div class="sales-period-tabs" role="tablist" aria-label="Period type">
-            ${viewTabs}
-          </div>
-        </div>
-        <p class="muted" style="margin:8px 0 10px">
-          ${
-            view === "months"
-              ? "Click a month for that month’s P&amp;L."
-              : view === "weeks"
-                ? "Click a week for that week’s P&amp;L."
-                : "Click a day for that day’s P&amp;L."
-          }
-          ${!key ? ` Showing full year ${year} until you pick one.` : ""}
-        </p>
+        <div class="sales-breadcrumb">${crumbs.join("")}</div>
+        <h3 class="settings-h" style="margin:12px 0 6px">${stepTitle}</h3>
+        <p class="muted" style="margin:0 0 10px">${stepHint}</p>
         <div class="sales-option-grid">${optionChips || `<p class="muted">No periods.</p>`}</div>
       </div>
 
@@ -1864,27 +1900,57 @@ function bindShell() {
       const y = Number(btn.dataset.salesYear);
       if (!Number.isFinite(y)) return;
       state.salesYear = y;
-      state.salesKey = null; // whole year until a month/week/day is picked
+      state.salesMonthKey = null;
+      state.salesWeekKey = null;
+      state.salesDayKey = null;
       render();
     });
   });
 
-  $$("[data-sales-view]").forEach((btn) => {
+  // Breadcrumb: jump back up the Year → Month → Week → Day tree
+  $$("[data-sales-crumb]").forEach((btn) => {
     btn.addEventListener("click", () => {
-      const v = btn.dataset.salesView;
-      if (!v || !["months", "weeks", "days"].includes(v)) return;
-      state.salesView = v;
-      state.salesKey = null;
+      const level = btn.dataset.salesCrumb;
+      if (level === "year") {
+        state.salesMonthKey = null;
+        state.salesWeekKey = null;
+        state.salesDayKey = null;
+      } else if (level === "month") {
+        state.salesWeekKey = null;
+        state.salesDayKey = null;
+      } else if (level === "week") {
+        state.salesDayKey = null;
+      }
       render();
     });
   });
 
-  $$("[data-sales-key]").forEach((btn) => {
+  $$("[data-sales-month]").forEach((btn) => {
     btn.addEventListener("click", () => {
-      const k = btn.dataset.salesKey;
+      const k = btn.dataset.salesMonth;
       if (!k) return;
-      // toggle off if same key clicked again → whole year
-      state.salesKey = state.salesKey === k ? null : k;
+      state.salesMonthKey = k;
+      state.salesWeekKey = null;
+      state.salesDayKey = null;
+      render();
+    });
+  });
+
+  $$("[data-sales-week]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const k = btn.dataset.salesWeek;
+      if (!k) return;
+      state.salesWeekKey = k;
+      state.salesDayKey = null;
+      render();
+    });
+  });
+
+  $$("[data-sales-day]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const k = btn.dataset.salesDay;
+      if (!k) return;
+      state.salesDayKey = k;
       render();
     });
   });
