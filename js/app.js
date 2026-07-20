@@ -537,22 +537,11 @@ function applySiteChrome() {
     const el = document.querySelector(sel);
     if (el && val != null && String(val).length) el.textContent = val;
   };
-  setText("#footerBlurb", c("footer_blurb", "footerText"));
   setText("#footerCompanyBlurb", c("footer_company_blurb", "footerCompanyBlurb"));
   setText("#footerDisclaimer", c("footer_disclaimer", "footerDisclaimer"));
   const year = new Date().getFullYear();
   setText("#footerCopyright", `© ${year} ${c("footer_copyright", "footerCopyright")}`);
-  const support = supportEmailAddress();
-  // Footer: support links go to the Support page
-  const supportLabel = document.querySelector("#footerSupportLabel");
-  if (supportLabel) {
-    supportLabel.textContent = support;
-    supportLabel.setAttribute("href", "#/support");
-    supportLabel.classList.add("js-go-support");
-  }
-  document.querySelectorAll(".footer-contact span[data-i18n-meta]").forEach((span) => {
-    span.textContent = t(span.getAttribute("data-i18n-meta"));
-  });
+  // Support links go to the Support page (bottom footer link only)
   document.querySelectorAll("a[data-support-email], a[data-support-link], a.js-go-support").forEach((a) => {
     a.setAttribute("href", "#/support");
     a.removeAttribute("target");

@@ -200,7 +200,7 @@
   }
   </script>
 
-  <link rel="stylesheet" href="css/styles.css?v=footer-min1" />
+  <link rel="stylesheet" href="css/styles.css?v=footer-2col4" />
 </head>
 <body class="galaxy">
   <!-- Fixed galaxy layers (pure CSS stars + nebulae) -->
@@ -347,9 +347,7 @@
         </p>
         <h2>Contact</h2>
         <p>
-          <!--email_off-->
-          Support: <a href="/support">Contact support</a> (support@subsaverph.com).
-          <!--email_on-->
+          <a href="/support">Contact support</a>.
           Website: <a href="https://subsaverph.com/">https://subsaverph.com/</a>.
           Service area: Philippines (online).
         </p>
@@ -370,33 +368,30 @@
 
   <footer class="footer">
     <div class="footer-shell">
-      <div class="footer-main">
-        <div class="footer-brand">
-          <a class="logo footer-logo" href="#/home" title="SubSaverPH home" aria-label="SubSaverPH home">
-            <img class="logo-mark" src="/assets/logo-192.png" width="36" height="36" alt="SubSaverPH" />
-          </a>
-          <p id="footerBlurb" class="footer-blurb">Discounted prepaid plans across AI, Design, Video, and Streaming.</p>
-          <p id="footerCompanyBlurb" class="footer-company-blurb">Philippines storefront for prepaid digital subscriptions — clear pricing, multi-currency checkout, instant delivery.</p>
-        </div>
-
-        <div class="footer-side">
-          <nav class="footer-links" aria-label="Footer">
-            <a href="#/about" data-i18n="footer_about">About</a>
-            <a href="#/support" class="js-go-support" data-i18n="footer_contact" data-support-link>Support</a>
-            <a href="#/terms" data-i18n="footer_terms">Terms</a>
-            <a href="#/privacy" data-i18n="footer_privacy">Privacy</a>
-          </nav>
-          <p class="footer-contact">
-            <span data-i18n-meta="support_meta">Support</span>
-            <a id="footerSupportLabel" href="#/support" class="js-go-support">support@subsaverph.com</a>
-          </p>
+      <div class="footer-top">
+        <a class="logo footer-logo" href="#/home" title="SubSaverPH home" aria-label="SubSaverPH home">
+          <img class="logo-mark" src="/assets/logo-192.png" width="36" height="36" alt="SubSaverPH" />
+        </a>
+        <div class="footer-cols">
+          <div class="footer-col footer-col-left">
+            <p id="footerCompanyBlurb" class="footer-company-blurb">Philippines storefront for prepaid digital subscriptions — clear pricing, multi-currency checkout, instant delivery.</p>
+          </div>
+          <div class="footer-col footer-col-right">
+            <p class="footer-disclaimer" id="footerDisclaimer">Independent storefront — not affiliated with brands in our catalog. Product names are trademarks of their respective owners.</p>
+          </div>
         </div>
       </div>
 
-      <p class="footer-disclaimer" id="footerDisclaimer">Independent storefront — not affiliated with brands in our catalog. Product names are trademarks of their respective owners.</p>
-
-      <div class="footer-bar">
-        <span id="footerCopyright">© <span id="footerYear">2026</span> SubSaverPH. All rights reserved.</span>
+      <div class="footer-bottom">
+        <nav class="footer-links" aria-label="Footer">
+          <a href="#/about" data-i18n="footer_about_company">About the company</a>
+          <a href="#/terms" data-i18n="footer_terms">Terms of Use</a>
+          <a href="#/privacy" data-i18n="footer_privacy">Privacy Policy</a>
+          <a href="#/support" class="js-go-support" data-i18n="footer_contact" data-support-link>Support</a>
+        </nav>
+        <div class="footer-bar">
+          <span id="footerCopyright">© <span id="footerYear">2026</span> SubSaverPH. All rights reserved.</span>
+        </div>
       </div>
     </div>
   </footer>
@@ -419,7 +414,7 @@
   <div id="toast" class="toast" role="status"></div>
 
   <script src="data/deals.js"></script>
-  <script type="module" src="js/app.js?v=footer-min1"></script>
+  <script type="module" src="js/app.js?v=footer-2col3"></script>
   <!-- Live data loads from /api/catalog when server.py is running -->
 </body>
 </html>
