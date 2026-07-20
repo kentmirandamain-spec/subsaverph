@@ -1,23 +1,14 @@
 {
-  "supergrok-7d": [
-    {
-      "code": "ntest@gmail.com 12345",
-      "status": "sold",
-      "addedAt": "2026-07-19T09:10:35.255844Z",
-      "soldAt": "2026-07-19T09:11:01.957801Z"
-    },
-    {
-      "code": "Username: test@gmail.com Password: 1234567",
-      "status": "sold",
-      "addedAt": "2026-07-19T09:12:22.925488Z",
-      "soldAt": "2026-07-19T09:13:20.668204Z"
-    },
-    {
-      "code": "Username:terst@gmail.com Password:1234567",
-      "status": "sold",
-      "addedAt": "2026-07-19T09:25:13.523351Z",
-      "soldAt": "2026-07-19T09:25:48.510685Z"
-    }
-  ],
-  "supergrok-1m": []
+  "supergrok-7d": [],
+  "supergrok-1m": [],
+  "canva-pro": [],
+  "canva-teams": [],
+  "capcut-pro": [],
+  "capcut-std": [],
+  "netflix-prem": [],
+  "netflix-std": [],
+  "yt-premium": [],
+  "yt-family": [],
+  "duolingo-super-1m": [],
+  "spotify-premium-1m": []
 }
