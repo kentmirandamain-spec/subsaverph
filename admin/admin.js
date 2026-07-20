@@ -1065,8 +1065,18 @@ function fmtShort(d) {
   return d.toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" });
 }
 
+/**
+ * Year chips for P&L: years that have orders, plus recent past and following years
+ * so hosts can always pick future months/weeks/days (2026–2032, etc.).
+ */
 function collectSalesYears(orders) {
-  const years = new Set([new Date().getFullYear()]);
+  const nowY = new Date().getFullYear();
+  const years = new Set();
+  // Past / current options
+  for (let y = nowY - 3; y <= nowY; y++) years.add(y);
+  // Following years (always available)
+  for (let y = nowY + 1; y <= nowY + 6; y++) years.add(y);
+  // Any year that already has invoices
   for (const o of orders || []) {
     const d = orderEventDate(o);
     if (d) years.add(d.getFullYear());
