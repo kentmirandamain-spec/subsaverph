@@ -47,9 +47,20 @@ function friendlyApiError(status, raw, data) {
 }
 
 /**
- * Admin API helper. Mutations use POST (Cloudflare sometimes returns HTML 405 for PUT/DELETE).
+ * Admin API helper.
+ * - Mutations use POST (Cloudflare sometimes returns HTML 405 for PUT/DELETE).
+ * - Paths are normalized (no trailing slash) — trailing slash caused live 405 on /api/admin/settings/.
  */
 async function api(path, opts = {}) {
+  let url = String(path || "");
+  // Keep query string; strip trailing slash on the path part only
+  const q = url.indexOf("?");
+  if (q === -1) {
+    if (url.length > 1 && url.endsWith("/")) url = url.replace(/\/+$/, "");
+  } else {
+    const base = url.slice(0, q).replace(/\/+$/, "") || "/";
+    url = base + url.slice(q);
+  }
   const headers = {
     "Content-Type": "application/json",
     Accept: "application/json",
@@ -57,7 +68,7 @@ async function api(path, opts = {}) {
   };
   let res;
   try {
-    res = await fetch(path, {
+    res = await fetch(url, {
       credentials: "same-origin",
       ...opts,
       headers,

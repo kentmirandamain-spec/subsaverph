@@ -51,12 +51,30 @@ app = Flask(__name__, static_folder=None)
 app.secret_key = os.environ.get("SECRET_KEY") or "subsaverph-change-me-in-production"
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+# Allow /api/foo and /api/foo/ (Cloudflare / browsers sometimes add a trailing slash → 405)
+app.url_map.strict_slashes = False
 # HTTPS on Render
 if os.environ.get("RENDER") or os.environ.get("FORCE_HTTPS"):
     app.config["SESSION_COOKIE_SECURE"] = True
     app.config["PREFERRED_URL_SCHEME"] = "https"
 # Trust Render / Cloudflare proxy headers
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
+
+
+@app.before_request
+def normalize_api_trailing_slash():
+    """Strip trailing slash on API POSTs so Flask never returns HTML 405 Method Not Allowed."""
+    path = request.path or ""
+    if path.startswith("/api/") and path.endswith("/") and len(path) > 5:
+        from flask import redirect
+
+        # 307 keeps method + body (POST/PUT/DELETE)
+        qs = request.query_string.decode("utf-8", errors="ignore")
+        target = path.rstrip("/")
+        if qs:
+            target = f"{target}?{qs}"
+        return redirect(target, code=307)
+    return None
 
 
 @app.before_request
