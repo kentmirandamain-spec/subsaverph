@@ -1,36 +1,60 @@
-# Keep SubSaverPH awake on Render free tier by pinging every 5 minutes.
-# True 24/7 with no cold starts: upgrade Render plan to Starter (paid).
+# Keep SubSaverPH awake on Render free tier.
+# Pings health every ~5 minutes so the free instance does not sleep.
+# Site runs on Render — your PC / admin login can be offline.
+#
+# True zero-cold-start 24/7: Render Dashboard → Instance Type → Starter (~$7/mo)
+# or set plan: starter in render.yaml
 
 name: Keep Render awake
 
 on:
   schedule:
-    # Every 5 minutes (GitHub may delay slightly under load)
+    # Every 5 minutes (GitHub may delay a few minutes under load)
     - cron: "*/5 * * * *"
   workflow_dispatch: # manual "Run workflow" button
 
 jobs:
   ping:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     steps:
-      - name: Ping health endpoint
+      - name: Ping store health (keep free instance awake)
         run: |
           set -e
-          URL="${{ vars.KEEP_ALIVE_URL }}"
-          if [ -z "$URL" ]; then
-            URL="https://subsaverph.onrender.com/api/health"
-          fi
-          echo "Pinging $URL"
-          # Retry a few times in case of cold start
-          for i in 1 2 3 4 5; do
-            if curl -fsS --max-time 45 "$URL"; then
-              echo ""
-              echo "OK (attempt $i)"
+          # Custom domain first (canonical), then Render hostname as backup
+          URLS=(
+            "${{ vars.KEEP_ALIVE_URL }}"
+            "https://subsaverph.com/api/health"
+            "https://subsaverph.onrender.com/api/health"
+          )
+
+          # Deduplicate empty / repeated URLs
+          SEEN=""
+          OK=0
+          for RAW in "${URLS[@]}"; do
+            URL="$(echo "$RAW" | xargs)"
+            [ -z "$URL" ] && continue
+            case " $SEEN " in
+              *" $URL "*) continue ;;
+            esac
+            SEEN="$SEEN $URL"
+
+            echo "==== Pinging $URL ===="
+            for i in 1 2 3 4 5 6; do
+              if curl -fsS --max-time 55 -H "User-Agent: SubSaverPH-KeepAlive/1.0" "$URL"; then
+                echo ""
+                echo "OK (attempt $i) — $URL"
+                OK=1
+                break
+              fi
+              echo "Attempt $i failed for $URL — retry in 12s (cold start?)"
+              sleep 12
+            done
+            if [ "$OK" -eq 1 ]; then
+              # One successful wake is enough for Render free tier
               exit 0
             fi
-            echo "Attempt $i failed, retrying..."
-            sleep 10
           done
-          echo "All attempts failed"
+
+          echo "All health URLs failed — site may be down or redeploying"
           exit 1
