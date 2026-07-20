@@ -19,6 +19,8 @@ const state = {
   salesPeriod: "day",
   /** Invoice search (order id, email, name, product, code) */
   orderSearch: "",
+  /** Search within monthly P&L invoices / products */
+  monthSearch: "",
 };
 
 function friendlyApiError(status, raw, data) {
@@ -1198,6 +1200,15 @@ function pnlCardHtml(title, report, active) {
     </button>`;
 }
 
+function productMatchesSearch(p, qRaw) {
+  const q = String(qRaw || "")
+    .trim()
+    .toLowerCase();
+  if (!q) return true;
+  const blob = [p.id, p.name, p.brand].filter(Boolean).join(" ").toLowerCase();
+  return q.split(/\s+/).every((tok) => blob.includes(tok));
+}
+
 function salesChecklistHtml(report, periodReports) {
   const { products, totals, totalOrders, periodLabel } = report;
   const t = totals || {
@@ -1211,6 +1222,8 @@ function salesChecklistHtml(report, periodReports) {
     grossRevenue: 0,
   };
   const period = state.salesPeriod || "day";
+  const monthQ = (state.monthSearch || "").trim();
+  const isMonth = period === "month";
   const tabs = [
     { id: "day", label: "Daily" },
     { id: "week", label: "Weekly" },
@@ -1223,8 +1236,13 @@ function salesChecklistHtml(report, periodReports) {
     )
     .join("");
 
-  const checklist = products.length
-    ? products
+  const filteredProducts =
+    isMonth && monthQ
+      ? (products || []).filter((p) => productMatchesSearch(p, monthQ))
+      : products || [];
+
+  const checklist = filteredProducts.length
+    ? filteredProducts
         .map((p) => {
           const refundNote =
             p.refundedUnits > 0
@@ -1245,11 +1263,34 @@ function salesChecklistHtml(report, periodReports) {
         </label>`;
         })
         .join("")
-    : `<p class="muted" style="margin:0">No PHP sales in this period. Paid PHP orders will appear here automatically.</p>`;
+    : `<p class="muted" style="margin:0">${
+        isMonth && monthQ
+          ? `No monthly products match “${escapeHtml(monthQ)}”.`
+          : "No PHP sales in this period. Paid PHP orders will appear here automatically."
+      }</p>`;
 
   const dayR = periodReports.day;
   const weekR = periodReports.week;
   const monthR = periodReports.month;
+
+  const monthlySearchBox = isMonth
+    ? `
+      <div class="month-search-box">
+        <label class="order-search-label">Search monthly invoices &amp; products
+          <input
+            id="adminMonthSearch"
+            type="search"
+            placeholder="Order ID, email, customer, product name…"
+            value="${escapeAttr(state.monthSearch || "")}"
+            autocomplete="off"
+          />
+        </label>
+        <p class="muted" style="margin:8px 0 0">
+          Filters this month’s product checklist and invoice list below.
+          ${monthQ ? `Query: <strong>${escapeHtml(monthQ)}</strong>` : "Leave empty to show all monthly sales."}
+        </p>
+      </div>`
+    : "";
 
   return `
     <div class="panel sales-panel">
@@ -1275,7 +1316,8 @@ function salesChecklistHtml(report, periodReports) {
           Net profit <strong class="${(t.profit || 0) < 0 ? "sales-loss" : ""}">${escapeHtml(money(t.profit))}</strong>
           ${t.refundOrders ? ` · ${t.refundOrders} refund(s) (−${escapeHtml(money(t.refunds))})` : ""}
         </p>
-        <h3 class="settings-h" style="margin-top:8px">Products bought &amp; sold (net of refunds)</h3>
+        ${monthlySearchBox}
+        <h3 class="settings-h" style="margin-top:12px">Products bought &amp; sold (net of refunds)</h3>
         <div class="sales-checklist" role="list">
           ${checklist}
         </div>
@@ -1330,7 +1372,9 @@ function ordersView() {
   const deals = state.deals || [];
   const period = state.salesPeriod || "day";
   const q = (state.orderSearch || "").trim();
+  const monthQ = (state.monthSearch || "").trim();
   const searching = q.length > 0;
+  const monthSearching = period === "month" && monthQ.length > 0;
   const periodReports = {
     day: buildSalesReport(allOrders, deals, "day"),
     week: buildSalesReport(allOrders, deals, "week"),
@@ -1339,9 +1383,21 @@ function ordersView() {
   };
   const report = periodReports[period] || periodReports.day;
   const periodOrders = filterOrdersByPeriod(allOrders, period === "all" ? "all" : period);
-  // Search looks across all invoices when typing; otherwise list follows period
-  const baseList = searching ? allOrders : period === "all" ? allOrders : periodOrders;
-  const list = baseList.filter((o) => orderMatchesSearch(o, q));
+  // Global invoice search across all; monthly search stays inside this month
+  let baseList;
+  let list;
+  if (searching) {
+    baseList = allOrders;
+    list = baseList.filter((o) => orderMatchesSearch(o, q));
+  } else if (period === "month") {
+    baseList = periodOrders;
+    list = monthSearching
+      ? baseList.filter((o) => orderMatchesSearch(o, monthQ))
+      : baseList;
+  } else {
+    baseList = period === "all" ? allOrders : periodOrders;
+    list = baseList;
+  }
 
   const rows = list
     .map((o) => {
@@ -1373,13 +1429,23 @@ function ordersView() {
 
   const emptyMsg = searching
     ? `No invoices match “${escapeHtml(q)}”.`
-    : "No orders in this period.";
+    : monthSearching
+      ? `No monthly invoices match “${escapeHtml(monthQ)}”.`
+      : "No orders in this period.";
+
+  const globalSearchHint = searching
+    ? `Showing <strong>${list.length}</strong> match(es) across all invoices`
+    : period === "month"
+      ? monthSearching
+        ? `Monthly matches: <strong>${list.length}</strong> (this month only)`
+        : `This month · <strong>${list.length}</strong> invoice(s). Use the monthly search box above to filter.`
+      : `Orders in selected period (${escapeHtml(report.periodLabel || "")}) · <strong>${list.length}</strong> shown`;
 
   return `
     <div class="top"><h1>Orders / Sales</h1></div>
     ${salesChecklistHtml(report, periodReports)}
     <div class="panel order-search-panel">
-      <label class="order-search-label">Search invoices
+      <label class="order-search-label">Search all invoices
         <input
           id="adminOrderSearch"
           type="search"
@@ -1389,11 +1455,7 @@ function ordersView() {
         />
       </label>
       <p class="muted" style="margin:8px 0 0">
-        ${
-          searching
-            ? `Showing <strong>${list.length}</strong> match(es) across all invoices`
-            : `Orders in selected period (${escapeHtml(report.periodLabel || "")}) · <strong>${list.length}</strong> shown`
-        }.
+        ${globalSearchHint}.
         Mark refunded to deduct from PHP P&amp;L.
       </p>
     </div>
@@ -1780,6 +1842,23 @@ function bindShell() {
     const keep = e.target.selectionStart;
     render();
     const again = $("#adminOrderSearch");
+    if (again) {
+      again.focus();
+      try {
+        again.setSelectionRange(keep, keep);
+      } catch {
+        /* ignore */
+      }
+    }
+  });
+
+  $("#adminMonthSearch")?.addEventListener("input", (e) => {
+    state.monthSearch = e.target.value;
+    // Prefer monthly view while searching monthly invoices
+    if (state.salesPeriod !== "month") state.salesPeriod = "month";
+    const keep = e.target.selectionStart;
+    render();
+    const again = $("#adminMonthSearch");
     if (again) {
       again.focus();
       try {

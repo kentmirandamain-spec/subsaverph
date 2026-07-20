@@ -662,6 +662,18 @@ textarea { min-height: 90px; resize: vertical; }
   text-transform: none;
 }
 
+.month-search-box {
+  margin: 0 0 14px;
+  padding: 14px 14px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #0a0a0a;
+}
+
+.month-search-box .order-search-label input {
+  max-width: 100%;
+}
+
 @media (max-width: 900px) {
   .sales-pnl-grid {
     grid-template-columns: 1fr;
