@@ -578,6 +578,75 @@ textarea { min-height: 90px; resize: vertical; }
   font-size: 0.68rem;
 }
 
+.sales-pnl-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.sales-pnl-card {
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  font: inherit;
+  color: inherit;
+}
+
+.sales-pnl-card:hover {
+  border-color: #555;
+}
+
+.sales-pnl-card.active {
+  border-color: #fff;
+  box-shadow: 0 0 0 1px #fff;
+}
+
+.sales-pnl-range {
+  font-size: 0.75rem;
+  margin: -4px 0 10px;
+}
+
+.sales-period-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 18px 0 12px;
+}
+
+.sales-period-tab {
+  background: #0a0a0a;
+  border: 1px solid var(--line);
+  color: var(--mute);
+  padding: 8px 14px;
+  font-size: 0.75rem;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  border-radius: 8px;
+}
+
+.sales-period-tab:hover {
+  color: #fff;
+  border-color: #555;
+}
+
+.sales-period-tab.active {
+  color: #000;
+  background: #fff;
+  border-color: #fff;
+}
+
+.sales-period-detail {
+  margin-top: 4px;
+  padding-top: 4px;
+}
+
+@media (max-width: 900px) {
+  .sales-pnl-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 800px) {
   .shell { grid-template-columns: 1fr; }
   .side { border-right: none; border-bottom: 1px solid var(--line); }

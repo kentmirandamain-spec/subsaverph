@@ -15,6 +15,8 @@ const state = {
   stockCodes: [],
   orders: [],
   supportMessages: [],
+  /** Orders/Sales P&L focus: day | week | month | all */
+  salesPeriod: "day",
 };
 
 function friendlyApiError(status, raw, data) {
@@ -978,18 +980,86 @@ function orderStatusKey(o) {
   return String(o?.status || "").toLowerCase();
 }
 
+function startOfLocalDay(d = new Date()) {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  return x;
+}
+
+/** Week starts Monday (local time). */
+function startOfLocalWeek(d = new Date()) {
+  const x = startOfLocalDay(d);
+  const day = x.getDay(); // 0 = Sun
+  const diff = day === 0 ? 6 : day - 1;
+  x.setDate(x.getDate() - diff);
+  return x;
+}
+
+function startOfLocalMonth(d = new Date()) {
+  return new Date(d.getFullYear(), d.getMonth(), 1, 0, 0, 0, 0);
+}
+
+function endOfLocalDay(d = new Date()) {
+  const x = startOfLocalDay(d);
+  x.setHours(23, 59, 59, 999);
+  return x;
+}
+
+function orderEventDate(o) {
+  const st = orderStatusKey(o);
+  const isRefund = ["refunded", "refund", "reversed", "chargeback"].includes(st);
+  const raw = (isRefund && o.refundedAt) || o.createdAt || o.paidAt || "";
+  const t = Date.parse(raw);
+  return Number.isFinite(t) ? new Date(t) : null;
+}
+
+function periodRange(period, now = new Date()) {
+  if (period === "day") {
+    return { from: startOfLocalDay(now), to: endOfLocalDay(now), label: "Today" };
+  }
+  if (period === "week") {
+    return { from: startOfLocalWeek(now), to: endOfLocalDay(now), label: "This week" };
+  }
+  if (period === "month") {
+    return { from: startOfLocalMonth(now), to: endOfLocalDay(now), label: "This month" };
+  }
+  return { from: null, to: null, label: "All time" };
+}
+
+function filterOrdersByPeriod(orders, period) {
+  const { from, to } = periodRange(period);
+  if (!from) return orders || [];
+  return (orders || []).filter((o) => {
+    const d = orderEventDate(o);
+    if (!d) return false;
+    return d >= from && d <= to;
+  });
+}
+
+function formatPeriodRange(period) {
+  const { from, to, label } = periodRange(period);
+  if (!from) return label;
+  const fmt = (d) =>
+    d.toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" });
+  if (period === "day") return `${label} · ${fmt(from)}`;
+  return `${label} · ${fmt(from)} – ${fmt(to)}`;
+}
+
 /**
  * PHP P&L: paid sales count; refunded sales are deducted from net revenue/profit.
  * Gross = paid + refunded history; Net = paid only; Refunds line = refunded totals.
+ * @param {object[]} orders
+ * @param {object[]} deals
+ * @param {"day"|"week"|"month"|"all"} [period]
  */
-function buildSalesReport(orders, deals) {
+function buildSalesReport(orders, deals, period = "all") {
   const dealById = Object.fromEntries((deals || []).map((d) => [d.id, d]));
   const paidStatuses = new Set(["paid", "completed", "succeeded", "complete", "success"]);
   const refundStatuses = new Set(["refunded", "refund", "reversed", "chargeback"]);
 
-  const phpOrders = (orders || []).filter(isPhpOrder);
-  const paid = phpOrders.filter((o) => paidStatuses.has(orderStatusKey(o)));
-  const refunded = phpOrders.filter((o) => refundStatuses.has(orderStatusKey(o)));
+  const scoped = filterOrdersByPeriod((orders || []).filter(isPhpOrder), period);
+  const paid = scoped.filter((o) => paidStatuses.has(orderStatusKey(o)));
+  const refunded = scoped.filter((o) => refundStatuses.has(orderStatusKey(o)));
 
   /** @type {Record<string, { id: string, name: string, brand: string, units: number, revenue: number, cost: number, profit: number, orders: number, refundedUnits: number, refundedAmount: number }>} */
   const byProduct = {};
@@ -1045,7 +1115,6 @@ function buildSalesReport(orders, deals) {
       const row = ensureProduct(id, name, brand);
 
       if (mode === "paid") {
-        // Net sale
         row.units += qty;
         row.revenue += rev;
         row.cost += costTotal;
@@ -1057,7 +1126,6 @@ function buildSalesReport(orders, deals) {
         totals.units += qty;
         totals.grossRevenue += rev;
       } else if (mode === "refunded") {
-        // Refunded: show on product line but exclude from net revenue/profit (money returned)
         row.refundedUnits += qty;
         row.refundedAmount += rev;
         totals.refunds += rev;
@@ -1070,24 +1138,43 @@ function buildSalesReport(orders, deals) {
   for (const o of paid) walkItems(o, "paid");
   for (const o of refunded) walkItems(o, "refunded");
 
-  // Net profit = net revenue − net cost − (already applied sunk cost on refunds)
-  // totals.profit already = paid profit − refunded cost
-
   const products = Object.values(byProduct)
     .filter((p) => p.units > 0 || p.refundedUnits > 0)
     .sort((a, b) => b.units - a.units || b.revenue - a.revenue);
 
+  const range = periodRange(period);
   return {
+    period,
+    periodLabel: formatPeriodRange(period),
     paid,
     refunded,
     totalOrders: totals.orders,
     products,
     totals,
+    from: range.from,
+    to: range.to,
   };
 }
 
-function salesChecklistHtml(report) {
-  const { products, totals, totalOrders } = report;
+function pnlCardHtml(title, report, active) {
+  const t = report.totals || {};
+  const profitClass = (t.profit || 0) < 0 ? "sales-loss" : "";
+  return `
+    <button type="button" class="sales-card sales-pnl-card ${active ? "active" : ""}" data-sales-period="${escapeAttr(report.period)}" title="Show ${escapeAttr(title)} detail">
+      <div class="sales-card-label">${escapeHtml(title)}</div>
+      <div class="muted sales-pnl-range">${escapeHtml(report.periodLabel || "")}</div>
+      <div class="sales-card-row"><span>Orders</span><strong>${report.totalOrders || 0}</strong></div>
+      <div class="sales-card-row"><span>Units</span><strong>${t.units || 0}</strong></div>
+      <div class="sales-card-row"><span>Gross</span><strong>${escapeHtml(money(t.grossRevenue))}</strong></div>
+      <div class="sales-card-row sales-refund"><span>Refunds</span><strong>− ${escapeHtml(money(t.refunds))}</strong></div>
+      <div class="sales-card-row"><span>Net revenue</span><strong>${escapeHtml(money(t.revenue))}</strong></div>
+      <div class="sales-card-row"><span>Cost</span><strong>${escapeHtml(money(t.cost))}</strong></div>
+      <div class="sales-card-row sales-profit ${profitClass}"><span>Net profit</span><strong>${escapeHtml(money(t.profit))}</strong></div>
+    </button>`;
+}
+
+function salesChecklistHtml(report, periodReports) {
+  const { products, totals, totalOrders, periodLabel } = report;
   const t = totals || {
     revenue: 0,
     cost: 0,
@@ -1098,25 +1185,18 @@ function salesChecklistHtml(report) {
     refundUnits: 0,
     grossRevenue: 0,
   };
-  const netRevenue = t.revenue;
-  const profitClass = t.profit < 0 ? "sales-loss" : "";
-
-  const summaryCards = `
-          <div class="sales-card">
-            <div class="sales-card-label">PHP P&amp;L</div>
-            <div class="sales-card-row"><span>Paid orders</span><strong>${totalOrders}</strong></div>
-            <div class="sales-card-row"><span>Units sold (net)</span><strong>${t.units}</strong></div>
-            <div class="sales-card-row"><span>Gross sales</span><strong>${escapeHtml(money(t.grossRevenue))}</strong></div>
-            <div class="sales-card-row sales-refund"><span>Refunds</span><strong>− ${escapeHtml(money(t.refunds))}</strong></div>
-            <div class="sales-card-row"><span>Net revenue</span><strong>${escapeHtml(money(netRevenue))}</strong></div>
-            <div class="sales-card-row"><span>Cost</span><strong>${escapeHtml(money(t.cost))}</strong></div>
-            <div class="sales-card-row sales-profit ${profitClass}"><span>Net profit</span><strong>${escapeHtml(money(t.profit))}</strong></div>
-            ${
-              t.refundOrders
-                ? `<div class="muted" style="margin-top:8px;font-size:0.78rem">${t.refundOrders} refund(s) · ${t.refundUnits} unit(s) deducted</div>`
-                : ""
-            }
-          </div>`;
+  const period = state.salesPeriod || "day";
+  const tabs = [
+    { id: "day", label: "Daily" },
+    { id: "week", label: "Weekly" },
+    { id: "month", label: "Monthly" },
+    { id: "all", label: "All time" },
+  ]
+    .map(
+      (tab) =>
+        `<button type="button" class="sales-period-tab ${period === tab.id ? "active" : ""}" data-sales-period="${tab.id}">${tab.label}</button>`
+    )
+    .join("");
 
   const checklist = products.length
     ? products
@@ -1140,34 +1220,58 @@ function salesChecklistHtml(report) {
         </label>`;
         })
         .join("")
-    : `<p class="muted" style="margin:0">No PHP products sold yet. Paid PHP orders will appear here automatically.</p>`;
+    : `<p class="muted" style="margin:0">No PHP sales in this period. Paid PHP orders will appear here automatically.</p>`;
+
+  const dayR = periodReports.day;
+  const weekR = periodReports.week;
+  const monthR = periodReports.month;
 
   return `
     <div class="panel sales-panel">
-      <h2 class="sales-h">Sales checklist &amp; P&amp;L (PHP)</h2>
+      <h2 class="sales-h">P&amp;L (PHP)</h2>
       <p class="muted" style="margin-top:0">
-        Amounts in <strong>₱</strong>. <strong>Net profit</strong> = paid sales − product cost.
-        <strong>Refunds</strong> are deducted from gross sales (not counted in net revenue or profit).
-        Use <strong>Mark refunded</strong> on an order below to update the P&amp;L.
+        Daily / weekly / monthly profit &amp; loss. Amounts in <strong>₱</strong>.
+        Net profit = paid sales − cost; refunds are deducted from gross.
+        Click a period card or tab to filter the product checklist.
       </p>
-      <div class="sales-summary">
-        <div class="sales-card sales-card-wide">
-          <div class="sales-card-label">Paid orders (net)</div>
-          <div class="sales-big">${totalOrders}</div>
-          <div class="muted">${products.length} product type(s) · ${t.refundOrders || 0} refund(s)</div>
-        </div>
-        ${summaryCards}
+      <div class="sales-summary sales-pnl-grid">
+        ${pnlCardHtml("Daily", dayR, period === "day")}
+        ${pnlCardHtml("Weekly", weekR, period === "week")}
+        ${pnlCardHtml("Monthly", monthR, period === "month")}
       </div>
-      <h3 class="settings-h" style="margin-top:18px">Products bought &amp; sold (net of refunds)</h3>
-      <div class="sales-checklist" role="list">
-        ${checklist}
+      <div class="sales-period-tabs" role="tablist" aria-label="P&L period">
+        ${tabs}
+      </div>
+      <div class="sales-period-detail">
+        <h3 class="settings-h" style="margin:0 0 6px">Detail · ${escapeHtml(periodLabel || "")}</h3>
+        <p class="muted" style="margin:0 0 12px">
+          ${totalOrders} paid order(s) · ${t.units || 0} unit(s) ·
+          Net revenue ${escapeHtml(money(t.revenue))} ·
+          Net profit <strong class="${(t.profit || 0) < 0 ? "sales-loss" : ""}">${escapeHtml(money(t.profit))}</strong>
+          ${t.refundOrders ? ` · ${t.refundOrders} refund(s) (−${escapeHtml(money(t.refunds))})` : ""}
+        </p>
+        <h3 class="settings-h" style="margin-top:8px">Products bought &amp; sold (net of refunds)</h3>
+        <div class="sales-checklist" role="list">
+          ${checklist}
+        </div>
       </div>
     </div>`;
 }
 
 function ordersView() {
-  const report = buildSalesReport(state.orders || [], state.deals || []);
-  const rows = (state.orders || [])
+  const allOrders = state.orders || [];
+  const deals = state.deals || [];
+  const period = state.salesPeriod || "day";
+  const periodReports = {
+    day: buildSalesReport(allOrders, deals, "day"),
+    week: buildSalesReport(allOrders, deals, "week"),
+    month: buildSalesReport(allOrders, deals, "month"),
+    all: buildSalesReport(allOrders, deals, "all"),
+  };
+  const report = periodReports[period] || periodReports.day;
+  const periodOrders = filterOrdersByPeriod(allOrders, period === "all" ? "all" : period);
+
+  const rows = (period === "all" ? allOrders : periodOrders)
     .map((o) => {
       const st = orderStatusKey(o);
       const isRefunded = st === "refunded" || st === "refund" || st === "reversed" || st === "chargeback";
@@ -1197,12 +1301,12 @@ function ordersView() {
 
   return `
     <div class="top"><h1>Orders / Sales</h1></div>
-    ${salesChecklistHtml(report)}
-    <p class="muted">All orders (newest first). Mark refunded to deduct from PHP P&amp;L above.</p>
+    ${salesChecklistHtml(report, periodReports)}
+    <p class="muted">Orders in selected period (${escapeHtml(report.periodLabel || "")}). Mark refunded to deduct from PHP P&amp;L.</p>
     <div class="panel" style="overflow:auto">
       <table class="table">
         <thead><tr><th>Order</th><th>Customer</th><th>Status</th><th>Amount / codes</th></tr></thead>
-        <tbody>${rows || `<tr><td colspan="4" class="muted">No orders yet.</td></tr>`}</tbody>
+        <tbody>${rows || `<tr><td colspan="4" class="muted">No orders in this period.</td></tr>`}</tbody>
       </table>
     </div>`;
 }
@@ -1428,6 +1532,15 @@ function bindShell() {
       } catch (err) {
         toast(err.message, true);
       }
+      render();
+    });
+  });
+
+  $$("[data-sales-period]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const p = btn.dataset.salesPeriod;
+      if (!p || !["day", "week", "month", "all"].includes(p)) return;
+      state.salesPeriod = p;
       render();
     });
   });
