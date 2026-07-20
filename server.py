@@ -159,10 +159,12 @@ def _set_meta_content(html: str, selector_attr: str, content: str) -> str:
 
 def _build_seo_bootstrap_inner(s: dict) -> str:
     """HTML for crawler-visible homepage body from admin SEO settings."""
-    h1 = (s.get("seoH1") or "").strip() or "SubSaverPH — Discounted Subscriptions in the Philippines"
+    h1 = (s.get("seoH1") or "").strip() or (
+        "SubSaverPH — Discounted Digital Subscriptions in the Philippines"
+    )
     intro = (s.get("seoIntro") or "").strip() or (
-        "SubSaverPH is an online store for discounted prepaid digital subscriptions "
-        "in the Philippines."
+        "SubSaverPH is a Philippines-based online storefront for discounted prepaid digital "
+        "subscriptions across AI, Design, Video, Streaming, and Learning."
     )
     why_title = (s.get("seoWhyTitle") or "").strip() or "Why shop SubSaverPH"
     why_raw = (s.get("seoWhyItems") or "").strip()
@@ -170,23 +172,22 @@ def _build_seo_bootstrap_inner(s: dict) -> str:
         why_items = [ln.strip() for ln in why_raw.splitlines() if ln.strip()]
     else:
         why_items = [
-            "PHP-friendly prepaid plans for popular AI, design, video, and streaming tools",
-            "Multi-currency price display with checkout for Filipino shoppers",
+            "Plans grouped by category: AI, Design, Video, Streaming, and Learning",
+            "PHP-friendly prepaid pricing with multi-currency display",
             "Instant digital delivery of access codes after successful payment",
             "Clear product pages with duration, stock, and fine print",
         ]
-    popular_title = (s.get("seoPopularTitle") or "").strip() or "Popular deals"
+    popular_title = (s.get("seoPopularTitle") or "").strip() or "Categories we cover"
     popular_raw = (s.get("seoPopularItems") or "").strip()
     if popular_raw:
         popular_items = [ln.strip() for ln in popular_raw.splitlines() if ln.strip()]
     else:
         popular_items = [
-            "**SuperGrok 7 Days** — discounted SuperGrok access in the Philippines",
-            "**SuperGrok 1 Month** — full SuperGrok prepaid monthly plan",
-            "**Canva Pro** — design tools at outlet rates",
-            "**CapCut Pro** — video editing subscription",
-            "**Netflix** — prepaid streaming plans",
-            "**YouTube Premium** — ad-free video and Music discount PH",
+            "**AI** — prepaid access for AI tools and assistants",
+            "**Design** — design and creative software plans",
+            "**Video** — video editing and creator subscriptions",
+            "**Streaming** — streaming and entertainment prepaid plans",
+            "**Learning** — education and language learning subscriptions",
         ]
     faq_title = (s.get("seoFaqTitle") or "").strip() or "FAQ"
     faq_raw = (s.get("seoFaq") or "").strip()
@@ -204,8 +205,8 @@ def _build_seo_bootstrap_inner(s: dict) -> str:
         faq_blocks = [
             (
                 "What is SubSaverPH?",
-                "SubSaverPH is a Philippines online store for discounted prepaid digital subscriptions "
-                "(SuperGrok, Canva, CapCut, Netflix, YouTube Premium) with digital delivery after payment.",
+                "SubSaverPH is a Philippines online storefront for discounted prepaid digital "
+                "subscriptions across AI, Design, Video, Streaming, and Learning, with digital delivery after payment.",
             ),
             (
                 "How do I pay?",
@@ -217,22 +218,21 @@ def _build_seo_bootstrap_inner(s: dict) -> str:
                 "Email is sent when configured.",
             ),
             (
-                "CapCut rules?",
-                "Login on the CapCut mobile app first; for PC scan the QR after mobile login. Do not log out. "
-                "Max 2 devices — a 3rd can lose access (not refundable).",
+                "What categories do you sell?",
+                "We group plans into AI, Design, Video, Streaming, and Learning so you can shop by use case.",
             ),
         ]
     browse_title = (s.get("seoBrowseTitle") or "").strip() or "Browse"
     browse_text = (s.get("seoBrowseText") or "").strip() or (
-        "All deals · FAQ · Support · SuperGrok 1 Month · CapCut Pro"
+        "All deals · AI · Design · Video · Streaming · Learning · Support"
     )
     contact_title = (s.get("seoContactTitle") or "").strip() or "Contact"
     contact_text = (s.get("seoContactText") or "").strip() or (
         "Contact support. Website: https://subsaverph.com/. Service area: Philippines (online)."
     )
     disclaimer = (s.get("seoDisclaimer") or "").strip() or (
-        "SubSaverPH is not affiliated with xAI, Canva, CapCut, Netflix, YouTube, or Google. "
-        "Product names are trademarks of their respective owners."
+        "SubSaverPH is an independent storefront and is not affiliated with brands in our "
+        "AI, Design, Video, Streaming, or Learning categories. Product names are trademarks of their respective owners."
     )
 
     def bullets(items):
