@@ -1424,26 +1424,11 @@ html[data-theme="light"] .badge {
 /* BRAND ROW — text monograms only */
 .brands {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  grid-template-columns: repeat(5, 1fr);
   gap: 1px;
   background: var(--line);
   border: 1px solid var(--line);
   margin-bottom: 40px;
-}
-
-/* Homepage: full View all / Deals block (same design as #/deals) */
-.home-view-all {
-  padding-top: 8px;
-}
-
-.home-deals-inner {
-  max-width: var(--max);
-  width: min(var(--max), calc(100% - 40px));
-  margin: 0 auto;
-}
-
-.home-deals-inner .page-title {
-  margin-top: 0;
 }
 
 .brand-tile {
