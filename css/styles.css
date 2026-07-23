@@ -10324,3 +10324,18 @@ html[data-theme="light"] .hero-cat-box-count strong {
     transform: scale(0.68) !important;
   }
 }
+
+/* Canva slider art — full-bleed new slide image, no extra shrink */
+.product-slider--hero .product-slide--canva .product-cover-img--canva,
+.product-slider--hero .product-slide--cover.product-slide--canva .product-cover-img {
+  transform: none !important;
+  object-fit: cover !important;
+  object-position: center center !important;
+  width: 100% !important;
+  height: 100% !important;
+  position: absolute !important;
+  inset: 0 !important;
+}
+.product-slider--hero .product-slide--canva {
+  background: #00c4cc !important;
+}

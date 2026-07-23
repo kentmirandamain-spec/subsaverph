@@ -117,7 +117,7 @@
     "active": true,
     "stockLeft": 2,
     "image": "/assets/products/cover-canva.png",
-    "imageSlide": "/assets/products/cover-canva.png",
+    "imageSlide": "/assets/products/cover-canva-slide.png?v=slide2",
     "logo": "/assets/products/cover-canva.png",
     "imageBg": "/assets/products/plate-canva.png",
     "brandColor": "#00c4cc"
@@ -156,7 +156,7 @@
     "active": true,
     "stockLeft": 2,
     "image": "/assets/products/cover-canva.png",
-    "imageSlide": "/assets/products/cover-canva.png",
+    "imageSlide": "/assets/products/cover-canva-slide.png?v=slide2",
     "logo": "/assets/products/cover-canva.png",
     "imageBg": "/assets/products/plate-canva.png",
     "brandColor": "#00c4cc"
