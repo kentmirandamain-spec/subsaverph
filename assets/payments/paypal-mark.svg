@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" role="img" aria-label="PayPal">
+  <title>PayPal</title>
+  <rect width="48" height="48" rx="12" fill="#003087"/>
+  <path fill="#009CDE" d="M30.4 12.2H20.2l-2.8 17.8h5.9l.8-5.1h3.2c4.8 0 8.4-2.9 9.2-7.6.8-4.5-1.9-5.1-6.1-5.1zm-1.2 8.4h-2.6l.7-4.3h2.5c1.6 0 2.6.5 2.4 1.9-.3 2.1-1.7 2.4-3 2.4z"/>
+  <path fill="#ffffff" d="M18.6 14.8h5.9c2.9 0 4.9 1.2 4.7 3.8-.3 3.4-2.8 5.4-6 5.4h-2.4l-.9 5.6h-4.2l2.9-14.8z"/>
+</svg>

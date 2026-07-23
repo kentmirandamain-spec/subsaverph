@@ -1776,6 +1776,45 @@ function payButtonLabel(method) {
   return "Continue to pay";
 }
 
+/** Official payment brand logos (SVG marks). */
+const PAYMENT_LOGOS = {
+  manual_gcash: { src: "/assets/payments/gcash.svg?v=paylogo1", alt: "GCash", wide: true },
+  gcash: { src: "/assets/payments/gcash.svg?v=paylogo1", alt: "GCash", wide: true },
+  manual_maya: { src: "/assets/payments/maya.svg?v=paylogo1", alt: "Maya", wide: true },
+  paymaya: { src: "/assets/payments/maya.svg?v=paylogo1", alt: "Maya", wide: true },
+  paypal: { src: "/assets/payments/paypal.svg?v=paylogo1", alt: "PayPal" },
+  crypto: { src: "/assets/payments/bitcoin.svg?v=paylogo1", alt: "Crypto" },
+  card: { src: "/assets/payments/card-mark.svg?v=paylogo1", alt: "Card" },
+  stripe: { src: "/assets/payments/stripe.svg?v=paylogo1", alt: "Stripe" },
+  liqpay: { src: "/assets/payments/liqpay.svg?v=paylogo1", alt: "LiqPay", wide: true },
+  grab_pay: { src: "/assets/payments/grab.svg?v=paylogo1", alt: "GrabPay" },
+  shopeepay: { src: "/assets/payments/shopee.svg?v=paylogo1", alt: "ShopeePay" },
+  xendit: { src: "/assets/payments/xendit-mark.svg?v=paylogo1", alt: "Xendit" },
+  demo: { src: "/assets/payments/demo.svg?v=paylogo1", alt: "Demo" },
+};
+
+function paymentLogoMeta(methodId) {
+  const id = String(methodId || "").toLowerCase();
+  if (PAYMENT_LOGOS[id]) return PAYMENT_LOGOS[id];
+  if (id.includes("gcash")) return PAYMENT_LOGOS.gcash;
+  if (id.includes("maya") || id.includes("paymaya")) return PAYMENT_LOGOS.paymaya;
+  if (id.includes("paypal")) return PAYMENT_LOGOS.paypal;
+  if (id.includes("grab")) return PAYMENT_LOGOS.grab_pay;
+  if (id.includes("shopee")) return PAYMENT_LOGOS.shopeepay;
+  if (id.includes("crypto") || id.includes("btc") || id.includes("coin")) return PAYMENT_LOGOS.crypto;
+  if (id.includes("card") || id.includes("stripe")) return PAYMENT_LOGOS.card;
+  if (id.includes("liqpay")) return PAYMENT_LOGOS.liqpay;
+  if (id.includes("xendit")) return PAYMENT_LOGOS.xendit;
+  return null;
+}
+
+function paymentLogoHtml(methodId) {
+  const meta = paymentLogoMeta(methodId);
+  if (!meta) return "";
+  const wide = meta.wide ? " co-method-logo--wide" : "";
+  return `<span class="co-method-logo${wide}" aria-hidden="true"><img class="co-method-logo-img product-img" src="${escapeAttr(meta.src)}" alt="" width="48" height="32" loading="lazy" decoding="async" /></span>`;
+}
+
 function viewCheckout() {
   const cart = getCart();
   const t = cartTotals();
@@ -1811,10 +1850,12 @@ function viewCheckout() {
     const isAuto = m.delivery === "auto" || isAutoDeliveryMethod(m.id);
     const line = shortDesc(m);
     const tone = isManual ? "ewallet" : isAuto ? "instant" : "default";
+    const logo = paymentLogoHtml(m.id);
     return `
-      <label class="co-method co-method--${tone}${checked ? " is-checked" : ""}">
+      <label class="co-method co-method--${tone}${checked ? " is-checked" : ""}${logo ? " co-method--has-logo" : ""}" data-pay-method="${escapeAttr(m.id)}">
         <input type="radio" name="method" value="${escapeHtml(m.id)}" ${checked ? "checked" : ""} required />
         <span class="co-method-check" aria-hidden="true"></span>
+        ${logo}
         <span class="co-method-body">
           <span class="co-method-name">${escapeHtml(m.label)}</span>
           ${line ? `<span class="co-method-meta">${escapeHtml(line)}</span>` : ""}
