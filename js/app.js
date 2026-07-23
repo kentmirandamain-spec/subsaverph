@@ -601,22 +601,34 @@ function dealsCatalogBlockHTML() {
 
         <div class="layout deals-layout">
           <aside class="filters deals-filters" aria-label="Filter deals">
-            <h3>Service</h3>
-            ${(Array.isArray(window.BRANDS) ? window.BRANDS : ["All"]).map(
-              (b) => `
-              <label class="radio">
-                <input type="radio" name="brand" value="${b}" ${state.brand === b ? "checked" : ""} />
-                <span>${b === "All" ? "All services" : b === "xAI" ? "SuperGrok (xAI)" : b}</span>
-              </label>`
-            ).join("")}
-            <h3 style="margin-top:20px">Category</h3>
-            ${(Array.isArray(window.CATEGORIES) ? window.CATEGORIES : ["All"]).map(
-              (cat) => `
-              <label class="radio">
-                <input type="radio" name="cat" value="${cat}" ${state.category === cat ? "checked" : ""} />
-                <span>${cat}</span>
-              </label>`
-            ).join("")}
+            <div class="filter-group filter-group--service">
+              <h3 class="filter-group-title">Service</h3>
+              <div class="filter-group-options" role="radiogroup" aria-label="Service">
+                ${(Array.isArray(window.BRANDS) ? window.BRANDS : ["All"])
+                  .map(
+                    (b) => `
+                <label class="radio">
+                  <input type="radio" name="brand" value="${b}" ${state.brand === b ? "checked" : ""} />
+                  <span>${b === "All" ? "All services" : b === "xAI" ? "SuperGrok (xAI)" : b}</span>
+                </label>`
+                  )
+                  .join("")}
+              </div>
+            </div>
+            <div class="filter-group filter-group--category">
+              <h3 class="filter-group-title">Category</h3>
+              <div class="filter-group-options" role="radiogroup" aria-label="Category">
+                ${(Array.isArray(window.CATEGORIES) ? window.CATEGORIES : ["All"])
+                  .map(
+                    (cat) => `
+                <label class="radio">
+                  <input type="radio" name="cat" value="${cat}" ${state.category === cat ? "checked" : ""} />
+                  <span>${cat}</span>
+                </label>`
+                  )
+                  .join("")}
+              </div>
+            </div>
           </aside>
           <div class="deals-results">
             ${list.length ? `<div class="grid deals-grid">${list.map((d) => card(d, state.query)).join("")}</div>` : `<div class="empty">No plans match. Try another search.</div>`}

@@ -7313,3 +7313,187 @@ html[data-theme="light"] .hero--orbit .hero-cat-chip:hover {
   align-items: center;
   padding: 2rem 0 3rem;
 }
+
+/* ============================================================
+   Service + Category filter alignment (deals catalog + hero)
+   ============================================================ */
+
+/* Desktop sidebar: two stacked groups, equal left edge */
+.deals-filters {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 1.35rem;
+  min-width: 0;
+}
+.deals-filters .filter-group {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.55rem;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+.deals-filters .filter-group-title,
+.deals-filters h3.filter-group-title {
+  margin: 0 !important;
+  padding: 0 0 0.45rem;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--mute-2);
+  line-height: 1.2;
+}
+.deals-filters .filter-group-options {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+}
+.deals-filters .radio {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  align-items: center;
+  column-gap: 10px;
+  margin: 0;
+  padding: 7px 8px;
+  border-radius: 8px;
+  min-height: 36px;
+  font-size: 0.86rem;
+  line-height: 1.25;
+  color: var(--mute);
+  transition: background 0.18s var(--ease), color 0.18s var(--ease);
+}
+.deals-filters .radio:hover {
+  color: var(--text);
+  background: var(--soft-fill);
+}
+.deals-filters .radio:has(input:checked) {
+  color: var(--text);
+  background: var(--accent-soft);
+}
+.deals-filters .radio input {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  accent-color: var(--accent);
+  flex-shrink: 0;
+}
+.deals-filters .radio span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  text-align: left;
+}
+
+/* Tablet/phone: Service + Category as two full-width aligned chip rows */
+@media (max-width: 1024px) {
+  .deals-filters,
+  .filters.deals-filters {
+    display: flex !important;
+    flex-direction: column !important;
+    flex-wrap: nowrap !important;
+    align-items: stretch !important;
+    gap: 0.85rem !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 4px 0 14px !important;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 8px;
+  }
+  .deals-filters .filter-group {
+    width: 100%;
+    gap: 0.45rem;
+  }
+  .deals-filters .filter-group-title {
+    width: 100%;
+    margin: 0 !important;
+    padding-bottom: 0.35rem;
+  }
+  .deals-filters .filter-group-options {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+  }
+  .deals-filters .radio {
+    display: inline-flex;
+    grid-template-columns: none;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    padding: 8px 12px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--soft-fill);
+    min-height: 40px;
+    font-size: 0.82rem;
+  }
+  .deals-filters .radio:has(input:checked) {
+    border-color: rgba(56, 189, 248, 0.5);
+    background: var(--accent-soft);
+    color: #e0f2fe;
+  }
+  .deals-filters .radio input {
+    width: 13px;
+    height: 13px;
+  }
+}
+
+/* Hero category chips — even alignment under search */
+.hero--orbit .hero-categories {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin: 14px auto 0;
+  max-width: min(100%, 720px);
+  width: 100%;
+  padding: 0 4px;
+  box-sizing: border-box;
+}
+.hero--orbit .hero-cat-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 8px 14px;
+  box-sizing: border-box;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+.hero--orbit .hero-cat-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1em;
+  flex-shrink: 0;
+}
+.hero--orbit .hero-cat-label {
+  line-height: 1.1;
+}
+.hero--orbit .hero-cat-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5em;
+  height: 1.35em;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+/* Keep deals results aligned with filter column edge */
+.deals-layout .deals-results {
+  min-width: 0;
+}
+.deals-layout .deals-grid {
+  width: 100%;
+}
