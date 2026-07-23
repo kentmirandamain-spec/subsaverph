@@ -1861,10 +1861,45 @@ html[data-theme="light"] .badge {
   border-bottom: 1px solid var(--line);
 }
 
-.layout {
-  display: grid;
-  grid-template-columns: 180px 1fr;
-  gap: 32px;
+/* Deals catalog: mobile-first full-width stack; sidebar only on large screens */
+.layout,
+.deals-layout {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  gap: 16px;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+.layout > *,
+.deals-layout > * {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.deals-results {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+/* Desktop only: filters left, products right */
+@media (min-width: 1025px) {
+  .layout,
+  .deals-layout {
+    display: grid;
+    grid-template-columns: 200px minmax(0, 1fr);
+    gap: 32px;
+    align-items: start;
+  }
 }
 
 .filters h3 {
@@ -3361,10 +3396,35 @@ html[data-theme="light"] .cred-value {
     grid-template-columns: 1fr 1fr;
   }
 
-  /* These use CSS grid — flex-direction does nothing; stack columns */
-  .layout {
-    grid-template-columns: 1fr;
-    gap: 20px;
+  /* Stack checkout; deals layout is mobile-first flex above */
+  .layout,
+  .deals-layout {
+    display: flex !important;
+    flex-direction: column !important;
+    grid-template-columns: none !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    gap: 16px;
+  }
+
+  .layout > *,
+  .deals-layout > *,
+  .deals-results {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+
+  /* Full-width product cards on tablet/phone (not squeezed into a right column) */
+  .deals-grid,
+  .deals-layout .grid,
+  .layout .grid {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    width: 100% !important;
+    max-width: 100% !important;
   }
 
   .checkout {
@@ -3788,18 +3848,24 @@ html[data-theme="light"] .cred-value {
     transform: translateY(0);
   }
 
-  /* Product cards never overflow viewport */
+  /* Product cards never overflow viewport — always one column full width on tablet/phone */
   .grid {
-    width: 100%;
-    max-width: 100%;
-    min-width: 0;
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    box-sizing: border-box;
   }
 
   .card {
     min-width: 0;
     max-width: 100%;
+    width: 100%;
     padding: 22px 16px;
     overflow: hidden;
+    box-sizing: border-box;
   }
 
   .card h3 {
@@ -3808,9 +3874,35 @@ html[data-theme="light"] .cred-value {
     word-break: break-word;
   }
 
-  .layout > * {
+  .layout > *,
+  .deals-layout > * {
     min-width: 0;
     max-width: 100%;
+  }
+
+  /* Filters as chips — no left rail taking space */
+  .filters,
+  .deals-filters {
+    display: flex !important;
+    flex-direction: row;
+    flex-wrap: wrap;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box;
+  }
+
+  .page-inner,
+  .home-deals-inner {
+    margin-left: auto !important;
+    margin-right: auto !important;
+    padding-left: 0;
+    padding-right: 0;
+    box-sizing: border-box;
+  }
+
+  /* page already offsets for fixed nav — don't double-pad title area */
+  .page .page-inner {
+    padding-top: 0 !important;
   }
 }
 
@@ -4742,8 +4834,10 @@ html[data-theme="light"] .pill.on {
   color: var(--text);
 }
 
+/* Nav offset lives on .page padding — only bare page-inner (rare) needs extra top */
 .page-inner {
-  padding-top: calc(var(--nav-h) + 32px);
+  padding-top: 0;
+  box-sizing: border-box;
 }
 
 .page-title {

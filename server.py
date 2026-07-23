@@ -4786,7 +4786,7 @@ def product_seo_page(deal_id: str):
   <meta name="twitter:description" content="{_esc(desc)}" />
   <link rel="icon" href="{base}/assets/favicon-48.png" type="image/png" sizes="48x48" />
   <script type="application/ld+json">{ld_json}</script>
-  <link rel="stylesheet" href="/css/styles.css?v=seo1" />
+  <link rel="stylesheet" href="/css/styles.css?v=deals-mobile-align2" />
   <script>
     // Send shoppers into the live SPA product view
     (function () {{

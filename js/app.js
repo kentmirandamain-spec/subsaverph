@@ -581,8 +581,8 @@ function dealsCatalogBlockHTML() {
         </div>
         <p class="rates" data-rates>${ratesNote()}</p>
 
-        <div class="layout">
-          <aside class="filters">
+        <div class="layout deals-layout">
+          <aside class="filters deals-filters" aria-label="Filter deals">
             <h3>Service</h3>
             ${(Array.isArray(window.BRANDS) ? window.BRANDS : ["All"]).map(
               (b) => `
@@ -600,8 +600,8 @@ function dealsCatalogBlockHTML() {
               </label>`
             ).join("")}
           </aside>
-          <div>
-            ${list.length ? `<div class="grid">${list.map((d) => card(d, state.query)).join("")}</div>` : `<div class="empty">No plans match. Try another search.</div>`}
+          <div class="deals-results">
+            ${list.length ? `<div class="grid deals-grid">${list.map((d) => card(d, state.query)).join("")}</div>` : `<div class="empty">No plans match. Try another search.</div>`}
           </div>
         </div>`;
 }
