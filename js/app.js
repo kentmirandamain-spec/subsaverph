@@ -103,7 +103,7 @@ function productBrandColor(d) {
     Canva: "#00c4cc",
     CapCut: "#000000",
     Netflix: "#000000",
-    YouTube: "#0f0f0f",
+    YouTube: "#ffffff",
     Duolingo: "#ffffff",
     Spotify: "#191414",
   };

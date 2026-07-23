@@ -345,7 +345,7 @@ window.DEALS = [
     "imageSlide": "/assets/products/logos/brand-youtube-fixed.svg",
     "logo": "/assets/products/logos/brand-youtube-fixed.svg",
     "imageBg": "/assets/products/plate-youtube.png",
-    "brandColor": "#0f0f0f"
+    "brandColor": "#ffffff"
   },
   {
     "id": "yt-family",
@@ -381,7 +381,7 @@ window.DEALS = [
     "imageSlide": "/assets/products/logos/brand-youtube-fixed.svg",
     "logo": "/assets/products/logos/brand-youtube-fixed.svg",
     "imageBg": "/assets/products/plate-youtube.png",
-    "brandColor": "#0f0f0f"
+    "brandColor": "#ffffff"
   },
   {
     "id": "duolingo-super-1m",
