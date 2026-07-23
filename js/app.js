@@ -418,16 +418,17 @@ function card(d, highlightQ = "") {
   const brandLabel = d.brand === "xAI" ? "SuperGrok" : d.brand || "";
   /* Full-bleed covers only for brands that use cover art; CapCut uses official logo */
   const fillFrame = /cover-canva/i.test(img) || d.brand === "Canva";
+  const logoFit = d.brand === "xAI" || d.brand === "CapCut";
   const saveHtml =
     !soldOut && d.original > d.price
       ? `<span class="price-compare">${formatDealPrice(d, "original")}</span>`
       : "";
   return `
-    <article class="card product-card ${soldOut ? "sold-out" : ""}${fillFrame ? " product-card--cover" : ""}" data-product-id="${escapeAttr(d.id)}">
-      <a class="product-card-media${fillFrame ? " product-card-media--cover" : " card-media--logo"}${img ? " has-product-photo" : ""}" href="#/deal/${d.id}" style="--brand-bg:${escapeAttr(bg)}">
+    <article class="card product-card ${soldOut ? "sold-out" : ""}${fillFrame ? " product-card--cover" : ""}${logoFit ? " product-card--logo-fit" : ""}" data-product-id="${escapeAttr(d.id)}" data-brand="${escapeAttr(d.brand || "")}">
+      <a class="product-card-media${fillFrame ? " product-card-media--cover" : " card-media--logo"}${logoFit ? " product-card-media--logo-fit" : ""}${img ? " has-product-photo" : ""}" href="#/deal/${d.id}" style="--brand-bg:${escapeAttr(bg)}">
         ${
           img
-            ? `<img class="product-img product-card-img${fillFrame ? " product-cover-img" : " product-logo-img"}" src="${escapeAttr(img)}" alt="${escapeAttr(d.brand || d.name)}" loading="lazy" decoding="async" width="600" height="400" />`
+            ? `<img class="product-img product-card-img${fillFrame ? " product-cover-img" : " product-logo-img"}${logoFit ? " product-logo-img--fit" : ""}" src="${escapeAttr(img)}" alt="${escapeAttr(d.brand || d.name)}" loading="lazy" decoding="async" width="600" height="400" />`
             : `<span class="product-monogram">${escapeHtml(d.monogram || "")}</span>`
         }
         ${
@@ -801,11 +802,11 @@ function viewHome() {
       ? slides
           .map(
             (d, i) => `
-            <article class="product-slide${i === 0 ? " is-active" : ""}${d.brand === "Canva" ? " product-slide--cover" : ""}" data-slide-index="${i}" ${i === 0 ? "" : "hidden"} style="--brand-bg:${escapeAttr(productBrandColor(d))}">
+            <article class="product-slide${i === 0 ? " is-active" : ""}${d.brand === "Canva" ? " product-slide--cover" : ""}${d.brand === "xAI" || d.brand === "CapCut" ? " product-slide--logo-fit" : ""}" data-slide-index="${i}" ${i === 0 ? "" : "hidden"} style="--brand-bg:${escapeAttr(productBrandColor(d))}">
               <a class="product-slide-link product-slide-link--logo" href="#/deal/${escapeAttr(d.id)}" tabindex="${i === 0 ? "0" : "-1"}">
                 <div class="product-slide-logo-wrap">
                   <img
-                    class="product-img product-slide-img${d.brand === "Canva" ? " product-cover-img" : " product-logo-img"}"
+                    class="product-img product-slide-img${d.brand === "Canva" ? " product-cover-img" : " product-logo-img"}${d.brand === "xAI" || d.brand === "CapCut" ? " product-logo-img--fit" : ""}"
                     src="${escapeAttr(productSlideImage(d))}"
                     alt="${escapeAttr(d.brand || d.name)}"
                     width="1280"
@@ -1002,8 +1003,9 @@ function viewDeal() {
               productImage(d)
                 ? (() => {
                     const cover = /cover-canva/i.test(productImage(d)) || d.brand === "Canva";
-                    return `<div class="detail-product-img-wrap${cover ? " detail-product-img-wrap--cover" : " detail-product-img-wrap--logo"}" style="--brand-bg:${escapeAttr(productBrandColor(d))}">
-                    <img class="product-img detail-product-img${cover ? " product-cover-img" : " product-logo-img"}" src="${escapeAttr(productImage(d))}" alt="${escapeAttr(d.brand || d.name)}" width="640" height="400" loading="eager" />
+                    const logoFit = d.brand === "xAI" || d.brand === "CapCut";
+                    return `<div class="detail-product-img-wrap${cover ? " detail-product-img-wrap--cover" : " detail-product-img-wrap--logo"}${logoFit ? " detail-product-img-wrap--logo-fit" : ""}" style="--brand-bg:${escapeAttr(productBrandColor(d))}">
+                    <img class="product-img detail-product-img${cover ? " product-cover-img" : " product-logo-img"}${logoFit ? " product-logo-img--fit" : ""}" src="${escapeAttr(productImage(d))}" alt="${escapeAttr(d.brand || d.name)}" width="640" height="400" loading="eager" />
                   </div>`;
                   })()
                 : `<div class="mono-box lg">${escapeHtml(d.monogram)}</div>`
