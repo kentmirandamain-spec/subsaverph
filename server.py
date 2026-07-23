@@ -443,6 +443,11 @@ def ensure_store() -> None:
             )
         if not DEALS_FILE.exists():
             DEALS_FILE.write_text("[]", encoding="utf-8")
+        # Re-seed catalog if deals.json is empty/corrupt so the storefront never goes blank
+        try:
+            seed_deals_if_empty()
+        except Exception:
+            pass
         if not INVENTORY_FILE.exists():
             INVENTORY_FILE.write_text("{}", encoding="utf-8")
         if not ORDERS_FILE.exists():
@@ -454,6 +459,44 @@ def ensure_store() -> None:
             pending_file.write_text("{}", encoding="utf-8")
     except OSError:
         pass
+
+
+def load_bundled_deals_seed() -> list:
+    """Load product catalog from data/deals.js (window.DEALS = [...])."""
+    path = ROOT / "data" / "deals.js"
+    if not path.is_file():
+        return []
+    try:
+        text = path.read_text(encoding="utf-8-sig")
+        start = text.find("[")
+        end = text.rfind("]")
+        if start < 0 or end <= start:
+            return []
+        data = json.loads(text[start : end + 1])
+        return data if isinstance(data, list) else []
+    except Exception:
+        return []
+
+
+def seed_deals_if_empty() -> None:
+    """If store deals.json is empty, restore from bundled data/deals.js."""
+    deals = read_json(DEALS_FILE, [])
+    if isinstance(deals, list) and len(deals) > 0:
+        return
+    seed = load_bundled_deals_seed()
+    if not seed:
+        return
+    write_json(DEALS_FILE, seed)
+    # Ensure inventory keys exist for each product (empty list = sold out, not missing)
+    inv = load_inventory()
+    changed = False
+    for d in seed:
+        pid = str(d.get("id") or "").strip()
+        if pid and pid not in inv:
+            inv[pid] = []
+            changed = True
+    if changed:
+        save_inventory(inv)
 
 
 def read_json(path: Path, default):

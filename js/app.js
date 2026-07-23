@@ -47,6 +47,9 @@ const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 if (!Array.isArray(window.DEALS)) window.DEALS = [];
 if (!Array.isArray(window.BRANDS)) window.BRANDS = ["All"];
 if (!Array.isArray(window.CATEGORIES)) window.CATEGORIES = ["All"];
+/** Snapshot of bundled catalog — never lose products if live API returns empty */
+const BUNDLED_DEALS =
+  Array.isArray(window.DEALS) && window.DEALS.length ? window.DEALS.map((d) => ({ ...d })) : [];
 
 const state = {
   view: "home",
@@ -632,10 +635,22 @@ function card(d, highlightQ = "") {
 
 function filtered() {
   let list = [...dealsList()];
+  // Never render an empty store if we still have catalog data under filters
+  if (!list.length && BUNDLED_DEALS.length) {
+    window.DEALS = BUNDLED_DEALS.map((d) => ({ ...d }));
+    list = [...dealsList()];
+  }
+  const beforeFilter = list.length;
   if (state.category !== "All") list = list.filter((d) => d.category === state.category);
   if (state.brand !== "All") list = list.filter((d) => d.brand === state.brand);
   if (state.query.trim()) {
     list = searchDeals(list, state.query, { limit: 100 });
+  }
+  // Auto-clear stale service/category filters that hide every product
+  if (!list.length && beforeFilter > 0 && (state.brand !== "All" || state.category !== "All") && !state.query.trim()) {
+    state.brand = "All";
+    state.category = "All";
+    list = [...dealsList()];
   }
   if (!state.query.trim()) {
     switch (state.sort) {
@@ -880,7 +895,15 @@ function dealsCatalogBlockHTML() {
             </div>
           </aside>
           <div class="deals-results">
-            ${list.length ? `<div class="grid deals-grid">${list.map((d) => card(d, state.query)).join("")}</div>` : `<div class="empty">No plans match. Try another search.</div>`}
+            ${
+              list.length
+                ? `<div class="grid deals-grid">${list.map((d) => card(d, state.query)).join("")}</div>`
+                : `<div class="empty">No plans match.${
+                    state.brand !== "All" || state.category !== "All" || state.query.trim()
+                      ? ` <button type="button" class="btn ghost btn-sm" id="clearDealFilters">Show all products</button>`
+                      : " Try another search."
+                  }</div>`
+            }
           </div>
         </div>`;
 }
@@ -3181,6 +3204,13 @@ function bind() {
 
   bindSearchTags();
 
+  $("#clearDealFilters")?.addEventListener("click", () => {
+    state.brand = "All";
+    state.category = "All";
+    state.query = "";
+    render();
+  });
+
   $$('input[name="brand"]').forEach((input) => {
     input.addEventListener("change", () => {
       state.brand = input.value;
@@ -3465,26 +3495,36 @@ async function loadLiveCatalog(opts = {}) {
     const data = await res.json();
     if (Array.isArray(data.deals) && data.deals.length) {
       window.DEALS = data.deals.map((d) => {
-        const left =
-          typeof d.stockLeft === "number"
-            ? d.stockLeft
-            : Number(d.stockLeft);
-        const stockLeft = Number.isFinite(left) ? left : 0;
+        // Only treat as sold out when stockLeft is an explicit finite number
+        let stockLeft;
+        if (typeof d.stockLeft === "number" && Number.isFinite(d.stockLeft)) {
+          stockLeft = d.stockLeft;
+        } else if (d.stockLeft != null && d.stockLeft !== "" && Number.isFinite(Number(d.stockLeft))) {
+          stockLeft = Number(d.stockLeft);
+        } else {
+          stockLeft = undefined;
+        }
+        const stockLabel =
+          typeof stockLeft === "number"
+            ? stockLeft <= 0
+              ? "SOLD OUT"
+              : stockLeft <= 5
+                ? `${stockLeft} in stock`
+                : d.stock || "In stock"
+            : d.stock || "In stock";
         return {
           ...d,
           includes: Array.isArray(d.includes) ? d.includes : [],
           badge: d.badge || null,
           // Live inventory count from /api/catalog (admin Codes / Stock)
-          stockLeft,
-          stock:
-            stockLeft <= 0
-              ? "SOLD OUT"
-              : stockLeft <= 5
-                ? `${stockLeft} in stock`
-                : d.stock || "In stock",
+          ...(typeof stockLeft === "number" ? { stockLeft } : {}),
+          stock: stockLabel,
         };
       });
       _catalogLoadedAt = Date.now();
+    } else if (BUNDLED_DEALS.length && (!Array.isArray(window.DEALS) || !window.DEALS.length)) {
+      // Live API returned no products — keep bundled catalog so the store is never blank
+      window.DEALS = BUNDLED_DEALS.map((d) => ({ ...d }));
     }
     if (data.settings) {
       state.settings = data.settings;
@@ -3855,4 +3895,6 @@ init().catch((e) => {
   const root = document.getElementById("app");
   if (root) {
     root.innerHTML =
-      '<div class="page"><div class="page-inner empty"><h2>Store failed to load</h2><p class="muted">Please hard-refresh (Ctrl+F5). If it continues, contact support
+      '<div class="page"><div class="page-inner empty"><h2>Store failed to load</h2><p class="muted">Please hard-refresh (Ctrl+F5). If it continues, contact support.</p><a class="btn solid" href="/">Reload</a></div></div>';
+  }
+});
