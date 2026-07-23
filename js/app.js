@@ -1786,12 +1786,14 @@ function viewCheckout() {
     const isManual = m.delivery === "manual" || MANUAL_EWALLETS.has(m.id);
     const isAuto = m.delivery === "auto" || isAutoDeliveryMethod(m.id);
     const line = shortDesc(m);
+    const tone = isManual ? "ewallet" : isAuto ? "instant" : "default";
     return `
-      <label class="pay-method ${isManual ? "pay-method-ewallet" : ""} ${isAuto ? "pay-method-instant" : ""}">
+      <label class="co-method co-method--${tone}${checked ? " is-checked" : ""}">
         <input type="radio" name="method" value="${escapeHtml(m.id)}" ${checked ? "checked" : ""} required />
-        <span class="pay-method-box">
-          <strong>${escapeHtml(m.label)}</strong>
-          ${line ? `<em>${escapeHtml(line)}</em>` : ""}
+        <span class="co-method-check" aria-hidden="true"></span>
+        <span class="co-method-body">
+          <span class="co-method-name">${escapeHtml(m.label)}</span>
+          ${line ? `<span class="co-method-meta">${escapeHtml(line)}</span>` : ""}
         </span>
       </label>`;
   };
@@ -1807,7 +1809,7 @@ function viewCheckout() {
   const methodRadios = [
     ...(instantMethods.length
       ? [
-          `<p class="pay-group-label">Instant</p>`,
+          `<p class="co-group-label">Instant delivery</p>`,
           ...instantMethods.map((m) =>
             radioHtml(m, preferred && m.id === preferred.id)
           ),
@@ -1815,7 +1817,7 @@ function viewCheckout() {
       : []),
     ...(ewalletMethods.length
       ? [
-          `<p class="pay-group-label">E-wallet QR</p>`,
+          `<p class="co-group-label">E-wallet QR</p>`,
           ...ewalletMethods.map((m) =>
             radioHtml(
               m,
@@ -1828,10 +1830,9 @@ function viewCheckout() {
       : []),
   ].join("");
 
-  // Minimal help — no repeated delivery paragraphs (info is on each method)
   const payHelp =
     stripeOn && isTestKey
-      ? `<div class="test-card-box" id="stripeTestBox" hidden>
+      ? `<div class="test-card-box co-test-card" id="stripeTestBox" hidden>
             <p class="test-card-label">Stripe test card</p>
             <ul>
               <li><strong>Card:</strong> <code>4242 4242 4242 4242</code></li>
@@ -1840,53 +1841,94 @@ function viewCheckout() {
           </div>`
       : `<div id="stripeTestBox" hidden></div>`;
 
+  const itemCount = cart.reduce((n, i) => n + (i.qty || 1), 0);
+  const totalLabel = formatMoney(t.total);
+
   return `
-    <div class="page page-checkout">
+    <div class="page page-checkout page-checkout--v2">
       <div class="page-inner page-inner--checkout">
-        <header class="checkout-page-head">
-          <p class="eyebrow">Payment</p>
-          <h1 class="page-title">Checkout</h1>
-          <p class="muted checkout-lead">Enter your details and choose how to pay.</p>
+        <header class="co-head">
+          <a class="co-back" href="#/deals" aria-label="Back to deals">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg>
+          </a>
+          <div class="co-head-text">
+            <p class="co-eyebrow">Secure checkout</p>
+            <h1 class="co-title">Checkout</h1>
+          </div>
         </header>
-        ${cancelled ? `<p class="err checkout-banner-err">Payment cancelled. You can try again.</p>` : ""}
-        <div class="checkout checkout--ordered">
-          <aside class="summary">
-            <h3 class="checkout-section-title">1. Your order</h3>
-            ${cart
-              .map(
-                (i) => `
-              <div class="line">
-                <span class="mono-box">${escapeHtml(i.monogram)}</span>
-                <div class="line-copy">
-                  <strong>${escapeHtml(i.name)}</strong>
-                  <em>${escapeHtml(i.duration)} × ${i.qty}</em>
-                </div>
-                <span class="line-price">${formatLinePrice(i)}</span>
-              </div>`
-              )
-              .join("")}
-            <div class="totals">
-              <div><span>Subtotal</span><span>${formatMoney(t.subtotal)}</span></div>
-              <div><span>You save</span><span>−${formatMoney(t.saved)}</span></div>
-              <div class="grand"><span>Total</span><span>${formatMoney(t.total)}</span></div>
+
+        ${cancelled ? `<p class="err co-banner-err">Payment cancelled. You can try again.</p>` : ""}
+
+        <div class="checkout checkout--v2">
+          <section class="co-card co-order" aria-label="Order summary">
+            <div class="co-card-top">
+              <h2 class="co-card-title">Your order</h2>
+              <span class="co-chip">${itemCount} item${itemCount === 1 ? "" : "s"}</span>
             </div>
-            <p class="rates" data-rates>${ratesNote()}</p>
-          </aside>
-          <form id="payForm" class="form" novalidate>
-            <h3 class="checkout-section-title">2. Contact</h3>
-            <label>Email for delivery<input required type="email" name="email" placeholder="you@email.com" autocomplete="email" /></label>
-            <label>Full name<input required name="name" placeholder="Juan Dela Cruz" autocomplete="name" /></label>
-            <h3 class="checkout-section-title">3. Payment currency</h3>
-            <div id="pageFxMount" class="checkout-fx-mount"></div>
-            <h3 class="checkout-section-title">4. Payment method</h3>
-            <div class="pay-methods" role="radiogroup" aria-label="Payment method">
-              ${methodRadios}
+            <ul class="co-order-list">
+              ${cart
+                .map(
+                  (i) => `
+                <li class="co-order-row">
+                  <span class="co-order-mono">${escapeHtml(i.monogram || "•")}</span>
+                  <span class="co-order-info">
+                    <span class="co-order-name">${escapeHtml(i.name)}</span>
+                    <span class="co-order-sub">${escapeHtml(i.duration)} · qty ${i.qty}</span>
+                  </span>
+                  <span class="co-order-price">${formatLinePrice(i)}</span>
+                </li>`
+                )
+                .join("")}
+            </ul>
+            <div class="co-totals">
+              <div class="co-total-row"><span>Subtotal</span><span>${formatMoney(t.subtotal)}</span></div>
+              ${
+                t.saved > 0
+                  ? `<div class="co-total-row co-total-save"><span>You save</span><span>−${formatMoney(t.saved)}</span></div>`
+                  : ""
+              }
+              <div class="co-total-row co-total-grand"><span>Total</span><span>${totalLabel}</span></div>
             </div>
-            ${payHelp}
-            <p class="err" id="checkoutErr"></p>
-            <button class="btn solid full" type="submit" id="payBtn" data-total="${escapeHtml(formatMoney(t.total))}">
-              Review &amp; continue · ${formatMoney(t.total)}
-            </button>
+          </section>
+
+          <form id="payForm" class="co-form form" novalidate>
+            <section class="co-card">
+              <h2 class="co-card-title">Contact</h2>
+              <div class="co-field">
+                <label class="co-label" for="coEmail">Email for delivery</label>
+                <input class="co-input" id="coEmail" required type="email" name="email" placeholder="you@email.com" autocomplete="email" inputmode="email" />
+              </div>
+              <div class="co-field">
+                <label class="co-label" for="coName">Full name</label>
+                <input class="co-input" id="coName" required name="name" placeholder="Juan Dela Cruz" autocomplete="name" />
+              </div>
+            </section>
+
+            <section class="co-card">
+              <h2 class="co-card-title">Currency</h2>
+              <div id="pageFxMount" class="co-fx"></div>
+            </section>
+
+            <section class="co-card">
+              <h2 class="co-card-title">Payment method</h2>
+              <div class="co-methods pay-methods" role="radiogroup" aria-label="Payment method">
+                ${methodRadios}
+              </div>
+              ${payHelp}
+            </section>
+
+            <p class="err co-err" id="checkoutErr"></p>
+
+            <div class="co-cta-spacer" aria-hidden="true"></div>
+            <div class="co-sticky">
+              <div class="co-sticky-total">
+                <span>Total</span>
+                <strong>${totalLabel}</strong>
+              </div>
+              <button class="btn solid co-submit" type="submit" id="payBtn" data-total="${escapeHtml(totalLabel)}">
+                Review &amp; continue
+              </button>
+            </div>
           </form>
         </div>
       </div>
@@ -3131,9 +3173,14 @@ function bind() {
       const method = form.querySelector('input[name="method"]:checked')?.value || "card";
       const testBox = $("#stripeTestBox");
       if (testBox) testBox.hidden = method !== "card";
+      // Highlight selected payment card
+      form.querySelectorAll(".co-method").forEach((el) => {
+        const on = el.querySelector('input[name="method"]')?.checked;
+        el.classList.toggle("is-checked", !!on);
+      });
       if (!btn) return;
-      // Keep review CTA until they open terms
-      btn.textContent = totalLabel ? `Review & continue · ${totalLabel}` : "Review & continue";
+      // Sticky bar already shows total — keep CTA short
+      btn.textContent = "Review & continue";
     };
 
     const openTermsModal = () => {
