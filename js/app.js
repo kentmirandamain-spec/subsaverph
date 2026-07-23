@@ -385,49 +385,85 @@ function stockLabel(d) {
   return raw;
 }
 
+function isWished(id) {
+  try {
+    const list = JSON.parse(localStorage.getItem("subsaverph_wish") || "[]");
+    return Array.isArray(list) && list.includes(id);
+  } catch {
+    return false;
+  }
+}
+
+function toggleWish(id) {
+  let list = [];
+  try {
+    list = JSON.parse(localStorage.getItem("subsaverph_wish") || "[]");
+  } catch {
+    list = [];
+  }
+  if (!Array.isArray(list)) list = [];
+  const on = list.includes(id);
+  list = on ? list.filter((x) => x !== id) : [...list, id];
+  localStorage.setItem("subsaverph_wish", JSON.stringify(list));
+  return !on;
+}
+
 function card(d, highlightQ = "") {
   const nameHtml = highlightQ ? highlightMatch(d.name, highlightQ) : escapeHtml(d.name);
-  const tagHtml = highlightQ ? highlightMatch(d.tagline || "", highlightQ) : escapeHtml(d.tagline || "");
   const soldOut = isSoldOut(d);
   const img = productImage(d);
   const bg = productBrandColor(d);
+  const wished = isWished(d.id);
+  const rating = Number(d.rating || 4.9).toFixed(2);
+  const typeLabel = (d.category || "Plan").toUpperCase();
+  const brandLabel = d.brand === "xAI" ? "SuperGrok" : d.brand || "";
+  const saveHtml =
+    !soldOut && d.original > d.price
+      ? `<span class="price-compare">${formatDealPrice(d, "original")}</span>`
+      : "";
   return `
-    <article class="card ${soldOut ? "sold-out" : ""}">
-      <div class="card-accent"></div>
-      <a class="card-media card-media--logo" href="#/deal/${d.id}" tabindex="-1" aria-hidden="true" style="--brand-bg:${escapeAttr(bg)}">
+    <article class="card product-card ${soldOut ? "sold-out" : ""}" data-product-id="${escapeAttr(d.id)}">
+      <a class="product-card-media card-media--logo${img ? " has-product-photo" : ""}" href="#/deal/${d.id}" style="--brand-bg:${escapeAttr(bg)}">
         ${
           img
-            ? `<img class="product-img product-logo-img" src="${escapeAttr(img)}" alt="${escapeAttr(d.brand || d.name)}" loading="lazy" width="320" height="160" />`
-            : `<div class="card-media-fallback mono-box">${escapeHtml(d.monogram)}</div>`
+            ? `<img class="product-img product-card-img product-logo-img" src="${escapeAttr(img)}" alt="${escapeAttr(d.brand || d.name)}" loading="lazy" decoding="async" width="600" height="400" />`
+            : `<span class="product-monogram">${escapeHtml(d.monogram || "")}</span>`
         }
-        <div class="pills card-media-pills">
-          ${soldOut ? `<span class="pill sold-out-pill">${escapeHtml(t("sold_out"))}</span>` : ""}
-          ${!soldOut && d.badge ? `<span class="pill">${escapeHtml(d.badge)}</span>` : ""}
-          ${!soldOut ? `<span class="pill on">−${off(d)}%</span>` : ""}
-        </div>
+        ${
+          soldOut
+            ? `<span class="product-badge sold-out-badge">${escapeHtml(t("sold_out"))}</span>`
+            : d.badge
+              ? `<span class="product-badge">${escapeHtml(d.badge)}</span>`
+              : !soldOut
+                ? `<span class="product-badge">−${off(d)}%</span>`
+                : ""
+        }
       </a>
-      <div class="card-body">
-        <div class="card-top">
-          <div class="mono-box">${escapeHtml(d.monogram)}</div>
+      <div class="product-card-body card-body">
+        <div class="product-card-meta">
+          <span class="listing-type">${escapeHtml(typeLabel)}</span>
+          <span class="listing-delivery delivery-instant">${escapeHtml(soldOut ? t("sold_out") : "Instant")}</span>
         </div>
-        <p class="cat">${escapeHtml(d.brand)} · ${escapeHtml(d.category)}</p>
-        <h3><a href="#/deal/${d.id}">${nameHtml}</a></h3>
-        <p class="tag">${tagHtml}</p>
-        <p class="stock-line ${soldOut ? "is-sold-out" : ""}">${escapeHtml(stockLabel(d))}</p>
-        <div class="price">
-          <div>
-            <strong>${formatDealPrice(d, "price")}</strong><span class="per">${periodLabel(d)}</span>
-            <span class="was">${formatDealPrice(d, "original")}${periodLabel(d)}</span>
+        <a class="product-card-title" href="#/deal/${d.id}">${nameHtml}</a>
+        <p class="listing-game">${escapeHtml(brandLabel)}</p>
+        <div class="listing-footer">
+          <div class="listing-price">
+            ${saveHtml}
+            <span class="price-now">${formatDealPrice(d, "price")}</span>
+            <small class="price-code">${escapeHtml(getCurrencyCode())}</small>
           </div>
-          <div class="dur">${escapeHtml(d.duration)}</div>
+          <div class="seller">
+            <span class="seller-avatar">${escapeHtml((d.monogram || "SS").slice(0, 2))}</span>
+            <span class="seller-meta">★ ${rating} <span class="verified-badge">VERIFIED</span></span>
+          </div>
         </div>
-        <div class="actions">
-          <a class="btn sm" href="#/deal/${d.id}">${escapeHtml(t("details"))}</a>
+        <div class="card-actions-row">
           ${
             soldOut
-              ? `<button class="btn sm sold-out-btn" type="button" disabled>${escapeHtml(t("sold_out"))}</button>`
-              : `<button class="btn sm solid" data-add="${d.id}">${escapeHtml(t("add"))}</button>`
+              ? `<button class="btn-outline btn-sm btn-add-cart sold-out-btn" type="button" disabled>${escapeHtml(t("sold_out"))}</button>`
+              : `<button class="btn-outline btn-sm btn-add-cart" type="button" data-add="${escapeAttr(d.id)}">${escapeHtml(t("add_to_cart") || "ADD TO CART")}</button>`
           }
+          <button class="btn-wish${wished ? " active" : ""}" type="button" data-wish="${escapeAttr(d.id)}" aria-label="Wishlist" title="Wishlist">${wished ? "♥" : "♡"}</button>
         </div>
       </div>
     </article>`;
@@ -2931,6 +2967,19 @@ function bind() {
       toast("Added to cart");
       updateBadge();
       openCart();
+    });
+  });
+
+  $$("[data-wish]").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const id = btn.dataset.wish;
+      if (!id) return;
+      const on = toggleWish(id);
+      btn.classList.toggle("active", on);
+      btn.textContent = on ? "♥" : "♡";
+      toast(on ? "Saved to wishlist" : "Removed from wishlist");
     });
   });
 

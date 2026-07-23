@@ -7911,3 +7911,327 @@ html[data-theme="light"] .hero--orbit .hero-cat-chip:hover {
     aspect-ratio: 16 / 11 !important;
   }
 }
+
+/* ============================================================
+   Orbit-style product / deals cards (match screenshot layout)
+   ============================================================ */
+
+.grid.deals-grid,
+.grid.search-grid,
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1rem;
+  background: transparent !important;
+  border: none !important;
+}
+
+.card.product-card,
+.product-card {
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.035) 0%, transparent 48%), var(--bg-card, #0f1420) !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 16px !important;
+  overflow: hidden;
+  display: flex !important;
+  flex-direction: column !important;
+  padding: 0 !important;
+  min-height: 0 !important;
+  gap: 0 !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+  transition: border-color 0.25s, transform 0.25s var(--ease), box-shadow 0.3s ease;
+  backdrop-filter: none !important;
+}
+.card.product-card:hover,
+.product-card:hover {
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--line-strong)) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.35), 0 0 48px rgba(56, 189, 248, 0.08);
+}
+
+.product-card-media {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: var(--brand-bg, #0a0e16);
+  border-bottom: 1px solid var(--line);
+  text-decoration: none;
+  color: inherit;
+}
+.product-card-media.card-media--logo {
+  aspect-ratio: 16 / 10 !important;
+  padding: 1.35rem 1.5rem;
+  box-sizing: border-box;
+}
+.product-card-media .product-logo-img,
+.product-card-media .product-card-img {
+  display: block !important;
+  width: auto !important;
+  max-width: min(78%, 240px) !important;
+  max-height: 70% !important;
+  height: auto !important;
+  object-fit: contain !important;
+  margin: 0 auto;
+  filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.28));
+  transition: transform 0.4s var(--ease);
+}
+.product-card:hover .product-card-media .product-logo-img {
+  transform: scale(1.04);
+}
+.product-monogram {
+  font-size: 1.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+}
+.product-badge {
+  position: absolute;
+  top: 0.75rem;
+  left: 0.75rem;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.3rem 0.55rem;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 2px;
+  backdrop-filter: blur(8px);
+  color: #eef2f7;
+  z-index: 2;
+}
+.product-badge.sold-out-badge {
+  background: rgba(248, 113, 113, 0.2);
+  border-color: rgba(248, 113, 113, 0.45);
+  color: #fecaca;
+}
+.card-media-pills {
+  display: none; /* replaced by product-badge */
+}
+
+.product-card-body {
+  padding: 1.15rem !important;
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1;
+  gap: 0 !important;
+  min-height: 0;
+}
+.product-card-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.65rem;
+  gap: 0.5rem;
+}
+.listing-type {
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--mute-2);
+  border: 1px solid var(--line);
+  padding: 0.25rem 0.5rem;
+  border-radius: 2px;
+  font-weight: 600;
+}
+.listing-delivery,
+.delivery-instant {
+  font-size: 0.75rem;
+  color: var(--success, #34d399);
+  font-weight: 600;
+}
+.product-card-title {
+  font-size: 0.98rem !important;
+  font-weight: 500 !important;
+  line-height: 1.35 !important;
+  letter-spacing: -0.01em !important;
+  text-transform: none !important;
+  font-family: var(--font) !important;
+  color: var(--text);
+  margin: 0;
+  transition: opacity 0.2s;
+  display: block;
+}
+.product-card-title:hover {
+  opacity: 0.75;
+}
+.listing-game {
+  font-size: 0.82rem;
+  color: var(--mute);
+  margin: 0.25rem 0 0;
+}
+.listing-footer {
+  margin-top: auto;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+  margin-bottom: 0.75rem;
+}
+.listing-price {
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  line-height: 1.2;
+}
+.listing-price .price-compare,
+.price-compare {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--mute-2);
+  text-decoration: line-through;
+  font-weight: 400;
+  margin-bottom: 0.1rem;
+}
+.listing-price .price-now {
+  display: inline;
+}
+.listing-price .price-code,
+.listing-price small {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 400;
+  color: var(--mute-2);
+  margin-top: 0.1rem;
+  letter-spacing: 0.06em;
+}
+.seller {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.78rem;
+  color: var(--mute);
+  flex-shrink: 0;
+}
+.seller-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #333, #666);
+  display: grid;
+  place-items: center;
+  font-size: 0.58rem;
+  color: var(--text);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+.seller-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  max-width: 9.5rem;
+  text-align: right;
+  line-height: 1.25;
+}
+.verified-badge {
+  display: inline-block;
+  padding: 0.12rem 0.35rem;
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #3dd68c;
+  border: 1px solid rgba(61, 214, 140, 0.45);
+  border-radius: 2px;
+  vertical-align: middle;
+}
+
+.card-actions-row {
+  display: flex;
+  gap: 0.45rem;
+  align-items: center;
+  margin-top: 0.15rem;
+}
+.card-actions-row .btn-add-cart {
+  flex: 1;
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.7rem 0.9rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border-radius: 10px;
+  border: 1px solid var(--line-strong);
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s, color 0.2s, box-shadow 0.2s;
+}
+.card-actions-row .btn-add-cart:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--line-strong));
+  background: var(--accent-soft);
+  color: #e0f2fe;
+}
+.card-actions-row .btn-add-cart:disabled,
+.card-actions-row .btn-add-cart.sold-out-btn {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.btn-wish {
+  min-width: 42px;
+  height: 42px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  color: var(--mute);
+  font-size: 1rem;
+  border-radius: 10px;
+  background: transparent;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s, background 0.2s;
+}
+.btn-wish:hover,
+.btn-wish.active {
+  color: #ff6b8a;
+  border-color: rgba(255, 107, 138, 0.5);
+  background: rgba(255, 107, 138, 0.08);
+}
+
+/* Hide old card chrome inside Orbit product cards */
+.product-card .card-accent,
+.product-card .card-top,
+.product-card .mono-box,
+.product-card .cat,
+.product-card .tag,
+.product-card .stock-line,
+.product-card > .price,
+.product-card > .actions {
+  display: none !important;
+}
+
+/* Sold out state */
+.product-card.sold-out {
+  opacity: 0.78;
+}
+.product-card.sold-out .price-now {
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+
+@media (max-width: 640px) {
+  .grid.deals-grid,
+  .grid.search-grid,
+  .grid {
+    grid-template-columns: 1fr !important;
+    gap: 0.85rem;
+  }
+  .product-card-body {
+    padding: 1rem !important;
+  }
+  .listing-footer {
+    flex-wrap: wrap;
+  }
+}
