@@ -370,15 +370,17 @@ async function localizeFullPage() {
 
 function openCart() {
   renderCart();
-  $("#drawer").classList.add("open");
-  $("#overlay").classList.add("open");
+  $("#drawer")?.classList.add("open");
+  $("#overlay")?.classList.add("open");
   document.body.style.overflow = "hidden";
+  document.body.classList.add("drawer-open");
 }
 
 function closeCart() {
-  $("#drawer").classList.remove("open");
-  $("#overlay").classList.remove("open");
+  $("#drawer")?.classList.remove("open");
+  $("#overlay")?.classList.remove("open");
   document.body.style.overflow = "";
+  document.body.classList.remove("drawer-open");
 }
 
 function getDeal(id) {

@@ -10599,3 +10599,9 @@ html[data-theme="light"] .hero-cat-box-count strong {
     display: none;
   }
 }
+@media (max-width: 900px) {
+  .overlay.open {
+    z-index: 1300 !important;
+    background: rgba(0, 0, 0, 0.55) !important;
+  }
+}
