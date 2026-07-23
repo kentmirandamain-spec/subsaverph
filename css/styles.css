@@ -11769,3 +11769,50 @@ html[data-theme="light"] .hero-cat-box:hover {
     max-height: min(26vh, 170px) !important;
   }
 }
+
+/* ============================================================
+   Shop by category — center incomplete second row
+   5 category tiles on a 3-col board leave 2 on row 2; center them.
+   ============================================================ */
+
+@media (max-width: 900px) {
+  .hero-cat-board,
+  .hero-cats-block--v4 .hero-cat-board {
+    /* 6 tracks so each tile can span 2 (= 3 visible columns) */
+    grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+    justify-items: stretch !important;
+  }
+
+  /* Each category tile = 1 of 3 columns */
+  .hero-cat-board > .hero-cat-box:not(.hero-cat-box--all),
+  .hero-cats-block--v4 .hero-cat-board > .hero-cat-box:not(.hero-cat-box--all) {
+    grid-column: span 2;
+    width: 100% !important;
+    max-width: none !important;
+  }
+
+  /*
+   * With 5 categories + All:
+   * row1: 1-2 | 3-4 | 5-6
+   * row2: offset so tiles sit in cols 2-3 and 4-5 (centered)
+   */
+  .hero-cat-board > .hero-cat-box:not(.hero-cat-box--all):nth-child(4):nth-last-child(3),
+  .hero-cats-block--v4 .hero-cat-board > .hero-cat-box:not(.hero-cat-box--all):nth-child(4):nth-last-child(3) {
+    grid-column: 2 / span 2;
+  }
+  .hero-cat-board > .hero-cat-box:not(.hero-cat-box--all):nth-child(5):nth-last-child(2),
+  .hero-cats-block--v4 .hero-cat-board > .hero-cat-box:not(.hero-cat-box--all):nth-child(5):nth-last-child(2) {
+    grid-column: 4 / span 2;
+  }
+
+  /* If only one tile on the last category row, center it */
+  .hero-cat-board > .hero-cat-box:not(.hero-cat-box--all):nth-child(4):nth-last-child(2),
+  .hero-cats-block--v4 .hero-cat-board > .hero-cat-box:not(.hero-cat-box--all):nth-child(4):nth-last-child(2) {
+    grid-column: 3 / span 2;
+  }
+
+  .hero-cat-board > .hero-cat-box--all,
+  .hero-cats-block--v4 .hero-cat-board > .hero-cat-box--all {
+    grid-column: 1 / -1 !important;
+  }
+}
