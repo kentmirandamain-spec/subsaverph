@@ -1832,8 +1832,10 @@ def available_payment_methods() -> list:
                     "id": "manual_gcash",
                     "label": "GCash (QR)",
                     "provider": "manual",
-                    "desc": "Scan QR · delivery in 10–30 minutes after payment",
+                    "desc": "Scan QR · delivery in 10–30 minutes",
                     "group": "ewallet",
+                    "delivery": "manual",
+                    "deliveryLabel": "10–30 minutes",
                 }
             )
         if manual_cfg.get("mayaQrUrl"):
@@ -1842,52 +1844,68 @@ def available_payment_methods() -> list:
                     "id": "manual_maya",
                     "label": "Maya (QR)",
                     "provider": "manual",
-                    "desc": "Scan QR · delivery in 10–30 minutes after payment",
+                    "desc": "Scan QR · delivery in 10–30 minutes",
                     "group": "ewallet",
+                    "delivery": "manual",
+                    "deliveryLabel": "10–30 minutes",
                 }
             )
 
-    # PayPal — live only (no free demo PayPal when keys missing)
-    if has_paypal:
+    # PayPal — live keys required (shown with auto delivery). Env PAYPAL_SHOW=0 to hide.
+    show_paypal = _truthy_env("PAYPAL_SHOW")
+    if show_paypal is None:
+        show_paypal = True
+    if has_paypal and show_paypal:
         methods.append(
             {
                 "id": "paypal",
                 "label": "PayPal",
                 "provider": "paypal",
-                "desc": "Pay with PayPal balance or linked card",
-                "group": "other",
+                "desc": "PayPal · Instant automatic delivery",
+                "group": "instant",
+                "delivery": "auto",
+                "deliveryLabel": "Instant automatic delivery",
             }
         )
-    elif demo_only:
+    elif demo_only and show_paypal:
         methods.append(
             {
                 "id": "paypal",
                 "label": "PayPal",
                 "provider": "demo",
-                "desc": "PayPal (demo — set PAYPAL_CLIENT_ID + SECRET for live)",
-                "group": "other",
+                "desc": "PayPal · Instant delivery (demo — set API keys for live)",
+                "group": "instant",
+                "delivery": "auto",
+                "deliveryLabel": "Instant automatic delivery",
             }
         )
 
-    # Crypto — live only
-    if has_crypto:
+    # Crypto — live keys required. Env CRYPTO_SHOW=0 to hide.
+    show_crypto = _truthy_env("CRYPTO_SHOW")
+    if show_crypto is None:
+        show_crypto = True
+    if has_crypto and show_crypto:
         methods.append(
             {
                 "id": "crypto",
                 "label": "Crypto",
                 "provider": "nowpayments",
-                "desc": "USDT, BTC, ETH & more via NOWPayments",
-                "group": "other",
+                "desc": "USDT, BTC, ETH · Instant automatic delivery",
+                "group": "instant",
+                "delivery": "auto",
+                "deliveryLabel": "Instant automatic delivery",
             }
         )
-    elif demo_only:
+    elif demo_only and show_crypto:
         methods.append(
             {
                 "id": "crypto",
                 "label": "Crypto",
                 "provider": "demo",
-                "desc": "Crypto (demo — set NOWPAYMENTS_API_KEY for live)",
-                "group": "other",
+                "desc": "Crypto · Instant delivery (demo — set NOWPAYMENTS_API_KEY for live)",
+                "group": "instant",
+                "delivery": "auto",
+                "deliveryLabel": "Instant automatic delivery",
             }
         )
 
@@ -1898,8 +1916,10 @@ def available_payment_methods() -> list:
                 "id": "liqpay",
                 "label": "LiqPay",
                 "provider": "liqpay",
-                "desc": "Card & wallets via LiqPay",
-                "group": "other",
+                "desc": "Card & wallets · Instant automatic delivery",
+                "group": "instant",
+                "delivery": "auto",
+                "deliveryLabel": "Instant automatic delivery",
             }
         )
     elif demo_only:
@@ -1909,7 +1929,9 @@ def available_payment_methods() -> list:
                 "label": "LiqPay",
                 "provider": "demo",
                 "desc": "LiqPay (demo — set LIQPAY_PUBLIC_KEY + LIQPAY_PRIVATE_KEY)",
-                "group": "other",
+                "group": "instant",
+                "delivery": "auto",
+                "deliveryLabel": "Instant automatic delivery",
             }
         )
 

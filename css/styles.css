@@ -2560,6 +2560,31 @@ html[data-theme="light"] .badge {
   color: var(--mute);
 }
 
+.pay-method-eta {
+  display: block;
+  margin-top: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text);
+  opacity: 0.9;
+}
+
+.pay-group-label {
+  grid-column: 1 / -1;
+  margin: 14px 0 4px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--mute-2);
+}
+
+.pay-group-label:first-child {
+  margin-top: 0;
+}
+
 .pay-method input:checked + .pay-method-box {
   border-color: var(--text);
   background: rgba(255, 255, 255, 0.06);

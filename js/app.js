@@ -1237,16 +1237,14 @@ function paymentMethodsList() {
     ? state.paymentMethods
     : [
         // Card/Stripe omitted from fallback — use PayPal for card payments
-        { id: "gcash", label: "GCash", desc: "Pay with GCash (PHP) · delivery 10–30 min", group: "ewallet" },
-        { id: "paymaya", label: "Maya", desc: "Pay with Maya (PHP) · delivery 10–30 min", group: "ewallet" },
-        { id: "grab_pay", label: "GrabPay", desc: "Pay with GrabPay (PHP) · delivery 10–30 min", group: "ewallet" },
-        { id: "shopeepay", label: "ShopeePay", desc: "Pay with ShopeePay (PHP) · delivery 10–30 min", group: "ewallet" },
-        { id: "manual_gcash", label: "GCash (QR)", desc: "Scan QR · delivery in 10–30 minutes after payment", group: "ewallet" },
-        { id: "manual_maya", label: "Maya (QR)", desc: "Scan QR · delivery in 10–30 minutes after payment", group: "ewallet" },
-        { id: "paypal", label: "PayPal", desc: "Pay with PayPal balance or linked card", group: "other" },
-        { id: "crypto", label: "Crypto", desc: "USDT, BTC, ETH & more", group: "other" },
-        { id: "liqpay", label: "LiqPay", desc: "Card & wallets via LiqPay", group: "other" },
-        { id: "demo", label: "Demo", desc: "Test without real money", group: "other" },
+        { id: "paypal", label: "PayPal", desc: "PayPal · Instant automatic delivery", group: "instant", delivery: "auto", deliveryLabel: "Instant automatic delivery" },
+        { id: "crypto", label: "Crypto", desc: "USDT, BTC, ETH · Instant automatic delivery", group: "instant", delivery: "auto", deliveryLabel: "Instant automatic delivery" },
+        { id: "manual_gcash", label: "GCash (QR)", desc: "Scan QR · delivery in 10–30 minutes", group: "ewallet", delivery: "manual", deliveryLabel: "10–30 minutes" },
+        { id: "manual_maya", label: "Maya (QR)", desc: "Scan QR · delivery in 10–30 minutes", group: "ewallet", delivery: "manual", deliveryLabel: "10–30 minutes" },
+        { id: "gcash", label: "GCash", desc: "Pay with GCash (PHP)", group: "ewallet", delivery: "auto", deliveryLabel: "Instant automatic delivery" },
+        { id: "paymaya", label: "Maya", desc: "Pay with Maya (PHP)", group: "ewallet", delivery: "auto", deliveryLabel: "Instant automatic delivery" },
+        { id: "liqpay", label: "LiqPay", desc: "Card & wallets · Instant automatic delivery", group: "instant", delivery: "auto" },
+        { id: "demo", label: "Demo", desc: "Test without real money · Instant", group: "instant", delivery: "auto" },
       ];
   return list;
 }
@@ -1261,6 +1259,26 @@ const PH_EWALLETS = new Set([
   "manual_maya",
 ]);
 const MANUAL_EWALLETS = new Set(["manual_gcash", "manual_maya"]);
+/** Instant code delivery after payment succeeds */
+const AUTO_DELIVERY_METHODS = new Set([
+  "paypal",
+  "crypto",
+  "card",
+  "liqpay",
+  "demo",
+]);
+
+function isManualEwalletMethod(method) {
+  return MANUAL_EWALLETS.has(method);
+}
+
+function isAutoDeliveryMethod(method) {
+  if (isManualEwalletMethod(method)) return false;
+  if (AUTO_DELIVERY_METHODS.has(method)) return true;
+  // Gateway PH e-wallets (PayMongo/Xendit) are auto; manual QR is not
+  if (PH_EWALLETS.has(method) && !isManualEwalletMethod(method)) return true;
+  return false;
+}
 
 function payButtonLabel(method) {
   if (method === "manual_gcash") return "Continue — scan GCash QR";
@@ -1301,36 +1319,61 @@ function viewCheckout() {
     !!state.manualEwalletEnabled || methods.some((m) => MANUAL_EWALLETS.has(m.id));
   const ewalletBackend = state.ewalletProvider || (paymongoOn ? "paymongo" : xenditOn ? "xendit" : "demo");
   const isTestKey = String(state.stripePublishableKey || "").startsWith("pk_test_");
-  const hasEwallet = methods.some((m) => PH_EWALLETS.has(m.id));
-  const ewalletMethods = methods.filter((m) => PH_EWALLETS.has(m.id) || m.group === "ewallet");
-  const otherMethods = methods.filter((m) => !PH_EWALLETS.has(m.id) && m.group !== "ewallet");
+  const hasEwallet = methods.some((m) => PH_EWALLETS.has(m.id) || m.group === "ewallet");
+  const ewalletMethods = methods.filter(
+    (m) => PH_EWALLETS.has(m.id) || m.group === "ewallet" || m.delivery === "manual"
+  );
+  const instantMethods = methods.filter(
+    (m) =>
+      !PH_EWALLETS.has(m.id) &&
+      m.group !== "ewallet" &&
+      m.delivery !== "manual"
+  );
 
-  const radioHtml = (m, checked) => `
-      <label class="pay-method ${PH_EWALLETS.has(m.id) ? "pay-method-ewallet" : ""}">
+  const radioHtml = (m, checked) => {
+    const isManual = m.delivery === "manual" || MANUAL_EWALLETS.has(m.id);
+    const isAuto = m.delivery === "auto" || isAutoDeliveryMethod(m.id);
+    const eta =
+      m.deliveryLabel ||
+      (isManual ? "Delivery: 10–30 minutes" : isAuto ? "Instant automatic delivery" : "");
+    return `
+      <label class="pay-method ${isManual ? "pay-method-ewallet" : ""} ${isAuto ? "pay-method-instant" : ""}">
         <input type="radio" name="method" value="${escapeHtml(m.id)}" ${checked ? "checked" : ""} required />
         <span class="pay-method-box">
           <strong>${escapeHtml(m.label)}</strong>
           <em>${escapeHtml(m.desc || "")}</em>
+          ${eta ? `<span class="pay-method-eta">${escapeHtml(eta)}</span>` : ""}
         </span>
       </label>`;
+  };
 
-  // Prefer GCash first for Filipino shoppers when available
+  // Prefer instant methods when available; else GCash QR for PH shoppers
   const preferred =
+    methods.find((m) => m.id === "paypal") ||
+    methods.find((m) => m.id === "crypto") ||
+    methods.find((m) => m.id === "manual_gcash") ||
     methods.find((m) => m.id === "gcash") ||
     methods.find((m) => PH_EWALLETS.has(m.id)) ||
     methods[0];
   const methodRadios = [
-    ...(ewalletMethods.length
+    ...(instantMethods.length
       ? [
-          `<p class="pay-group-label">Philippine e-wallets (PHP)</p>`,
-          ...ewalletMethods.map((m) => radioHtml(m, preferred && m.id === preferred.id)),
+          `<p class="pay-group-label">Instant automatic delivery</p>`,
+          ...instantMethods.map((m) =>
+            radioHtml(m, preferred && m.id === preferred.id)
+          ),
         ]
       : []),
-    ...(otherMethods.length
+    ...(ewalletMethods.length
       ? [
-          ewalletMethods.length ? `<p class="pay-group-label">Other methods</p>` : "",
-          ...otherMethods.map((m) =>
-            radioHtml(m, !preferred || (!PH_EWALLETS.has(preferred.id) && m.id === preferred.id))
+          `<p class="pay-group-label">E-wallet QR · delivery 10–30 minutes</p>`,
+          ...ewalletMethods.map((m) =>
+            radioHtml(
+              m,
+              preferred &&
+                m.id === preferred.id &&
+                !instantMethods.some((x) => x.id === preferred.id)
+            )
           ),
         ]
       : []),
@@ -1338,55 +1381,30 @@ function viewCheckout() {
 
   const payHelp = `
         <div class="pay-help" id="payHelpBox">
-          <strong>How payment works</strong>
+          <strong>How payment &amp; delivery work</strong>
           <p id="payHelpText">
             ${
-              stripeOn ||
-              paymongoOn ||
-              xenditOn ||
-              state.paypalEnabled ||
-              state.cryptoEnabled ||
-              state.liqpayEnabled ||
-              manualOn
-                ? "Pick a method below. Gateway methods redirect to a secure page. GCash/Maya QR: scan, pay, then wait 10–30 minutes for delivery after we verify."
-                : "Demo mode — no real money. Add payment keys or set up manual GCash/Maya in Admin."
+              paypalOn || cryptoOn || manualOn || stripeOn || paymongoOn || xenditOn
+                ? "Choose a method below. <strong style=\"color:var(--text)\">PayPal &amp; Crypto</strong> = codes unlock automatically after payment. <strong style=\"color:var(--text)\">GCash/Maya QR</strong> = delivery in <strong style=\"color:var(--text)\">10–30 minutes</strong> after we verify."
+                : "Demo mode — no real money. Add payment keys on the server for live PayPal / Crypto."
             }
           </p>
-          ${
-            manualOn
-              ? `<p class="muted" style="margin:8px 0 0;font-size:0.8rem;text-transform:none;letter-spacing:0;font-weight:400">
-            <strong style="color:var(--text)">GCash / Maya QR</strong> —
-            scan our QR, pay the exact amount, submit your reference.
-            <strong style="color:var(--text)">Delivery time: 10–30 minutes</strong> after we verify payment (not instant).
-          </p>
+          <div class="ewallet-eta-notice delivery-notice-auto" id="autoDeliveryNotice" hidden>
+            <strong>Instant automatic delivery</strong>
+            <p>PayPal and Crypto payments unlock your login codes <strong>automatically</strong> right after payment succeeds — no waiting for manual review.</p>
+          </div>
           <div class="ewallet-eta-notice" id="ewalletEtaNotice" hidden>
-            <strong>E-wallet delivery</strong>
-            <p>After you pay via GCash or Maya and we confirm, your login codes are usually delivered in <strong>10–30 minutes</strong>. Keep this page or check your email.</p>
-          </div>`
-              : ""
-          }
-          ${
-            hasEwallet && (paymongoOn || xenditOn || (!manualOn && ewalletBackend === "demo"))
-              ? `<p class="muted" style="margin:8px 0 0;font-size:0.8rem;text-transform:none;letter-spacing:0;font-weight:400">
-            <strong style="color:var(--text)">PH e-wallets (gateway)</strong> bill in
-            <strong style="color:var(--text)">PHP</strong> via
-            <strong style="color:var(--text)">${escapeHtml(ewalletBackend === "xendit" ? "Xendit" : ewalletBackend === "paymongo" ? "PayMongo" : "demo")}</strong>.
-            ${
-              xenditOn || paymongoOn
-                ? "Gateway keys are configured."
-                : "Showing demo e-wallets until Xendit/PayMongo is configured."
-            }
-          </p>`
-              : ""
-          }
+            <strong>E-wallet delivery: 10–30 minutes</strong>
+            <p>After you pay via GCash or Maya QR and submit your reference, we verify payment. Login codes are usually delivered in <strong>10–30 minutes</strong> (not instant).</p>
+          </div>
           ${
             paypalOn
               ? `<p class="muted" style="margin:8px 0 0;font-size:0.8rem;text-transform:none;letter-spacing:0;font-weight:400">
             <strong style="color:var(--text)">PayPal</strong> —
             ${
               state.paypalEnabled
-                ? "live PayPal Checkout is configured. You’ll approve payment on PayPal, then return here for codes."
-                : "shown in demo mode until you set PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET."
+                ? "Live · Instant automatic delivery after you approve payment on PayPal."
+                : "Demo mode until PAYPAL_CLIENT_ID + SECRET are set on the server."
             }
           </p>`
               : ""
@@ -1397,21 +1415,17 @@ function viewCheckout() {
             <strong style="color:var(--text)">Crypto</strong> —
             ${
               state.cryptoEnabled
-                ? "NOWPayments is configured (USDT, BTC, ETH, etc.). Pay on the hosted crypto page, then return for codes."
-                : "shown in demo mode until you set NOWPAYMENTS_API_KEY (see CRYPTO-SETUP.md)."
+                ? "Live · Instant automatic delivery after crypto payment confirms."
+                : "Demo mode until NOWPAYMENTS_API_KEY is set on the server."
             }
           </p>`
               : ""
           }
           ${
-            liqpayOn
+            manualOn
               ? `<p class="muted" style="margin:8px 0 0;font-size:0.8rem;text-transform:none;letter-spacing:0;font-weight:400">
-            <strong style="color:var(--text)">LiqPay</strong> —
-            ${
-              state.liqpayEnabled
-                ? "LiqPay is configured for card/wallet checkout."
-                : "demo until you set LIQPAY_PUBLIC_KEY + LIQPAY_PRIVATE_KEY (see LIQPAY-SETUP.md)."
-            }
+            <strong style="color:var(--text)">GCash / Maya QR</strong> —
+            scan, pay, submit reference · <strong style="color:var(--text)">delivery 10–30 minutes</strong> after we verify.
           </p>`
               : ""
           }
@@ -2569,10 +2583,11 @@ function bind() {
       const testBox = $("#stripeTestBox");
       if (testBox) testBox.hidden = method !== "card";
       const etaBox = $("#ewalletEtaNotice");
-      if (etaBox) {
-        // Show when any PH e-wallet is selected (QR or gateway)
-        etaBox.hidden = !PH_EWALLETS.has(method);
-      }
+      const autoBox = $("#autoDeliveryNotice");
+      const manualPick = isManualEwalletMethod(method);
+      const autoPick = isAutoDeliveryMethod(method);
+      if (etaBox) etaBox.hidden = !manualPick;
+      if (autoBox) autoBox.hidden = !autoPick;
       if (!btn) return;
       // Keep review CTA until they open terms
       btn.textContent = totalLabel ? `Review & continue · ${totalLabel}` : "Review & continue";
