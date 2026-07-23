@@ -809,13 +809,6 @@ function viewHome() {
     </div>`;
   }
 
-  const catIcons = {
-    AI: "✦",
-    Design: "◇",
-    Video: "▶",
-    Streaming: "◎",
-    Learning: "▣",
-  };
   const catBlurb = {
     AI: "Assistants & models",
     Design: "Creative tools",
@@ -829,6 +822,20 @@ function viewHome() {
     Video: "video",
     Streaming: "stream",
     Learning: "learn",
+  };
+  /** Clean line icons for category tiles */
+  const catSvgIcon = (key) => {
+    const common =
+      'class="hero-cat-svg" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"';
+    const icons = {
+      AI: `<svg ${common}><path d="M12 3v2"/><path d="M12 19v2"/><path d="M5 12H3"/><path d="M21 12h-2"/><path d="M6.3 6.3l1.4 1.4"/><path d="M16.3 16.3l1.4 1.4"/><path d="M6.3 17.7l1.4-1.4"/><path d="M16.3 7.7l1.4-1.4"/><circle cx="12" cy="12" r="3.2"/><path d="M9.5 14.5c.7.7 1.6 1 2.5 1s1.8-.3 2.5-1"/></svg>`,
+      Design: `<svg ${common}><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3z"/><path d="M18.5 15.5l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7.7-2z"/></svg>`,
+      Video: `<svg ${common}><rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10.5l5-2.5v8l-5-2.5v-3z"/></svg>`,
+      Streaming: `<svg ${common}><path d="M4.9 8.1a8 8 0 0 1 14.2 0"/><path d="M7.8 11a4.5 4.5 0 0 1 8.4 0"/><circle cx="12" cy="16.5" r="1.6"/><path d="M12 18v2.5"/></svg>`,
+      Learning: `<svg ${common}><path d="M4 19.5V7.8c0-.7.4-1.3 1-1.5L12 4l7 2.3c.6.2 1 .8 1 1.5v11.7"/><path d="M12 4v15.5"/><path d="M4 19.5l8 2 8-2"/><path d="M8 10h2"/><path d="M8 13h2"/></svg>`,
+      All: `<svg ${common}><circle cx="12" cy="12" r="8"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>`,
+    };
+    return icons[key] || icons.All;
   };
 
   /* One slide per brand so every brand logo appears in the carousel */
@@ -932,39 +939,50 @@ function viewHome() {
               ${searchBarHTML(t("search_placeholder"))}
             </div>
 
-            <div class="hero-cats-block hero-cats-block--v3" id="home-categories">
-              <div class="hero-cats-head hero-cats-head--v3">
+            <div class="hero-cats-block hero-cats-block--v4" id="home-categories">
+              <div class="hero-cats-head hero-cats-head--v4">
                 <p class="hero-cats-kicker">
                   <span class="hero-cats-kicker-line" aria-hidden="true"></span>
                   ${escapeHtml(t("categories_title") || "Categories")}
                   <span class="hero-cats-kicker-line" aria-hidden="true"></span>
                 </p>
+                <p class="hero-cats-lead">Pick a lane to shop prepaid plans</p>
               </div>
-              <div class="hero-cat-rail" role="list" aria-label="${escapeAttr(t("categories_title") || "Categories")}">
+              <div class="hero-cat-board" role="list" aria-label="${escapeAttr(t("categories_title") || "Categories")}">
                 ${categories
                   .map(
                     (cat, i) => `
-                  <button type="button" class="hero-cat-tile hero-cat-tile--${escapeAttr(catTone[cat.key] || "default")}" data-category="${escapeAttr(cat.key)}" role="listitem">
-                    <span class="hero-cat-tile-glow" aria-hidden="true"></span>
-                    <span class="hero-cat-tile-icon" aria-hidden="true">${catIcons[cat.key] || cat.mono}</span>
-                    <span class="hero-cat-tile-name">${escapeHtml(cat.label)}</span>
-                    <span class="hero-cat-tile-meta">
-                      <span class="hero-cat-tile-count">${cat.count}</span>
-                      <span class="hero-cat-tile-label">${escapeHtml(t("meta_plans") || "plans")}</span>
+                  <button type="button" class="hero-cat-box hero-cat-box--${escapeAttr(catTone[cat.key] || "default")}" data-category="${escapeAttr(cat.key)}" role="listitem">
+                    <span class="hero-cat-box-mesh" aria-hidden="true"></span>
+                    <span class="hero-cat-box-num">${String(i + 1).padStart(2, "0")}</span>
+                    <span class="hero-cat-box-icon">${catSvgIcon(cat.key)}</span>
+                    <span class="hero-cat-box-copy">
+                      <span class="hero-cat-box-name">${escapeHtml(cat.label)}</span>
+                      <span class="hero-cat-box-desc">${escapeHtml(catBlurb[cat.key] || cat.label)}</span>
                     </span>
-                    <span class="hero-cat-tile-hint">${escapeHtml(catBlurb[cat.key] || "")}</span>
+                    <span class="hero-cat-box-foot">
+                      <span class="hero-cat-box-count"><strong>${cat.count}</strong> ${escapeHtml(t("meta_plans") || "plans")}</span>
+                      <span class="hero-cat-box-go" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
+                      </span>
+                    </span>
                   </button>`
                   )
                   .join("")}
-                <button type="button" class="hero-cat-tile hero-cat-tile--all" data-category="All" role="listitem">
-                  <span class="hero-cat-tile-glow" aria-hidden="true"></span>
-                  <span class="hero-cat-tile-icon" aria-hidden="true">∞</span>
-                  <span class="hero-cat-tile-name">${escapeHtml(t("all_deals") || "All deals")}</span>
-                  <span class="hero-cat-tile-meta">
-                    <span class="hero-cat-tile-count">${all.length}</span>
-                    <span class="hero-cat-tile-label">${escapeHtml(t("meta_plans") || "plans")}</span>
+                <button type="button" class="hero-cat-box hero-cat-box--all" data-category="All" role="listitem">
+                  <span class="hero-cat-box-mesh" aria-hidden="true"></span>
+                  <span class="hero-cat-box-num">${String(categories.length + 1).padStart(2, "0")}</span>
+                  <span class="hero-cat-box-icon">${catSvgIcon("All")}</span>
+                  <span class="hero-cat-box-copy">
+                    <span class="hero-cat-box-name">${escapeHtml(t("all_deals") || "All deals")}</span>
+                    <span class="hero-cat-box-desc">Browse the full catalog</span>
                   </span>
-                  <span class="hero-cat-tile-hint">Browse full catalog</span>
+                  <span class="hero-cat-box-foot">
+                    <span class="hero-cat-box-count"><strong>${all.length}</strong> ${escapeHtml(t("meta_plans") || "plans")}</span>
+                    <span class="hero-cat-box-go" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
+                    </span>
+                  </span>
                 </button>
               </div>
             </div>

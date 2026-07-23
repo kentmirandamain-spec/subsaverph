@@ -10030,3 +10030,246 @@ body.nav-menu-open {
     padding-bottom: 0;
   }
 }
+
+/* ============================================================
+   Hero categories v4 — redesigned boxes, icons, content
+   ============================================================ */
+
+.hero-cats-block--v4 {
+  width: 100%;
+  max-width: min(100%, 860px);
+  margin: 1.4rem auto 0;
+  text-align: center;
+}
+.hero-cats-head--v4 {
+  margin-bottom: 0.9rem;
+}
+.hero-cats-head--v4 .hero-cats-kicker {
+  margin-bottom: 0.35rem;
+}
+.hero-cats-lead {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #cbd5e1;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+
+.hero-cat-board {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.7rem;
+  width: 100%;
+}
+@media (min-width: 900px) {
+  .hero-cat-board {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}
+
+.hero-cat-box {
+  --cat-accent: #38bdf8;
+  --cat-soft: rgba(56, 189, 248, 0.14);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.55rem;
+  min-height: 148px;
+  padding: 0.85rem 0.8rem 0.75rem;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background:
+    linear-gradient(165deg, rgba(255, 255, 255, 0.08) 0%, transparent 46%),
+    rgba(8, 12, 22, 0.88);
+  color: #f8fafc;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  overflow: hidden;
+  isolation: isolate;
+  transition: transform 0.22s var(--ease), border-color 0.22s, box-shadow 0.22s, background 0.22s;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+  -webkit-tap-highlight-color: transparent;
+}
+.hero-cat-box-mesh {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 85% 15%, var(--cat-soft), transparent 42%),
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: auto, 14px 14px, 14px 14px;
+  opacity: 0.9;
+  pointer-events: none;
+  z-index: 0;
+}
+.hero-cat-box > *:not(.hero-cat-box-mesh) {
+  position: relative;
+  z-index: 1;
+}
+.hero-cat-box:hover {
+  transform: translateY(-4px);
+  border-color: color-mix(in srgb, var(--cat-accent) 55%, rgba(255, 255, 255, 0.2));
+  box-shadow:
+    0 18px 40px rgba(0, 0, 0, 0.42),
+    0 0 28px color-mix(in srgb, var(--cat-accent) 22%, transparent);
+  background:
+    linear-gradient(165deg, color-mix(in srgb, var(--cat-accent) 16%, transparent) 0%, transparent 50%),
+    rgba(10, 16, 28, 0.94);
+}
+
+.hero-cat-box-num {
+  position: absolute;
+  top: 0.7rem;
+  right: 0.75rem;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: rgba(148, 163, 184, 0.9);
+}
+.hero-cat-box-icon {
+  width: 2.55rem;
+  height: 2.55rem;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  color: var(--cat-accent);
+  border: 1px solid color-mix(in srgb, var(--cat-accent) 40%, transparent);
+  background: color-mix(in srgb, var(--cat-accent) 14%, rgba(6, 10, 18, 0.65));
+  box-shadow: 0 0 18px color-mix(in srgb, var(--cat-accent) 18%, transparent);
+}
+.hero-cat-svg {
+  display: block;
+}
+.hero-cat-box-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+  width: 100%;
+  margin-top: 0.1rem;
+}
+.hero-cat-box-name {
+  font-size: 0.95rem;
+  font-weight: 750;
+  letter-spacing: -0.025em;
+  color: #fff;
+  line-height: 1.15;
+}
+.hero-cat-box-desc {
+  font-size: 0.7rem;
+  color: #cbd5e1;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.hero-cat-box-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  width: 100%;
+  margin-top: auto;
+  padding-top: 0.35rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+.hero-cat-box-count {
+  font-size: 0.68rem;
+  color: #94a3b8;
+}
+.hero-cat-box-count strong {
+  color: #e0f2fe;
+  font-size: 0.88rem;
+  font-weight: 800;
+  margin-right: 0.15rem;
+  letter-spacing: -0.02em;
+}
+.hero-cat-box-go {
+  width: 1.7rem;
+  height: 1.7rem;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  color: var(--cat-accent);
+  background: color-mix(in srgb, var(--cat-accent) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--cat-accent) 35%, transparent);
+  transition: transform 0.2s, background 0.2s;
+}
+.hero-cat-box:hover .hero-cat-box-go {
+  transform: translateX(2px);
+  background: color-mix(in srgb, var(--cat-accent) 22%, transparent);
+}
+
+/* Tones */
+.hero-cat-box--ai { --cat-accent: #a5b4fc; --cat-soft: rgba(129, 140, 248, 0.22); }
+.hero-cat-box--design { --cat-accent: #22d3ee; --cat-soft: rgba(34, 211, 238, 0.2); }
+.hero-cat-box--video { --cat-accent: #f472b6; --cat-soft: rgba(244, 114, 182, 0.2); }
+.hero-cat-box--stream { --cat-accent: #f87171; --cat-soft: rgba(248, 113, 113, 0.2); }
+.hero-cat-box--learn { --cat-accent: #4ade80; --cat-soft: rgba(74, 222, 128, 0.2); }
+.hero-cat-box--all {
+  --cat-accent: #7dd3fc;
+  --cat-soft: rgba(56, 189, 248, 0.2);
+  border-style: dashed;
+  border-color: rgba(125, 211, 252, 0.35);
+}
+
+/* Hide previous v3 tiles if leftover */
+.hero-cats-block--v4 .hero-cat-rail,
+.hero-cats-block--v4 .hero-cat-tile {
+  display: none !important;
+}
+
+@media (max-width: 720px) {
+  .hero-cat-board {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.55rem;
+  }
+  .hero-cat-box {
+    min-height: 132px;
+    padding: 0.75rem 0.7rem 0.65rem;
+    border-radius: 16px;
+  }
+  .hero-cat-box--all {
+    grid-column: 1 / -1;
+    min-height: 110px;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.65rem;
+  }
+  .hero-cat-box--all .hero-cat-box-copy {
+    flex: 1;
+    min-width: 0;
+  }
+  .hero-cat-box--all .hero-cat-box-foot {
+    width: auto;
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
+    margin-left: auto;
+  }
+  .hero-cat-box-desc {
+    -webkit-line-clamp: 1;
+  }
+}
+
+html[data-theme="light"] .hero-cat-box {
+  background: #fff;
+  border-color: rgba(15, 23, 42, 0.1);
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.08);
+}
+html[data-theme="light"] .hero-cat-box-name {
+  color: #0f172a;
+}
+html[data-theme="light"] .hero-cat-box-desc {
+  color: #64748b;
+}
+html[data-theme="light"] .hero-cats-lead {
+  color: #475569;
+  text-shadow: none;
+}
+html[data-theme="light"] .hero-cat-box-count strong {
+  color: #0f172a;
+}
