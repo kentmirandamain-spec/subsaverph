@@ -1662,14 +1662,14 @@ function paymentMethodsList() {
     ? state.paymentMethods
     : [
         // Card/Stripe omitted from fallback — use PayPal for card payments
-        { id: "paypal", label: "PayPal", desc: "PayPal · Instant automatic delivery", group: "instant", delivery: "auto", deliveryLabel: "Instant automatic delivery" },
-        { id: "crypto", label: "Crypto", desc: "USDT, BTC, ETH · Instant automatic delivery", group: "instant", delivery: "auto", deliveryLabel: "Instant automatic delivery" },
-        { id: "manual_gcash", label: "GCash (QR)", desc: "Scan QR · delivery in 10–30 minutes", group: "ewallet", delivery: "manual", deliveryLabel: "10–30 minutes" },
-        { id: "manual_maya", label: "Maya (QR)", desc: "Scan QR · delivery in 10–30 minutes", group: "ewallet", delivery: "manual", deliveryLabel: "10–30 minutes" },
-        { id: "gcash", label: "GCash", desc: "Pay with GCash (PHP)", group: "ewallet", delivery: "auto", deliveryLabel: "Instant automatic delivery" },
-        { id: "paymaya", label: "Maya", desc: "Pay with Maya (PHP)", group: "ewallet", delivery: "auto", deliveryLabel: "Instant automatic delivery" },
-        { id: "liqpay", label: "LiqPay", desc: "Card & wallets · Instant automatic delivery", group: "instant", delivery: "auto" },
-        { id: "demo", label: "Demo", desc: "Test without real money · Instant", group: "instant", delivery: "auto" },
+        { id: "paypal", label: "PayPal", desc: "Instant codes", group: "instant", delivery: "auto" },
+        { id: "crypto", label: "Crypto", desc: "Instant codes", group: "instant", delivery: "auto" },
+        { id: "manual_gcash", label: "GCash (QR)", desc: "10–30 min", group: "ewallet", delivery: "manual" },
+        { id: "manual_maya", label: "Maya (QR)", desc: "10–30 min", group: "ewallet", delivery: "manual" },
+        { id: "gcash", label: "GCash", desc: "Instant codes", group: "ewallet", delivery: "auto" },
+        { id: "paymaya", label: "Maya", desc: "Instant codes", group: "ewallet", delivery: "auto" },
+        { id: "liqpay", label: "LiqPay", desc: "Instant codes", group: "instant", delivery: "auto" },
+        { id: "demo", label: "Demo", desc: "Test only", group: "instant", delivery: "auto" },
       ];
   return list;
 }
@@ -1735,16 +1735,7 @@ function viewCheckout() {
   const cancelled =
     typeof location !== "undefined" && location.hash.includes("cancelled=1");
   const stripeOn = !!state.stripeEnabled;
-  const paymongoOn = !!state.paymongoEnabled;
-  const xenditOn = !!state.xenditEnabled;
-  const paypalOn = !!state.paypalEnabled || methods.some((m) => m.id === "paypal");
-  const cryptoOn = !!state.cryptoEnabled || methods.some((m) => m.id === "crypto");
-  const liqpayOn = !!state.liqpayEnabled || methods.some((m) => m.id === "liqpay");
-  const manualOn =
-    !!state.manualEwalletEnabled || methods.some((m) => MANUAL_EWALLETS.has(m.id));
-  const ewalletBackend = state.ewalletProvider || (paymongoOn ? "paymongo" : xenditOn ? "xendit" : "demo");
   const isTestKey = String(state.stripePublishableKey || "").startsWith("pk_test_");
-  const hasEwallet = methods.some((m) => PH_EWALLETS.has(m.id) || m.group === "ewallet");
   const ewalletMethods = methods.filter(
     (m) => PH_EWALLETS.has(m.id) || m.group === "ewallet" || m.delivery === "manual"
   );
@@ -1755,22 +1746,25 @@ function viewCheckout() {
       m.delivery !== "manual"
   );
 
+  /** One short line only — avoid repeating delivery text already in labels */
   const shortDesc = (m) => {
+    if (m.desc && String(m.desc).length <= 28) return String(m.desc);
     const isManual = m.delivery === "manual" || MANUAL_EWALLETS.has(m.id);
-    if (isManual) return "QR pay · codes in 10–30 min";
-    if (isAutoDeliveryMethod(m.id) || m.delivery === "auto") return "Instant codes after pay";
-    return m.desc || "";
+    if (isManual) return "10–30 min";
+    if (isAutoDeliveryMethod(m.id) || m.delivery === "auto") return "Instant";
+    return "";
   };
 
   const radioHtml = (m, checked) => {
     const isManual = m.delivery === "manual" || MANUAL_EWALLETS.has(m.id);
     const isAuto = m.delivery === "auto" || isAutoDeliveryMethod(m.id);
+    const line = shortDesc(m);
     return `
       <label class="pay-method ${isManual ? "pay-method-ewallet" : ""} ${isAuto ? "pay-method-instant" : ""}">
         <input type="radio" name="method" value="${escapeHtml(m.id)}" ${checked ? "checked" : ""} required />
         <span class="pay-method-box">
           <strong>${escapeHtml(m.label)}</strong>
-          <em>${escapeHtml(shortDesc(m))}</em>
+          ${line ? `<em>${escapeHtml(line)}</em>` : ""}
         </span>
       </label>`;
   };
@@ -1879,21 +1873,15 @@ function checkoutTermsModalHtml(cart, totals) {
   const eyebrow = s.checkoutTermsEyebrow || "Before you pay";
   const title = s.checkoutTermsTitle || "Purchase details & rules";
   const whatLines = settingsLines(s.checkoutWhatYouBuy, [
-    "You are purchasing a **prepaid digital access account or code** for the selected product (e.g. SuperGrok, Canva, streaming).",
-    "Delivery is **digital** — username/password or access code is shown after successful payment (and emailed when email is configured).",
-    "SubSaverPH is an **independent reseller / storefront**. We are **not** affiliated with, endorsed by, or sponsored by xAI, Canva, CapCut, Netflix, YouTube, Google, or any listed brand.",
+    "You are buying a **prepaid digital access** (login or code) for the selected product.",
+    "Delivery is **digital** after payment — on the success page and by email when configured.",
+    "SubSaverPH is an **independent storefront**, not affiliated with the listed brands.",
   ]);
   const ruleLines = settingsLines(s.checkoutRules, [
-    "**Digital goods are non-refundable** once login details or codes are delivered, **except** when the product is **defective** or **not delivered** — contact support with your order ID for those cases.",
-    "If you **break these rules** (including changing username, password, billing address, or subscription), you **cannot get a refund** and support may be refused.",
-    "You must be at least **18 years old** and able to form a binding contract.",
-    "Use the product only for **personal, lawful use** and follow the official service’s terms of use.",
-    "**Do not** resell, share publicly, or abuse accounts in a way that violates the brand’s policies.",
-    "**Do not change the username/email, password, billing address, or subscription plan** on the shared/prepaid account — doing so may lock you out and **voids refunds and support**.",
-    "**Do not** add your own payment method, cancel the plan, or transfer ownership of the account.",
-    "Keep the login details private; use only as provided.",
-    "Prices may be shown in other currencies; the amount charged is confirmed at payment (PH e-wallets bill in PHP when applicable).",
-    "By paying you confirm you understand this is a digital delivery product and you accept these rules.",
+    "**No refund** after login details are delivered, except **defective** or **not delivered** products.",
+    "Do **not** change username, password, billing, or subscription — that voids support and refunds.",
+    "Personal use only. Do not resell or share logins.",
+    "You must be **18+**. By paying you accept these rules.",
   ]);
   const supportEmail = s.supportEmail || "support@subsaverph.com";
   const supportText =
@@ -2240,41 +2228,15 @@ function viewSuccess() {
           .join("");
       }
 
-      const features = Array.isArray(item.includes)
-        ? item.includes.filter((x) => String(x || "").trim())
-        : [];
-      const featuresHtml = features.length
-        ? `<div class="delivery-block">
-            <h3 class="delivery-block-title">Features included</h3>
-            <ul class="delivery-features">${features.map((f) => `<li>${escapeHtml(f)}</li>`).join("")}</ul>
-          </div>`
-        : "";
-
+      /* Keep success package simple: product + login only (no repeated features/rules) */
+      const metaBits = [item.duration || "", item.brand || ""].filter(Boolean);
       const instructions = String(item.howToRedeem || "").trim();
       const instructionsHtml = instructions
         ? `<div class="delivery-block">
-            <h3 class="delivery-block-title">Instructions — how to use</h3>
+            <h3 class="delivery-block-title">How to use</h3>
             <div class="delivery-pre">${escapeHtml(instructions)}</div>
           </div>`
         : "";
-
-      const rules = String(item.importantNotes || "").trim();
-      const fine = String(item.finePrint || "").trim();
-      const rulesHtml =
-        rules || fine
-          ? `<div class="delivery-block delivery-block-rules">
-            <h3 class="delivery-block-title">Rules</h3>
-            ${rules ? `<div class="delivery-pre">${escapeHtml(rules)}</div>` : ""}
-            ${fine ? `<p class="muted delivery-fine">${escapeHtml(fine)}</p>` : ""}
-          </div>`
-          : "";
-
-      const metaBits = [
-        item.accountType ? `Account: ${item.accountType}` : "",
-        item.validity ? `Validity: ${item.validity}` : "",
-        item.duration || "",
-        item.delivery || "",
-      ].filter(Boolean);
 
       return `
         <article class="delivery-packet">
@@ -2286,12 +2248,10 @@ function viewSuccess() {
             </div>
           </header>
           <div class="delivery-block">
-            <h3 class="delivery-block-title">Login credentials</h3>
+            <h3 class="delivery-block-title">Login</h3>
             <div class="cred-list">${credHtml}</div>
           </div>
-          ${featuresHtml}
           ${instructionsHtml}
-          ${rulesHtml}
         </article>`;
     })
     .join("");
