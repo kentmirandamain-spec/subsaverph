@@ -913,9 +913,10 @@ function settingsView() {
             <input name="supportEmail" value="${escapeAttr(s.supportEmail || "support@subsaverph.com")}" />
           </label>
         </div>
-        <label>Owner inbox (where support form emails go)
-          <input name="ownerInbox" type="email" value="${escapeAttr(s.ownerInbox || "")}" placeholder="you@outlook.com" />
+        <label>Owner inbox (where support form emails go — use your Outlook, not Gmail if that is where you want tickets)
+          <input name="ownerInbox" type="email" value="${escapeAttr(s.ownerInbox || "")}" placeholder="subsaver@outlook.com" />
         </label>
+        <p class="muted" style="margin-top:0">Support form messages go here first. Order copies may still use <code>ORDER_NOTIFY_EMAIL</code> on Render (often Gmail). Leave blank only if you rely on env <code>SUPPORT_INBOX</code>.</p>
         <label>Website URL
           <input name="websiteUrl" value="${escapeAttr(s.websiteUrl || "")}" />
         </label>
