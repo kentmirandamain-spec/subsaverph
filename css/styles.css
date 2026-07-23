@@ -11238,3 +11238,127 @@ html[data-theme="light"] .hero-cat-box:hover {
     margin-right: auto;
   }
 }
+
+/* ============================================================
+   Mobile only: deals grid 3 columns
+   ============================================================ */
+
+@media (max-width: 900px) {
+  /* Deals catalog / home deals / deals page — 3 columns on mobile */
+  .deals-grid,
+  .grid.deals-grid,
+  .deals-layout .grid,
+  .deals-layout .deals-grid,
+  .home-deals-inner .deals-grid,
+  .home-deals-inner .grid,
+  .page .deals-grid,
+  .page .grid.deals-grid,
+  #view-all-deals .grid,
+  #view-all-deals .deals-grid {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Compact cards so 3 cols fit */
+  .deals-grid .product-card,
+  .deals-grid .card,
+  .grid.deals-grid .product-card,
+  .home-deals-inner .product-card,
+  #view-all-deals .product-card {
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+  .deals-grid .product-card-body,
+  .grid.deals-grid .product-card-body,
+  .home-deals-inner .product-card-body,
+  #view-all-deals .product-card-body {
+    padding: 0.55rem 0.4rem 0.55rem !important;
+    gap: 0.25rem !important;
+  }
+  .deals-grid .product-card-media,
+  .deals-grid .product-card-media.card-media--logo,
+  .home-deals-inner .product-card-media,
+  #view-all-deals .product-card-media {
+    aspect-ratio: 1 / 1 !important;
+    min-height: 0 !important;
+    padding: 10% 8% !important;
+  }
+  .deals-grid .product-card-title,
+  .home-deals-inner .product-card-title,
+  #view-all-deals .product-card-title {
+    font-size: 0.68rem !important;
+    line-height: 1.2 !important;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .deals-grid .listing-game,
+  .deals-grid .listing-type,
+  .deals-grid .product-badge,
+  .home-deals-inner .listing-game,
+  #view-all-deals .listing-game {
+    font-size: 0.55rem !important;
+  }
+  .deals-grid .listing-price,
+  .home-deals-inner .listing-price,
+  #view-all-deals .listing-price {
+    font-size: 0.72rem !important;
+  }
+  .deals-grid .price-compare,
+  .deals-grid .price-code,
+  .home-deals-inner .price-compare,
+  #view-all-deals .price-code {
+    font-size: 0.55rem !important;
+  }
+  .deals-grid .product-card-meta,
+  .home-deals-inner .product-card-meta {
+    flex-wrap: wrap;
+    gap: 2px;
+    margin-bottom: 0.25rem !important;
+  }
+  .deals-grid .card-actions-row,
+  .home-deals-inner .card-actions-row,
+  #view-all-deals .card-actions-row {
+    flex-direction: column !important;
+    gap: 4px !important;
+  }
+  .deals-grid .card-actions-row .btn-add-cart,
+  .home-deals-inner .card-actions-row .btn-add-cart,
+  #view-all-deals .card-actions-row .btn-add-cart {
+    width: 100% !important;
+    min-height: 32px !important;
+    padding: 0.35rem 0.25rem !important;
+    font-size: 0.52rem !important;
+    letter-spacing: 0.04em !important;
+  }
+  .deals-grid .btn-wish,
+  .home-deals-inner .btn-wish,
+  #view-all-deals .btn-wish {
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 30px !important;
+    height: 30px !important;
+  }
+  .deals-grid .listing-delivery,
+  .home-deals-inner .listing-delivery {
+    font-size: 0.52rem !important;
+  }
+}
+
+/* Very small phones: still 3 cols, even tighter */
+@media (max-width: 380px) {
+  .deals-grid,
+  .grid.deals-grid,
+  .home-deals-inner .grid,
+  #view-all-deals .grid {
+    gap: 6px !important;
+  }
+  .deals-grid .product-card-title,
+  .home-deals-inner .product-card-title {
+    font-size: 0.62rem !important;
+  }
+}
