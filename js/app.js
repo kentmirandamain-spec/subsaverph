@@ -163,7 +163,7 @@ function productBrandColor(d) {
     CapCut: "#000000",
     Netflix: "#000000",
     YouTube: "#ffffff",
-    Duolingo: "#58cc02",
+    Duolingo: "#ffffff",
     Spotify: "#191414",
   };
   if (d?.brand && map[d.brand]) return map[d.brand];
