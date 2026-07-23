@@ -75,6 +75,22 @@ function dealsList() {
   return Array.isArray(window.DEALS) ? window.DEALS : [];
 }
 
+/** Official product image path (card). Falls back by brand monogram art. */
+function productImage(d) {
+  if (!d) return "";
+  if (d.image) return String(d.image);
+  if (d.id) return `/assets/products/${d.id}.png`;
+  return "";
+}
+
+/** Wide slide image for homepage carousel. */
+function productSlideImage(d) {
+  if (!d) return "";
+  if (d.imageSlide) return String(d.imageSlide);
+  if (d.id) return `/assets/products/${d.id}-slide.png`;
+  return productImage(d);
+}
+
 /** Apply data-i18n labels across static chrome */
 function applyI18n() {
   document.querySelectorAll("[data-i18n]").forEach((el) => {
@@ -354,35 +370,46 @@ function card(d, highlightQ = "") {
   const nameHtml = highlightQ ? highlightMatch(d.name, highlightQ) : escapeHtml(d.name);
   const tagHtml = highlightQ ? highlightMatch(d.tagline || "", highlightQ) : escapeHtml(d.tagline || "");
   const soldOut = isSoldOut(d);
+  const img = productImage(d);
   return `
     <article class="card ${soldOut ? "sold-out" : ""}">
       <div class="card-accent"></div>
-      <div class="card-top">
-        <div class="mono-box">${escapeHtml(d.monogram)}</div>
-        <div class="pills">
+      <a class="card-media" href="#/deal/${d.id}" tabindex="-1" aria-hidden="true">
+        ${
+          img
+            ? `<img class="product-img" src="${escapeAttr(img)}" alt="" loading="lazy" width="400" height="500" />`
+            : `<div class="card-media-fallback mono-box">${escapeHtml(d.monogram)}</div>`
+        }
+        <div class="card-media-shade"></div>
+        <div class="pills card-media-pills">
           ${soldOut ? `<span class="pill sold-out-pill">${escapeHtml(t("sold_out"))}</span>` : ""}
           ${!soldOut && d.badge ? `<span class="pill">${escapeHtml(d.badge)}</span>` : ""}
           ${!soldOut ? `<span class="pill on">−${off(d)}%</span>` : ""}
         </div>
-      </div>
-      <p class="cat">${escapeHtml(d.brand)} · ${escapeHtml(d.category)}</p>
-      <h3><a href="#/deal/${d.id}">${nameHtml}</a></h3>
-      <p class="tag">${tagHtml}</p>
-      <p class="stock-line ${soldOut ? "is-sold-out" : ""}">${escapeHtml(stockLabel(d))}</p>
-      <div class="price">
-        <div>
-          <strong>${formatDealPrice(d, "price")}</strong><span class="per">${periodLabel(d)}</span>
-          <span class="was">${formatDealPrice(d, "original")}${periodLabel(d)}</span>
+      </a>
+      <div class="card-body">
+        <div class="card-top">
+          <div class="mono-box">${escapeHtml(d.monogram)}</div>
         </div>
-        <div class="dur">${escapeHtml(d.duration)}</div>
-      </div>
-      <div class="actions">
-        <a class="btn sm" href="#/deal/${d.id}">${escapeHtml(t("details"))}</a>
-        ${
-          soldOut
-            ? `<button class="btn sm sold-out-btn" type="button" disabled>${escapeHtml(t("sold_out"))}</button>`
-            : `<button class="btn sm solid" data-add="${d.id}">${escapeHtml(t("add"))}</button>`
-        }
+        <p class="cat">${escapeHtml(d.brand)} · ${escapeHtml(d.category)}</p>
+        <h3><a href="#/deal/${d.id}">${nameHtml}</a></h3>
+        <p class="tag">${tagHtml}</p>
+        <p class="stock-line ${soldOut ? "is-sold-out" : ""}">${escapeHtml(stockLabel(d))}</p>
+        <div class="price">
+          <div>
+            <strong>${formatDealPrice(d, "price")}</strong><span class="per">${periodLabel(d)}</span>
+            <span class="was">${formatDealPrice(d, "original")}${periodLabel(d)}</span>
+          </div>
+          <div class="dur">${escapeHtml(d.duration)}</div>
+        </div>
+        <div class="actions">
+          <a class="btn sm" href="#/deal/${d.id}">${escapeHtml(t("details"))}</a>
+          ${
+            soldOut
+              ? `<button class="btn sm sold-out-btn" type="button" disabled>${escapeHtml(t("sold_out"))}</button>`
+              : `<button class="btn sm solid" data-add="${d.id}">${escapeHtml(t("add"))}</button>`
+          }
+        </div>
       </div>
     </article>`;
 }
@@ -709,6 +736,68 @@ function viewHome() {
     Learning: "▣",
   };
 
+  const slides = all.slice(0, 12);
+  const sliderHtml = slides.length
+    ? `
+    <section class="product-slider" id="productSlider" aria-roledescription="carousel" aria-label="Featured products">
+      <div class="product-slider-stage">
+        <div class="product-slider-track" id="productSliderTrack">
+          ${slides
+            .map(
+              (d, i) => `
+            <article class="product-slide${i === 0 ? " is-active" : ""}" data-slide-index="${i}" ${i === 0 ? "" : "hidden"}>
+              <a class="product-slide-link" href="#/deal/${escapeAttr(d.id)}">
+                <img
+                  class="product-img product-slide-img"
+                  src="${escapeAttr(productSlideImage(d))}"
+                  alt="${escapeAttr(d.name)}"
+                  width="1280"
+                  height="720"
+                  loading="${i === 0 ? "eager" : "lazy"}"
+                />
+                <div class="product-slide-shade"></div>
+                <div class="product-slide-content">
+                  <p class="product-slide-brand">${escapeHtml(d.brand)} · ${escapeHtml(d.category)}</p>
+                  <h2 class="product-slide-title">${escapeHtml(d.name)}</h2>
+                  <p class="product-slide-tag">${escapeHtml(d.tagline || "")}</p>
+                  <div class="product-slide-meta">
+                    <strong class="product-slide-price">${formatDealPrice(d, "price")}</strong>
+                    <span class="product-slide-off">−${off(d)}%</span>
+                    <span class="product-slide-cta">View plan →</span>
+                  </div>
+                </div>
+              </a>
+            </article>`
+            )
+            .join("")}
+        </div>
+        <div class="product-slider-progress" aria-hidden="true">
+          <div class="product-slider-progress-bar" id="productSliderProgress"></div>
+        </div>
+        <div class="product-slider-controls">
+          <button type="button" class="product-slider-btn" id="productSliderPrev" aria-label="Previous product">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg>
+          </button>
+          <button type="button" class="product-slider-btn" id="productSliderNext" aria-label="Next product">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>
+          </button>
+          <button type="button" class="product-slider-btn product-slider-pause" id="productSliderPause" aria-label="Pause slideshow" aria-pressed="false">
+            <svg class="icon-pause" viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
+            <svg class="icon-play" viewBox="0 0 24 24" width="14" height="14" fill="currentColor" hidden><path d="M8 5v14l11-7z"/></svg>
+          </button>
+        </div>
+        <div class="product-slider-dots" id="productSliderDots" role="tablist" aria-label="Product slides">
+          ${slides
+            .map(
+              (d, i) =>
+                `<button type="button" class="product-slider-dot${i === 0 ? " is-active" : ""}" role="tab" aria-selected="${i === 0 ? "true" : "false"}" aria-label="${escapeAttr(d.name)}" data-slide-to="${i}"></button>`
+            )
+            .join("")}
+        </div>
+      </div>
+    </section>`
+    : "";
+
   return `
     <section class="hero hero--orbit" aria-label="Featured storefront">
       <div class="hero-orbit-bg" aria-hidden="true">
@@ -762,6 +851,8 @@ function viewHome() {
       </div>
     </section>
 
+    ${sliderHtml}
+
     <section class="ops-rail" aria-label="Store status">
       <div class="ops-rail-inner">
         <div class="ops-rail-live">
@@ -812,7 +903,13 @@ function viewDeal() {
         <a href="#/deals" class="link">← ${escapeHtml(t("all_deals"))}</a>
         <div class="detail">
           <div class="detail-panel">
-            <div class="mono-box lg">${escapeHtml(d.monogram)}</div>
+            ${
+              productImage(d)
+                ? `<div class="detail-product-img-wrap">
+                    <img class="product-img detail-product-img" src="${escapeAttr(productImage(d))}" alt="${escapeAttr(d.name)}" width="480" height="600" loading="eager" />
+                  </div>`
+                : `<div class="mono-box lg">${escapeHtml(d.monogram)}</div>`
+            }
             ${
               soldOut
                 ? `<div class="save-big sold-out-big">${escapeHtml(t("sold_out"))}<span>${escapeHtml(t("no_codes_left"))}</span></div>`
@@ -2397,6 +2494,7 @@ function render() {
     bindSearchTags();
     mountPageFx();
     bind();
+    bindProductSlider();
     syncGlobalSearchInput();
     applySiteChrome();
     applyI18n();
@@ -2413,6 +2511,120 @@ function render() {
       )}</p><p class="muted">${dealsList().length} products loaded.</p><a class="btn solid" href="#/deals">Browse deals</a></div></div>`;
     }
   }
+}
+
+/** Homepage product image carousel (autoplay + controls). */
+let _productSliderTimer = null;
+let _productSliderProgressTimer = null;
+
+function stopProductSlider() {
+  if (_productSliderTimer) {
+    clearInterval(_productSliderTimer);
+    _productSliderTimer = null;
+  }
+  if (_productSliderProgressTimer) {
+    clearInterval(_productSliderProgressTimer);
+    _productSliderProgressTimer = null;
+  }
+}
+
+function bindProductSlider() {
+  stopProductSlider();
+  const root = $("#productSlider");
+  if (!root) return;
+  const slides = $$(".product-slide", root);
+  const dots = $$(".product-slider-dot", root);
+  const progress = $("#productSliderProgress");
+  const btnPrev = $("#productSliderPrev");
+  const btnNext = $("#productSliderNext");
+  const btnPause = $("#productSliderPause");
+  if (slides.length < 2) return;
+
+  let index = 0;
+  let paused = false;
+  const DURATION = 4500;
+
+  const show = (i) => {
+    index = ((i % slides.length) + slides.length) % slides.length;
+    slides.forEach((slide, n) => {
+      const on = n === index;
+      slide.classList.toggle("is-active", on);
+      if (on) slide.removeAttribute("hidden");
+      else slide.setAttribute("hidden", "");
+    });
+    dots.forEach((dot, n) => {
+      const on = n === index;
+      dot.classList.toggle("is-active", on);
+      dot.setAttribute("aria-selected", on ? "true" : "false");
+    });
+    if (progress) {
+      progress.style.transition = "none";
+      progress.style.width = "0%";
+      // force reflow then animate
+      void progress.offsetWidth;
+      if (!paused) {
+        progress.style.transition = `width ${DURATION}ms linear`;
+        progress.style.width = "100%";
+      }
+    }
+  };
+
+  const next = () => show(index + 1);
+  const prev = () => show(index - 1);
+
+  const startAuto = () => {
+    stopProductSlider();
+    if (paused) return;
+    if (progress) {
+      progress.style.transition = `width ${DURATION}ms linear`;
+      progress.style.width = "100%";
+    }
+    _productSliderTimer = setInterval(next, DURATION);
+  };
+
+  btnPrev?.addEventListener("click", () => {
+    prev();
+    startAuto();
+  });
+  btnNext?.addEventListener("click", () => {
+    next();
+    startAuto();
+  });
+  dots.forEach((dot) => {
+    dot.addEventListener("click", () => {
+      const to = Number(dot.getAttribute("data-slide-to") || 0);
+      show(to);
+      startAuto();
+    });
+  });
+  btnPause?.addEventListener("click", () => {
+    paused = !paused;
+    btnPause.setAttribute("aria-pressed", paused ? "true" : "false");
+    btnPause.setAttribute("aria-label", paused ? "Play slideshow" : "Pause slideshow");
+    const pauseIcon = btnPause.querySelector(".icon-pause");
+    const playIcon = btnPause.querySelector(".icon-play");
+    if (pauseIcon) pauseIcon.hidden = paused;
+    if (playIcon) playIcon.hidden = !paused;
+    if (paused) {
+      stopProductSlider();
+      if (progress) {
+        progress.style.transition = "none";
+      }
+    } else {
+      show(index);
+      startAuto();
+    }
+  });
+
+  if (!window.__ssphSliderVisBound) {
+    window.__ssphSliderVisBound = true;
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) stopProductSlider();
+    });
+  }
+
+  show(0);
+  startAuto();
 }
 
 function bind() {
