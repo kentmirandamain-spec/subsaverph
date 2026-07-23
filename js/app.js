@@ -256,6 +256,35 @@ function bindPrefsPanel() {
   });
 }
 
+/** Scroll the storefront to the very top (mobile-safe). */
+function scrollPageToTop() {
+  try {
+    document.body.style.overflow = "";
+    document.documentElement.style.overflow = "";
+    document.body.classList.remove("drawer-open", "nav-menu-open");
+  } catch {
+    /* ignore */
+  }
+  const jump = () => {
+    try {
+      window.scrollTo(0, 0);
+      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    } catch {
+      /* ignore */
+    }
+    if (document.documentElement) document.documentElement.scrollTop = 0;
+    if (document.body) document.body.scrollTop = 0;
+    const app = document.getElementById("app");
+    if (app) app.scrollTop = 0;
+  };
+  jump();
+  requestAnimationFrame(jump);
+  // Mobile browsers often re-apply scroll after layout / keyboard / hash change
+  setTimeout(jump, 40);
+  setTimeout(jump, 180);
+  setTimeout(jump, 400);
+}
+
 function parseRoute() {
   const hash = location.hash.replace(/^#\/?/, "") || "home";
   // support #/search?q=netflix and #/search/netflix and #/deals?q=
@@ -281,6 +310,8 @@ function parseRoute() {
 
   render();
   syncGlobalSearchInput();
+  // Always land at top after route change (checkout → success, etc.)
+  scrollPageToTop();
 }
 
 /** Navigate to home and clear search — always show full homepage */
@@ -2731,6 +2762,10 @@ function render() {
     if (getLang() !== "en") {
       queueTranslateDom(document.body, getLang());
     }
+    // After payment / success screens, keep user at the top on mobile
+    if (state.view === "success" || state.view === "checkout") {
+      scrollPageToTop();
+    }
   } catch (err) {
     console.error("SubSaverPH render error:", err);
     const root = $("#app");
@@ -3117,6 +3152,7 @@ function bind() {
         }
         toast("Reference submitted — waiting for confirmation");
         render();
+        scrollPageToTop();
       } catch (err) {
         if (errEl) errEl.textContent = err.message || "Submit failed";
         toast(err.message || "Submit failed", true);
@@ -3416,11 +3452,16 @@ function bind() {
         clearCart();
         updateBadge();
         closeTermsModal();
+        scrollPageToTop();
         if (data.provider === "manual" || data.pending || order.status === "awaiting_payment") {
           location.hash = `#/success?manual=1&order=${encodeURIComponent(order.id || "")}`;
         } else {
           location.hash = "#/success";
         }
+        // Ensure top after SPA render (hashchange + render)
+        scrollPageToTop();
+        setTimeout(scrollPageToTop, 100);
+        setTimeout(scrollPageToTop, 300);
       } catch (err) {
         const msg = err.message || "Checkout failed";
         if (termsErr) termsErr.textContent = msg;
@@ -3824,8 +3865,9 @@ async function init() {
 
   window.addEventListener("hashchange", () => {
     closeMobileMenu();
-    parseRoute();
-    window.scrollTo(0, 0);
+    closeCart();
+    parseRoute(); // also scrolls to top
+    scrollPageToTop();
     // Pull latest stock when browsing catalog pages
     refreshCatalogIfStale({ rerender: true });
   });
