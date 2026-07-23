@@ -195,11 +195,11 @@ window.DEALS = [
     "extraDetails": [],
     "active": true,
     "stockLeft": 0,
-    "image": "/assets/products/cover-capcut-v3.png?v=3",
-    "imageSlide": "/assets/products/cover-capcut-v3.png?v=3",
-    "logo": "/assets/products/cover-capcut-v3.png?v=3",
+    "image": "/assets/products/cover-capcut-official.png?v=official1",
+    "imageSlide": "/assets/products/cover-capcut-official.png?v=official1",
+    "logo": "/assets/products/cover-capcut-official.png?v=official1",
     "imageBg": "/assets/products/plate-capcut.png",
-    "brandColor": "#000000"
+    "brandColor": "#00C2FF"
   },
   {
     "id": "capcut-std",
@@ -233,11 +233,11 @@ window.DEALS = [
     "extraDetails": [],
     "active": true,
     "stockLeft": 0,
-    "image": "/assets/products/cover-capcut-v3.png?v=3",
-    "imageSlide": "/assets/products/cover-capcut-v3.png?v=3",
-    "logo": "/assets/products/cover-capcut-v3.png?v=3",
+    "image": "/assets/products/cover-capcut-official.png?v=official1",
+    "imageSlide": "/assets/products/cover-capcut-official.png?v=official1",
+    "logo": "/assets/products/cover-capcut-official.png?v=official1",
     "imageBg": "/assets/products/plate-capcut.png",
-    "brandColor": "#000000"
+    "brandColor": "#00C2FF"
   },
   {
     "id": "netflix-prem",
