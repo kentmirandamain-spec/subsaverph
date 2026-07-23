@@ -3,7 +3,7 @@ const app = $("#app");
 
 const state = {
   user: null,
-  tab: "deals",
+  tab: "dashboard",
   deals: [],
   settings: {},
   msg: "",
@@ -29,6 +29,8 @@ const state = {
   orderSearch: "",
   /** Search within period invoices / products */
   monthSearch: "",
+  /** G2G-style order pipeline filter on orders tab */
+  orderPipeFilter: "all",
 };
 
 function friendlyApiError(status, raw, data) {
@@ -129,20 +131,63 @@ function loginView() {
 }
 
 function shell(content) {
+  const pendingPay = (state.orders || []).filter(
+    (o) =>
+      o.paymentMode === "manual_ewallet" &&
+      String(o.status || "").toLowerCase() === "payment_submitted" &&
+      (o.paymentReference || "").trim()
+  ).length;
+  const availStock = (state.inventorySummary || []).reduce(
+    (n, s) => n + (Number(s.available) || 0),
+    0
+  );
+
   return `
     <div class="shell">
+      <header class="topbar">
+        <div class="topbar-brand">
+          <span class="dot" title="Online"></span>
+          SubSaverPH Seller
+        </div>
+        <div class="topbar-meta">
+          <span class="pill">Pending <strong>${pendingPay}</strong></span>
+          <span class="pill">Stock <strong>${availStock}</strong></span>
+          <span class="pill">${escapeHtml(state.user || "admin")}</span>
+          <a class="btn ghost btn-sm" href="/" target="_blank" rel="noopener">Live store</a>
+        </div>
+      </header>
       <aside class="side">
-        <h2>SubSaverPH</h2>
-        <button type="button" data-tab="deals" class="${state.tab === "deals" ? "active" : ""}">Products</button>
-        <button type="button" data-tab="stock" class="${state.tab === "stock" ? "active" : ""}">Codes / Stock</button>
-        <button type="button" data-tab="orders" class="${state.tab === "orders" ? "active" : ""}">Orders / Sales</button>
-        <button type="button" data-tab="support" class="${state.tab === "support" ? "active" : ""}">Support inbox</button>
-        <button type="button" data-tab="emailtest" class="${state.tab === "emailtest" ? "active" : ""}">★ Test email</button>
-        <button type="button" data-tab="settings" class="${state.tab === "settings" ? "active" : ""}">Site content</button>
-        <button type="button" data-tab="account" class="${state.tab === "account" ? "active" : ""}">Account</button>
-        <a href="/" target="_blank" rel="noopener">↗ View live site</a>
-        <button type="button" id="logoutBtn">Log out</button>
-        <p class="muted" style="margin-top:24px;padding:0 12px">Signed in as ${escapeHtml(state.user || "admin")}</p>
+        <div class="side-section">Overview</div>
+        <button type="button" data-tab="dashboard" class="${state.tab === "dashboard" ? "active" : ""}">
+          <span class="side-ico">▣</span> Dashboard
+        </button>
+        <div class="side-section">Selling</div>
+        <button type="button" data-tab="orders" class="${state.tab === "orders" ? "active" : ""}">
+          <span class="side-ico">☰</span> Orders ${pendingPay ? `(${pendingPay})` : ""}
+        </button>
+        <button type="button" data-tab="deals" class="${state.tab === "deals" ? "active" : ""}">
+          <span class="side-ico">◈</span> Listings
+        </button>
+        <button type="button" data-tab="stock" class="${state.tab === "stock" ? "active" : ""}">
+          <span class="side-ico">◎</span> Inventory
+        </button>
+        <div class="side-section">Support</div>
+        <button type="button" data-tab="support" class="${state.tab === "support" ? "active" : ""}">
+          <span class="side-ico">✉</span> Messages
+        </button>
+        <button type="button" data-tab="emailtest" class="${state.tab === "emailtest" ? "active" : ""}">
+          <span class="side-ico">★</span> Test email
+        </button>
+        <div class="side-section">Store</div>
+        <button type="button" data-tab="settings" class="${state.tab === "settings" ? "active" : ""}">
+          <span class="side-ico">⚙</span> Site content
+        </button>
+        <button type="button" data-tab="account" class="${state.tab === "account" ? "active" : ""}">
+          <span class="side-ico">☺</span> Account
+        </button>
+        <a href="/" target="_blank" rel="noopener"><span class="side-ico">↗</span> View live site</a>
+        <button type="button" id="logoutBtn"><span class="side-ico">⎋</span> Log out</button>
+        <p class="side-foot">G2G-style seller console · Orbit theme</p>
       </aside>
       <main class="main">
         ${state.msg ? `<p class="ok">${escapeHtml(state.msg)}</p>` : ""}
@@ -151,6 +196,139 @@ function shell(content) {
       </main>
     </div>
     ${state.editing !== null ? dealModal(state.editing) : ""}`;
+}
+
+function dashboardView() {
+  const orders = state.orders || [];
+  const paid = orders.filter((o) =>
+    ["paid", "completed", "succeeded", "complete", "success"].includes(orderStatusKey(o))
+  );
+  const pending = orders.filter(
+    (o) =>
+      o.paymentMode === "manual_ewallet" &&
+      orderStatusKey(o) === "payment_submitted" &&
+      (o.paymentReference || "").trim()
+  );
+  const refunded = orders.filter((o) =>
+    ["refunded", "refund", "reversed", "chargeback"].includes(orderStatusKey(o))
+  );
+  const revenue = paid.reduce((sum, o) => {
+    if (o.amountPhp != null) return sum + Number(o.amountPhp);
+    return sum + orderLineTotal(o);
+  }, 0);
+  const avail = (state.inventorySummary || []).reduce((n, s) => n + (Number(s.available) || 0), 0);
+  const soldCodes = (state.inventorySummary || []).reduce((n, s) => n + (Number(s.sold) || 0), 0);
+  const liveProducts = (state.deals || []).filter((d) => d.active !== false).length;
+  const msgs = (state.supportMessages || []).length;
+  const lowStock = (state.inventorySummary || []).filter(
+    (s) => (Number(s.available) || 0) > 0 && (Number(s.available) || 0) <= 2
+  );
+
+  const recent = orders.slice(0, 8);
+  const recentRows = recent
+    .map((o) => {
+      const st = orderStatusKey(o);
+      const label =
+        st === "payment_submitted"
+          ? "Paid | Preparing"
+          : st === "paid" || st === "completed"
+            ? "Delivered"
+            : st === "refunded"
+              ? "Refunded"
+              : st || "—";
+      const badge =
+        st === "payment_submitted"
+          ? "badge badge-pending"
+          : st === "paid" || st === "completed"
+            ? "badge badge-paid"
+            : st === "refunded"
+              ? "badge badge-refund"
+              : "badge";
+      return `<tr>
+        <td><strong>${escapeHtml(o.id || "")}</strong><div class="muted">${escapeHtml(o.createdAt || "")}</div></td>
+        <td>${escapeHtml(o.email || "")}<div class="muted">${escapeHtml(o.name || "")}</div></td>
+        <td><span class="${badge}">${escapeHtml(label)}</span></td>
+        <td>${escapeHtml(o.amountFormatted || money(orderLineTotal(o)))}</td>
+      </tr>`;
+    })
+    .join("");
+
+  return `
+    <div class="top">
+      <div>
+        <h1>Seller dashboard</h1>
+        <p class="subtitle">G2G-style overview · sales, pending delivery, inventory</p>
+      </div>
+      <div class="row-actions">
+        <button type="button" class="btn" data-tab="orders">Open orders</button>
+        <button type="button" class="btn ghost" data-tab="stock">Add stock</button>
+      </div>
+    </div>
+
+    <div class="dash-kpis">
+      <div class="kpi-card kpi-accent">
+        <div class="kpi-label">Revenue (paid)</div>
+        <div class="kpi-value">${escapeHtml(money(revenue))}</div>
+        <div class="kpi-hint">${paid.length} completed order(s)</div>
+      </div>
+      <div class="kpi-card kpi-warn">
+        <div class="kpi-label">Paid | Preparing</div>
+        <div class="kpi-value">${pending.length}</div>
+        <div class="kpi-hint">E-wallet awaiting confirm</div>
+      </div>
+      <div class="kpi-card kpi-ok">
+        <div class="kpi-label">Inventory ready</div>
+        <div class="kpi-value">${avail}</div>
+        <div class="kpi-hint">${soldCodes} codes sold · ${liveProducts} listings</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Support messages</div>
+        <div class="kpi-value">${msgs}</div>
+        <div class="kpi-hint">Website form tickets</div>
+      </div>
+    </div>
+
+    <div class="order-pipeline" aria-label="Order pipeline">
+      <button type="button" class="pipe-card" data-tab="orders" data-pipe="preparing">
+        <span class="pipe-label">Paid | Preparing</span>
+        <span class="pipe-count">${pending.length}</span>
+      </button>
+      <button type="button" class="pipe-card" data-tab="orders" data-pipe="delivered">
+        <span class="pipe-label">Delivered</span>
+        <span class="pipe-count">${paid.length}</span>
+      </button>
+      <button type="button" class="pipe-card" data-tab="orders" data-pipe="refunded">
+        <span class="pipe-label">Refunded</span>
+        <span class="pipe-count">${refunded.length}</span>
+      </button>
+      <button type="button" class="pipe-card" data-tab="orders" data-pipe="all">
+        <span class="pipe-label">All orders</span>
+        <span class="pipe-count">${orders.length}</span>
+      </button>
+    </div>
+
+    ${
+      lowStock.length
+        ? `<div class="panel">
+        <h3 class="settings-h" style="margin:0 0 10px">Low stock</h3>
+        <p class="muted" style="margin:0 0 10px">Products with 1–2 codes left</p>
+        <ul style="margin:0;padding-left:1.1rem;color:var(--mute)">
+          ${lowStock.map((s) => `<li><strong style="color:var(--text)">${escapeHtml(s.name || s.productId)}</strong> — ${s.available} left</li>`).join("")}
+        </ul>
+      </div>`
+        : ""
+    }
+
+    <div class="panel" style="overflow:auto">
+      <div class="top" style="margin-bottom:12px">
+        <h3 class="settings-h" style="margin:0">Recent orders</h3>
+        <button type="button" class="btn ghost btn-sm" data-tab="orders">View all</button>
+      </div>
+      <table class="table">
+        <thead><tr><th>Order</th><th>Buyer</th><th>Status</th><th>Amount</th></tr></thead>
+        <tbody>${recentRows || `<tr><td colspan="4" class="muted">No orders yet.</td></tr>`}</tbody>
+      </table>
+    </div>`;
 }
 
 function dealsView() {
@@ -1695,6 +1873,25 @@ function ordersView() {
     list = periodOrders;
   }
 
+  // G2G-style pipeline filter from dashboard cards
+  const pipe = state.orderPipeFilter || "all";
+  if (pipe === "preparing") {
+    list = list.filter(
+      (o) =>
+        o.paymentMode === "manual_ewallet" &&
+        orderStatusKey(o) === "payment_submitted" &&
+        (o.paymentReference || "").trim()
+    );
+  } else if (pipe === "delivered") {
+    list = list.filter((o) =>
+      ["paid", "completed", "succeeded", "complete", "success"].includes(orderStatusKey(o))
+    );
+  } else if (pipe === "refunded") {
+    list = list.filter((o) =>
+      ["refunded", "refund", "reversed", "chargeback"].includes(orderStatusKey(o))
+    );
+  }
+
   const rows = list
     .map((o) => {
       const st = orderStatusKey(o);
@@ -1763,8 +1960,27 @@ function ordersView() {
       ? `<strong>${list.length}</strong> match(es) in ${escapeHtml(range.label)}`
       : `Period: <strong>${escapeHtml(range.label)}</strong> · <strong>${list.length}</strong> invoice(s)`;
 
+  const pipeNote =
+    pipe === "preparing"
+      ? "Showing: Paid | Preparing (awaiting your confirm)"
+      : pipe === "delivered"
+        ? "Showing: Delivered / paid orders"
+        : pipe === "refunded"
+          ? "Showing: Refunded orders"
+          : "";
+
   return `
-    <div class="top"><h1>Orders / Sales</h1></div>
+    <div class="top">
+      <div>
+        <h1>Orders / Sales</h1>
+        <p class="subtitle">${pipeNote || "G2G-style order list · PHP P&L"}</p>
+      </div>
+      ${
+        pipe !== "all"
+          ? `<button type="button" class="btn ghost btn-sm" id="clearOrderPipe">Show all</button>`
+          : ""
+      }
+    </div>
     ${salesChecklistHtml(report, allOrders, deals)}
     <div class="panel invoice-search-box invoice-search-box-panel">
       <label class="invoice-search-label" for="adminOrderSearch">Search all invoices</label>
@@ -1985,7 +2201,8 @@ function render() {
   }
 
   let content = "";
-  if (state.tab === "settings") content = settingsView();
+  if (state.tab === "dashboard") content = dashboardView();
+  else if (state.tab === "settings") content = settingsView();
   else if (state.tab === "account") content = accountView();
   else if (state.tab === "emailtest") content = emailTestView();
   else if (state.tab === "stock") content = stockView();
@@ -2003,15 +2220,26 @@ function bindShell() {
       state.tab = btn.dataset.tab;
       state.editing = null;
       state.stockProductId = "";
+      if (btn.dataset.pipe) {
+        state.orderPipeFilter = btn.dataset.pipe;
+      } else if (state.tab !== "orders") {
+        state.orderPipeFilter = "all";
+      }
       try {
         if (state.tab === "stock") await loadInventory();
-        if (state.tab === "orders") await loadOrders();
+        if (state.tab === "orders" || state.tab === "dashboard") await loadOrders();
         if (state.tab === "support") await loadSupportMessages();
+        if (state.tab === "dashboard") await loadInventory();
       } catch (err) {
         toast(err.message, true);
       }
       render();
     });
+  });
+
+  $("#clearOrderPipe")?.addEventListener("click", () => {
+    state.orderPipeFilter = "all";
+    render();
   });
 
   $$("[data-sales-year]").forEach((btn) => {
