@@ -428,8 +428,10 @@ function quickTagsHTML() {
 
 function searchBarHTML(placeholder = "Search SuperGrok, Netflix, Canva…") {
   return `
-    <div class="product-search large">
-      <span class="search-icon" aria-hidden="true">⌕</span>
+    <div class="product-search large search-bar-orbit">
+      <span class="search-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+      </span>
       <input
         id="productSearch"
         type="search"
@@ -439,7 +441,7 @@ function searchBarHTML(placeholder = "Search SuperGrok, Netflix, Canva…") {
         aria-label="Search products"
       />
       ${state.query ? `<button type="button" class="search-clear" id="clearSearch" aria-label="Clear search">✕</button>` : ""}
-      <button type="button" class="btn sm solid search-go" id="searchGo">Search</button>
+      <button type="button" class="btn solid search-go" id="searchGo">${escapeHtml(t("cta_search") || "Search")}</button>
     </div>
     ${quickTagsHTML()}`;
 }
@@ -552,8 +554,24 @@ function applySiteChrome() {
 }
 
 function heroTitleHtml() {
-  const raw = c("hero_title", "heroTitle") || "Premium\nplans.\nLower\ncost.";
-  return escapeHtml(raw).replace(/\\n/g, "<br/>").replace(/\n/g, "<br/>");
+  const raw = c("hero_title", "heroTitle") || "Premium plans.\nLower cost.";
+  const lines = String(raw)
+    .replace(/\\n/g, "\n")
+    .split(/\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+  if (!lines.length) {
+    return `<span class="hero-title-line">Premium plans.</span><span class="hero-title-line hero-title-line--accent">Lower cost.</span>`;
+  }
+  return lines
+    .map((line, i) => {
+      const cls =
+        i === lines.length - 1 && lines.length > 1
+          ? "hero-title-line hero-title-line--accent"
+          : "hero-title-line";
+      return `<span class="${cls}">${escapeHtml(line)}</span>`;
+    })
+    .join("");
 }
 
 /**
@@ -671,65 +689,131 @@ function viewHome() {
     </div>`;
   }
 
+  const catIcons = {
+    AI: "✦",
+    Design: "◇",
+    Video: "▶",
+    Streaming: "◎",
+    Learning: "▣",
+  };
+
   return `
-    <section class="hero">
-      <div class="hero-glow"></div>
-      <div class="hero-inner">
-        <p class="eyebrow">${escapeHtml(c("hero_eyebrow", "heroEyebrow"))}</p>
-        <h1 class="display">${heroTitleHtml()}</h1>
-        <p class="lead">${escapeHtml(c("hero_lead", "heroLead"))}</p>
+    <section class="hero hero--orbit" aria-label="Featured storefront">
+      <div class="hero-orbit-bg" aria-hidden="true">
+        <div class="hero-orbit-glow"></div>
+        <div class="hero-orbit-grid"></div>
+        <div class="hero-orbit-vignette"></div>
+      </div>
+      <div class="hero-orbit-chrome">
+        <div class="hero-orbit-main">
+          <div class="hero-content">
+            <p class="hero-badge">
+              <span class="hero-badge-dot" aria-hidden="true"></span>
+              ${escapeHtml(c("hero_eyebrow", "heroEyebrow") || "Live · PH digital store")}
+            </p>
+            <h1 class="display hero-title">${heroTitleHtml()}</h1>
+            <p class="lead hero-sub">${escapeHtml(c("hero_lead", "heroLead"))}</p>
 
-        ${searchBarHTML(t("search_placeholder"))}
+            <div class="hero-search-wrap">
+              ${searchBarHTML(t("search_placeholder"))}
+            </div>
 
-        <div class="hero-categories" id="home-categories" role="list" aria-label="${escapeAttr(t("categories_title") || "Categories")}">
-          ${categories
-            .map(
-              (cat) => `
-            <button type="button" class="hero-cat-chip" data-category="${escapeAttr(cat.key)}" role="listitem">
-              <span class="hero-cat-label">${escapeHtml(cat.label)}</span>
-              <span class="hero-cat-count">${cat.count}</span>
-            </button>`
-            )
-            .join("")}
-          <button type="button" class="hero-cat-chip hero-cat-chip-all" data-category="All" role="listitem">
-            <span class="hero-cat-label">${escapeHtml(t("all_deals") || "All deals")}</span>
-            <span class="hero-cat-count">${all.length}</span>
-          </button>
+            <div class="cta hero-cta">
+              <a class="btn solid" href="#view-all-deals">${escapeHtml(t("cta_browse") || "Browse deals")}</a>
+              <a class="btn btn-ghost-orbit" href="#/search">${escapeHtml(t("cta_search") || "Search")}</a>
+            </div>
+
+            <div class="meta hero-stats">
+              <div><strong>${all.length}</strong><span>${escapeHtml(t("meta_plans"))}</span></div>
+              <div><strong>${brands.length}</strong><span>${escapeHtml(t("meta_platforms"))}</span></div>
+              <div><strong>${CURRENCY_LIST.length}+</strong><span>${escapeHtml(t("meta_currencies"))}</span></div>
+            </div>
+          </div>
         </div>
 
-        <div class="cta" style="margin-top:28px">
-          <a class="btn solid" href="#/search">${escapeHtml(t("cta_search"))}</a>
-          <a class="btn" href="#view-all-deals">${escapeHtml(t("cta_browse"))}</a>
-        </div>
-        <div class="meta">
-          <div><strong>${all.length}</strong><span>${escapeHtml(t("meta_plans"))}</span></div>
-          <div><strong>${brands.length}</strong><span>${escapeHtml(t("meta_platforms"))}</span></div>
-          <div><strong>${CURRENCY_LIST.length}+</strong><span>${escapeHtml(t("meta_currencies"))}</span></div>
+        <div class="hero-cats" id="home-categories">
+          <div class="hero-cats-inner">
+            <div class="hero-cats-head">
+              <div>
+                <p class="hero-cats-eyebrow">01 · Loadout</p>
+                <h2 class="hero-cats-title">${escapeHtml(t("categories_title") || "Categories")}</h2>
+              </div>
+              <a class="link-arrow cat-all-link" href="#/deals">${escapeHtml(t("all_deals") || "All deals")} →</a>
+            </div>
+            <div class="category-grid category-grid--hero" role="list" aria-label="${escapeAttr(t("categories_title") || "Categories")}">
+              ${categories
+                .map(
+                  (cat, i) => `
+                <button type="button" class="category-card" data-category="${escapeAttr(cat.key)}" role="listitem">
+                  <div class="category-card-top">
+                    <span class="category-icon" aria-hidden="true">${catIcons[cat.key] || cat.mono}</span>
+                    <span class="category-index">${String(i + 1).padStart(2, "0")}</span>
+                  </div>
+                  <div class="category-copy">
+                    <h3>${escapeHtml(cat.label)}</h3>
+                  </div>
+                  <div class="category-card-foot">
+                    <span class="category-stat-num">${cat.count}</span>
+                    <span class="category-stat-label">${escapeHtml(t("meta_plans") || "plans")}</span>
+                    <span class="category-go">Browse →</span>
+                  </div>
+                </button>`
+                )
+                .join("")}
+              <button type="button" class="category-card category-card--all" data-category="All" role="listitem">
+                <div class="category-card-top">
+                  <span class="category-icon" aria-hidden="true">∞</span>
+                  <span class="category-index">${String(categories.length + 1).padStart(2, "0")}</span>
+                </div>
+                <div class="category-copy">
+                  <h3>${escapeHtml(t("all_deals") || "All deals")}</h3>
+                </div>
+                <div class="category-card-foot">
+                  <span class="category-stat-num">${all.length}</span>
+                  <span class="category-stat-label">${escapeHtml(t("meta_plans") || "plans")}</span>
+                  <span class="category-go">Open →</span>
+                </div>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </section>
 
-    <div class="strip">
-      <div>${escapeHtml(c("strip1", "strip1"))}</div>
-      <div>${escapeHtml(c("strip2", "strip2"))}</div>
-      <div>${escapeHtml(c("strip3", "strip3"))}</div>
-      <div>${escapeHtml(c("strip4", "strip4"))}</div>
-    </div>
+    <section class="ops-rail" aria-label="Store status">
+      <div class="ops-rail-inner">
+        <div class="ops-rail-live">
+          <span class="launch-board-pulse" aria-hidden="true"></span>
+          <span class="ops-live-label">Live</span>
+          <strong class="ops-live-title">Ops feed</strong>
+          <span class="ops-live-items">
+            <span>${escapeHtml(c("strip1", "strip1"))}</span>
+            <span>${escapeHtml(c("strip2", "strip2"))}</span>
+          </span>
+        </div>
+        <div class="ops-rail-promos">
+          <span class="ops-rail-promo-label">Signals</span>
+          <span class="ops-promo-chip">${escapeHtml(c("strip3", "strip3"))}</span>
+          <span class="ops-promo-chip">${escapeHtml(c("strip4", "strip4"))}</span>
+        </div>
+      </div>
+    </section>
 
-    <section class="section">
+    <section class="section section-platforms">
       <div class="section-inner">
-        <div class="section-head">
+        <div class="section-head row">
           <div>
-            <p class="eyebrow">${escapeHtml(t("eyebrow_platforms"))}</p>
+            <p class="eyebrow">${escapeHtml(t("eyebrow_platforms") || "02 · Platforms")}</p>
             ${(() => {
               const platformsTitle = c("platforms_title", "platformsTitle");
               return platformsTitle
                 ? `<h2>${escapeHtml(platformsTitle)}</h2>`
-                : "";
+                : `<h2>Popular platforms</h2>`;
             })()}
           </div>
+          <a class="link-arrow" href="#view-all-deals">${escapeHtml(t("cta_browse") || "Browse")} →</a>
         </div>
-        <div class="brands">
+        <div class="brands brands--orbit">
           ${brands
             .map(
               (b) => `
@@ -743,8 +827,7 @@ function viewHome() {
       </div>
     </section>
 
-    <!-- Same All deals arrangement as #/deals — visible when scrolling the main page -->
-    <section class="section home-view-all" id="view-all-deals">
+    <section class="section home-view-all section-alt" id="view-all-deals">
       <div class="section-inner home-deals-inner">
         ${dealsCatalogBlockHTML()}
       </div>
