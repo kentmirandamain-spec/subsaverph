@@ -12854,3 +12854,25 @@ html[data-theme="light"] .hero-cat-box:hover {
     flex: none !important;
   }
 }
+
+/* Hide legacy G2G UI if any leftover markup appears */
+.g2g-tracker,
+.g2g-status-pill,
+.g2g-step-num,
+.g2g-step-label {
+  display: none !important;
+}
+
+@media (max-width: 900px) {
+  /* Keep checkout simple — hide noisy rates line under order total */
+  .page-checkout .rates {
+    display: none !important;
+  }
+  /* Method cards: less stacked text */
+  .page-checkout .pay-method-eta {
+    display: none !important;
+  }
+  .page-checkout .pay-help {
+    display: none !important;
+  }
+}

@@ -1755,19 +1755,22 @@ function viewCheckout() {
       m.delivery !== "manual"
   );
 
+  const shortDesc = (m) => {
+    const isManual = m.delivery === "manual" || MANUAL_EWALLETS.has(m.id);
+    if (isManual) return "QR pay · codes in 10–30 min";
+    if (isAutoDeliveryMethod(m.id) || m.delivery === "auto") return "Instant codes after pay";
+    return m.desc || "";
+  };
+
   const radioHtml = (m, checked) => {
     const isManual = m.delivery === "manual" || MANUAL_EWALLETS.has(m.id);
     const isAuto = m.delivery === "auto" || isAutoDeliveryMethod(m.id);
-    const eta =
-      m.deliveryLabel ||
-      (isManual ? "Delivery: 10–30 minutes" : isAuto ? "Instant automatic delivery" : "");
     return `
       <label class="pay-method ${isManual ? "pay-method-ewallet" : ""} ${isAuto ? "pay-method-instant" : ""}">
         <input type="radio" name="method" value="${escapeHtml(m.id)}" ${checked ? "checked" : ""} required />
         <span class="pay-method-box">
           <strong>${escapeHtml(m.label)}</strong>
-          <em>${escapeHtml(m.desc || "")}</em>
-          ${eta ? `<span class="pay-method-eta">${escapeHtml(eta)}</span>` : ""}
+          <em>${escapeHtml(shortDesc(m))}</em>
         </span>
       </label>`;
   };
@@ -1783,7 +1786,7 @@ function viewCheckout() {
   const methodRadios = [
     ...(instantMethods.length
       ? [
-          `<p class="pay-group-label">Instant automatic delivery</p>`,
+          `<p class="pay-group-label">Instant</p>`,
           ...instantMethods.map((m) =>
             radioHtml(m, preferred && m.id === preferred.id)
           ),
@@ -1791,7 +1794,7 @@ function viewCheckout() {
       : []),
     ...(ewalletMethods.length
       ? [
-          `<p class="pay-group-label">E-wallet QR · delivery 10–30 minutes</p>`,
+          `<p class="pay-group-label">E-wallet QR</p>`,
           ...ewalletMethods.map((m) =>
             radioHtml(
               m,
@@ -1804,73 +1807,17 @@ function viewCheckout() {
       : []),
   ].join("");
 
-  const payHelp = `
-        <div class="pay-help" id="payHelpBox">
-          <strong>How payment &amp; delivery work</strong>
-          <p id="payHelpText">
-            ${
-              paypalOn || cryptoOn || manualOn || stripeOn || paymongoOn || xenditOn
-                ? "Choose a method below. <strong style=\"color:var(--text)\">PayPal &amp; Crypto</strong> = codes unlock automatically after payment. <strong style=\"color:var(--text)\">GCash/Maya QR</strong> = delivery in <strong style=\"color:var(--text)\">10–30 minutes</strong> after we verify."
-                : "Demo mode — no real money. Add payment keys on the server for live PayPal / Crypto."
-            }
-          </p>
-          <div class="ewallet-eta-notice delivery-notice-auto" id="autoDeliveryNotice" hidden>
-            <strong>Instant automatic delivery</strong>
-            <p>PayPal and Crypto payments unlock your login codes <strong>automatically</strong> right after payment succeeds — no waiting for manual review.</p>
-          </div>
-          <div class="ewallet-eta-notice" id="ewalletEtaNotice" hidden>
-            <strong>E-wallet delivery: 10–30 minutes</strong>
-            <p>After you pay via GCash or Maya QR and submit your reference, we verify payment. Login codes are usually delivered in <strong>10–30 minutes</strong> (not instant).</p>
-          </div>
-          ${
-            paypalOn
-              ? `<p class="muted" style="margin:8px 0 0;font-size:0.8rem;text-transform:none;letter-spacing:0;font-weight:400">
-            <strong style="color:var(--text)">PayPal</strong> —
-            ${
-              state.paypalEnabled
-                ? "Live · Instant automatic delivery after you approve payment on PayPal."
-                : "Demo mode until PAYPAL_CLIENT_ID + SECRET are set on the server."
-            }
-          </p>`
-              : ""
-          }
-          ${
-            cryptoOn
-              ? `<p class="muted" style="margin:8px 0 0;font-size:0.8rem;text-transform:none;letter-spacing:0;font-weight:400">
-            <strong style="color:var(--text)">Crypto</strong> —
-            ${
-              state.cryptoEnabled
-                ? "Live · Instant automatic delivery after crypto payment confirms."
-                : "Demo mode until NOWPAYMENTS_API_KEY is set on the server."
-            }
-          </p>`
-              : ""
-          }
-          ${
-            manualOn
-              ? `<p class="muted" style="margin:8px 0 0;font-size:0.8rem;text-transform:none;letter-spacing:0;font-weight:400">
-            <strong style="color:var(--text)">GCash / Maya QR</strong> —
-            scan, pay, submit reference · <strong style="color:var(--text)">delivery 10–30 minutes</strong> after we verify.
-          </p>`
-              : ""
-          }
-          ${
-            stripeOn && isTestKey
-              ? `<div class="test-card-box" id="stripeTestBox" hidden>
-            <p class="test-card-label">Stripe test card (Card method only)</p>
+  // Minimal help — no repeated delivery paragraphs (info is on each method)
+  const payHelp =
+    stripeOn && isTestKey
+      ? `<div class="test-card-box" id="stripeTestBox" hidden>
+            <p class="test-card-label">Stripe test card</p>
             <ul>
-              <li><strong>Card number:</strong> <code>4242 4242 4242 4242</code></li>
-              <li><strong>Expiry:</strong> any future date (e.g. 12/34)</li>
-              <li><strong>CVC:</strong> any 3 digits (e.g. 123)</li>
-              <li><strong>Name / ZIP:</strong> anything</li>
+              <li><strong>Card:</strong> <code>4242 4242 4242 4242</code></li>
+              <li><strong>Expiry / CVC:</strong> any future · any 3 digits</li>
             </ul>
           </div>`
-              : ""
-          }
-        </div>`;
-
-  const defaultMethod = preferred?.id || methods[0]?.id || "gcash";
-  const defaultBtn = payButtonLabel(defaultMethod);
+      : `<div id="stripeTestBox" hidden></div>`;
 
   return `
     <div class="page page-checkout">
@@ -1878,14 +1825,7 @@ function viewCheckout() {
         <header class="checkout-page-head">
           <p class="eyebrow">Payment</p>
           <h1 class="page-title">Checkout</h1>
-          <p class="muted checkout-lead">
-            Pay with
-            <strong style="color:var(--text)">GCash</strong>,
-            <strong style="color:var(--text)">Maya</strong>,
-            <strong style="color:var(--text)">GrabPay</strong>,
-            <strong style="color:var(--text)">ShopeePay</strong>
-            or card. Codes deliver after payment.
-          </p>
+          <p class="muted checkout-lead">Enter your details and choose how to pay.</p>
         </header>
         ${cancelled ? `<p class="err checkout-banner-err">Payment cancelled. You can try again.</p>` : ""}
         <div class="checkout checkout--ordered">
@@ -1917,17 +1857,11 @@ function viewCheckout() {
             <label>Full name<input required name="name" placeholder="Juan Dela Cruz" autocomplete="name" /></label>
             <h3 class="checkout-section-title">3. Payment currency</h3>
             <div id="pageFxMount" class="checkout-fx-mount"></div>
-            <p class="muted checkout-hint">
-              PH e-wallets always bill in <strong>PHP</strong> (converted from your display currency).
-            </p>
             <h3 class="checkout-section-title">4. Payment method</h3>
             <div class="pay-methods" role="radiogroup" aria-label="Payment method">
               ${methodRadios}
             </div>
             ${payHelp}
-            <p class="muted checkout-hint checkout-hint--next">
-              Next: review purchase rules and accept the terms before payment.
-            </p>
             <p class="err" id="checkoutErr"></p>
             <button class="btn solid full" type="submit" id="payBtn" data-total="${escapeHtml(formatMoney(t.total))}">
               Review &amp; continue · ${formatMoney(t.total)}
@@ -2035,58 +1969,6 @@ function checkoutTermsModalHtml(cart, totals) {
       </div>`;
 }
 
-/** G2G-style order stage for e-wallet (buyer-facing). */
-function g2gStageForOrder(order) {
-  const st = String(order?.status || "").toLowerCase();
-  if (st === "paid" || st === "completed" || st === "success") {
-    return {
-      key: "delivered",
-      label: "Delivered",
-      g2g: "Completed",
-      step: 4,
-    };
-  }
-  if (st === "payment_submitted") {
-    return {
-      key: "paid_preparing",
-      label: "Paid | Preparing",
-      g2g: "Paid · Preparing delivery",
-      step: 3,
-    };
-  }
-  // awaiting_payment / incomplete
-  return {
-    key: "to_pay",
-    label: "To Pay",
-    g2g: "To Pay · Scan QR",
-    step: 1,
-  };
-}
-
-function g2gTrackerHtml(activeStep) {
-  const stages = [
-    { n: 1, t: "To Pay" },
-    { n: 2, t: "Verifying" },
-    { n: 3, t: "Paid | Preparing" },
-    { n: 4, t: "Delivered" },
-  ];
-  // Map: step 1 = to pay, 2 = verifying (same as submitted before confirm), 3 = paid preparing, 4 = delivered
-  const visual = activeStep === 3 ? 3 : activeStep === 4 ? 4 : activeStep === 1 ? 1 : 2;
-  return `
-    <ol class="g2g-tracker" aria-label="Order progress">
-      ${stages
-        .map((s) => {
-          const done = s.n < visual;
-          const cur = s.n === visual;
-          return `<li class="${done ? "is-done" : ""} ${cur ? "is-current" : ""}">
-            <span class="g2g-step-num">${s.n}</span>
-            <span class="g2g-step-label">${escapeHtml(s.t)}</span>
-          </li>`;
-        })
-        .join("")}
-    </ol>`;
-}
-
 function viewManualEwalletPending(order) {
   const payTo = order.payTo || {};
   const wallet = payTo.wallet || (order.method === "manual_maya" ? "Maya" : "GCash");
@@ -2098,20 +1980,8 @@ function viewManualEwalletPending(order) {
     (order.paymentInstructions && order.paymentInstructions.qrUrl) ||
     payTo.qrUrl ||
     "";
-  const steps = (order.paymentInstructions && order.paymentInstructions.steps) || [
-    `Open your ${wallet} app.`,
-    "Scan the QR code below.",
-    `Pay exactly ${amount}.`,
-    `Put Order ID ${order.id} in the message / reference if asked.`,
-    "Paste your payment reference below after paying.",
-    "We verify payment and release your codes.",
-  ];
-  const note = (order.paymentInstructions && order.paymentInstructions.note) || "";
   const st = String(order.status || "").toLowerCase();
   const submitted = st === "payment_submitted";
-  const stage = g2gStageForOrder(order);
-  // After reference: treat as Verifying → Paid|Preparing (step 3 for display)
-  const trackerStep = submitted ? 3 : 1;
   const itemsHtml = (order.items || [])
     .map(
       (i) =>
@@ -2123,51 +1993,34 @@ function viewManualEwalletPending(order) {
     <div class="success">
       <div class="success-card success-card-wide">
         <div class="ok">${submitted ? "✓" : "₱"}</div>
-        <h1>${submitted ? "Paid | Preparing" : "Scan to pay with " + escapeHtml(wallet)}</h1>
+        <h1>${submitted ? "Payment submitted" : "Pay with " + escapeHtml(wallet)}</h1>
         <p class="muted">Order <strong class="success-order-id">${escapeHtml(order.id || "")}</strong>
-          · ${escapeHtml(order.email || "")}</p>
-        <p class="g2g-status-pill" style="margin-top:10px">
-          Status: <strong style="color:var(--text)">${escapeHtml(stage.g2g)}</strong>
-        </p>
-        ${g2gTrackerHtml(trackerStep)}
-        <p style="margin-top:12px;font-weight:600">${escapeHtml(
-          order.message ||
-            (submitted
-              ? "Payment received. We are preparing your delivery (usually 10–30 minutes)."
-              : "Scan the QR, pay the exact amount, then submit your reference.")
-        )}</p>
-
-        <div class="ewallet-eta-notice ewallet-eta-notice-page" role="status">
-          <strong>${submitted ? "Paid · Preparing delivery" : "To Pay · Delivery after confirm: 10–30 minutes"}</strong>
-          <p>${
-            submitted
-              ? "Like G2G: once payment is confirmed, the seller prepares delivery. Your login codes are released after we verify — usually <strong>10–30 minutes</strong>."
-              : "E-wallet QR checkout (G2G-style offline pay). Pay first, then submit your reference so we can verify."
-          }</p>
+          ${order.email ? ` · ${escapeHtml(order.email)}` : ""}</p>
+        <p class="muted" style="margin-top:10px">
           ${
-            !submitted
-              ? `<p style="margin-top:8px">Stock is <strong>not held</strong> until you submit your payment reference. If you leave without submitting, this checkout is discarded.</p>`
-              : `<p style="margin-top:8px">Payment reference on file — status is <strong>Paid | Preparing</strong>. Refresh this page after delivery.</p>`
+            submitted
+              ? "We received your reference. Codes are usually ready within <strong style=\"color:var(--text)\">10–30 minutes</strong>."
+              : "Scan the QR, pay the exact amount, then submit your reference below."
           }
-        </div>
+        </p>
 
         ${
           !submitted
-            ? `<div class="manual-pay-box" role="region" aria-label="Payment QR instructions">
-          <h2 class="manual-pay-title">Pay exactly this amount</h2>
+            ? `<div class="manual-pay-box" role="region" aria-label="Payment QR">
+          <h2 class="manual-pay-title">Amount to pay</h2>
           <div class="manual-pay-amount">${escapeHtml(amount)}</div>
           ${
             qrUrl
               ? `<div class="manual-pay-qr">
               <p class="manual-pay-qr-label">Scan with ${escapeHtml(wallet)}</p>
-              <img class="pay-qr" src="${escapeAttr(qrUrl)}" alt="${escapeAttr(wallet)} payment QR code" width="260" height="260" decoding="async" />
+              <img class="pay-qr" src="${escapeAttr(qrUrl)}" alt="${escapeAttr(wallet)} payment QR" width="260" height="260" decoding="async" />
               ${accountName ? `<p class="manual-pay-qr-name">${escapeHtml(accountName)}</p>` : ""}
             </div>`
-              : `<p class="err" style="color:#ff8a8a">QR code missing — contact support with Order ID ${escapeHtml(order.id || "")}.</p>`
+              : `<p class="err" style="color:#ff8a8a">QR missing — contact support with Order ID ${escapeHtml(order.id || "")}.</p>`
           }
           <div class="manual-pay-grid" style="margin-top:16px">
             <div>
-              <span class="manual-pay-label">Order ID (use as message / reference)</span>
+              <span class="manual-pay-label">Order ID</span>
               <div class="manual-pay-value-row">
                 <code class="manual-pay-value" data-copy-text>${escapeHtml(order.id || "")}</code>
                 <button type="button" class="btn sm cred-copy" data-copy="${escapeAttr(order.id || "")}">Copy</button>
@@ -2175,29 +2028,39 @@ function viewManualEwalletPending(order) {
             </div>
           </div>
           <ol class="manual-pay-steps">
-            ${steps.map((s) => `<li>${escapeHtml(s)}</li>`).join("")}
+            <li>Open ${escapeHtml(wallet)} and scan the QR</li>
+            <li>Pay exactly <strong>${escapeHtml(amount)}</strong></li>
+            <li>Submit your reference number below</li>
           </ol>
-          ${note ? `<p class="muted" style="margin:12px 0 0;font-size:0.85rem">${escapeHtml(note)}</p>` : ""}
-        </div>`
+        </div>
+
+        <form id="manualProofForm" class="form manual-proof-form" style="margin-top:20px">
+          <h3 style="margin:0 0 10px">I already paid</h3>
+          <label>Payment reference number
+            <input required name="paymentReference" placeholder="e.g. 1234 567 890123" autocomplete="off" />
+          </label>
+          <label>Optional note
+            <input name="note" placeholder="Sender name…" autocomplete="off" />
+          </label>
+          <p class="err" id="manualProofErr" style="color:#ff8a8a;font-size:0.85rem;min-height:1.2em"></p>
+          <button class="btn solid full" type="submit" id="manualProofBtn">Submit payment reference</button>
+        </form>`
             : `<div class="manual-pay-box" role="region" aria-label="Payment received">
-          <h2 class="manual-pay-title">Payment method</h2>
           <div class="manual-pay-grid">
             <div>
               <span class="manual-pay-label">Method</span>
               <div class="manual-pay-value-row">
-                <code class="manual-pay-value">${escapeHtml(wallet)} (QR)</code>
-                <button type="button" class="btn sm cred-copy" data-copy="${escapeAttr(wallet + " QR")}">Copy</button>
+                <code class="manual-pay-value">${escapeHtml(wallet)} QR</code>
               </div>
             </div>
             <div>
-              <span class="manual-pay-label">Amount paid</span>
+              <span class="manual-pay-label">Amount</span>
               <div class="manual-pay-value-row">
                 <code class="manual-pay-value">${escapeHtml(amount)}</code>
-                <button type="button" class="btn sm cred-copy" data-copy="${escapeAttr(String(amount))}">Copy</button>
               </div>
             </div>
             <div>
-              <span class="manual-pay-label">Payment reference</span>
+              <span class="manual-pay-label">Reference</span>
               <div class="manual-pay-value-row">
                 <code class="manual-pay-value">${escapeHtml(order.paymentReference || "—")}</code>
                 <button type="button" class="btn sm cred-copy" data-copy="${escapeAttr(order.paymentReference || "")}">Copy</button>
@@ -2211,7 +2074,8 @@ function viewManualEwalletPending(order) {
               </div>
             </div>
           </div>
-          <p class="muted" style="margin:14px 0 0;font-size:0.85rem">Keep these details for support. Delivery usually within <strong style="color:var(--text)">10–30 minutes</strong>.</p>
+          <button type="button" class="btn solid full" id="manualRefreshBtn" style="margin-top:16px">Check if codes are ready</button>
+          <p class="err" id="manualProofErr" style="color:#ff8a8a;font-size:0.85rem;min-height:1.2em;margin-top:8px"></p>
         </div>`
         }
 
@@ -2220,35 +2084,8 @@ function viewManualEwalletPending(order) {
           ${itemsHtml || "<p class='muted'>—</p>"}
         </div>
 
-        ${
-          submitted
-            ? `<div class="manual-pay-submitted">
-            <p><strong>G2G-style status:</strong> <span style="color:var(--text)">Paid | Preparing</span></p>
-            <p class="muted" style="margin-top:8px">
-              We received your payment reference. Delivery is being prepared.
-              Refresh this page when codes are ready, or check your email.
-            </p>
-            <button type="button" class="btn solid" id="manualRefreshBtn" style="margin-top:14px">Check delivery status</button>
-            <p class="err" id="manualProofErr" style="color:#ff8a8a;font-size:0.85rem;min-height:1.2em;margin-top:8px"></p>
-          </div>`
-            : `<form id="manualProofForm" class="form manual-proof-form" style="margin-top:20px">
-            <h3 style="margin:0 0 10px">I already paid</h3>
-            <p class="muted" style="margin:0 0 12px;font-size:0.85rem;text-transform:none;letter-spacing:0;font-weight:400">After you transfer, submit your reference so status becomes <strong>Paid | Preparing</strong>.</p>
-            <label>GCash / Maya reference number
-              <input required name="paymentReference" placeholder="e.g. 1234 567 890123" autocomplete="off" />
-            </label>
-            <label>Optional note
-              <input name="note" placeholder="Time sent, sender name…" autocomplete="off" />
-            </label>
-            <p class="err" id="manualProofErr" style="color:#ff8a8a;font-size:0.85rem;min-height:1.2em"></p>
-            <button class="btn solid full" type="submit" id="manualProofBtn">Submit payment reference</button>
-          </form>`
-        }
-
         <div class="support-inline" style="margin-top:22px">
-          <p class="muted" style="margin:0;font-size:0.9rem">Need help?</p>
           <button type="button" class="btn ghost" data-go-support-order="${escapeAttr(order.id || "")}">Contact support</button>
-          <a class="btn ghost js-go-support" href="#/support">Support page</a>
         </div>
         <div class="cta" style="justify-content:center;margin-top:18px">
           <a class="btn" href="#/deals">More deals</a>
@@ -2472,15 +2309,10 @@ function viewSuccess() {
         <div class="ok">OK</div>
         <h1>${escapeHtml(ss.successTitle || "Order delivered")}</h1>
         <p class="muted">Order <strong class="success-order-id">${escapeHtml(order.id)}</strong><br/>${emailNote}</p>
-        <p style="margin-top:12px;font-weight:600">${escapeHtml(order.currency || getCurrencyCode())} · ${escapeHtml(order.paymentMode || "instant")} · Instant digital delivery</p>
 
         <div class="cred-panel delivery-panel" role="region" aria-label="Your product delivery">
           <div class="cred-panel-head">
             <h2>${escapeHtml(ss.successPackageTitle || "Your access package")}</h2>
-            <p class="muted">${escapeHtml(
-              ss.successPackageSub ||
-                "Login credentials, features, instructions, and rules for each product."
-            )}</p>
           </div>
           <div class="delivery-list">${deliveryPackets}</div>
         </div>
@@ -3312,12 +3144,6 @@ function bind() {
       const method = form.querySelector('input[name="method"]:checked')?.value || "card";
       const testBox = $("#stripeTestBox");
       if (testBox) testBox.hidden = method !== "card";
-      const etaBox = $("#ewalletEtaNotice");
-      const autoBox = $("#autoDeliveryNotice");
-      const manualPick = isManualEwalletMethod(method);
-      const autoPick = isAutoDeliveryMethod(method);
-      if (etaBox) etaBox.hidden = !manualPick;
-      if (autoBox) autoBox.hidden = !autoPick;
       if (!btn) return;
       // Keep review CTA until they open terms
       btn.textContent = totalLabel ? `Review & continue · ${totalLabel}` : "Review & continue";
