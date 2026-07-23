@@ -14884,17 +14884,26 @@ html[data-theme="light"] .co-method {
     visibility: visible !important;
   }
 
-  /* Grok / Duolingo / CapCut plates: keep mark fully visible (contain) */
+  /* Grok / Duolingo: keep logo marks fully visible on black */
   #view-all-deals .product-card[data-brand="xAI"] .product-card-img,
   #view-all-deals .product-card[data-brand="Duolingo"] .product-card-img,
-  #view-all-deals .product-card[data-brand="CapCut"] .product-card-img,
   .deals-grid .product-card[data-brand="xAI"] .product-card-img,
   .deals-grid .product-card[data-brand="Duolingo"] .product-card-img,
-  .deals-grid .product-card[data-brand="CapCut"] .product-card-img,
   .home-deals-inner .product-card[data-brand="xAI"] .product-card-img,
-  .home-deals-inner .product-card[data-brand="Duolingo"] .product-card-img,
-  .home-deals-inner .product-card[data-brand="CapCut"] .product-card-img {
+  .home-deals-inner .product-card[data-brand="Duolingo"] .product-card-img {
     object-fit: contain !important;
+    background: #000000 !important;
+  }
+
+  /* CapCut + Canva original photos: fill the square frame */
+  #view-all-deals .product-card[data-brand="CapCut"] .product-card-img,
+  #view-all-deals .product-card[data-brand="Canva"] .product-card-img,
+  .deals-grid .product-card[data-brand="CapCut"] .product-card-img,
+  .deals-grid .product-card[data-brand="Canva"] .product-card-img,
+  .home-deals-inner .product-card[data-brand="CapCut"] .product-card-img,
+  .home-deals-inner .product-card[data-brand="Canva"] .product-card-img {
+    object-fit: cover !important;
+    object-position: center center !important;
     background: #000000 !important;
   }
 }

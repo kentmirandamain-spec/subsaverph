@@ -111,20 +111,20 @@ const OFFICIAL_BRAND_SLIDE = {
 };
 
 /**
- * Mobile All Deals / cards: full-bleed official brand photos
- * for Canva, CapCut, Duolingo, Grok.
+ * Mobile All Deals / cards: original brand photos
+ * for Grok, CapCut, Duolingo, Canva.
  */
 const MOBILE_OFFICIAL_PHOTO = {
-  xAI: "/assets/products/photo-xai.png?v=mfix1",
-  Canva: "/assets/products/cover-canva.png?v=mfix1",
-  CapCut: "/assets/products/photo-capcut.png?v=capcutorig2",
-  Duolingo: "/assets/products/photo-duolingo.png?v=mfix1",
+  xAI: "/assets/products/m-orig-xai.png?v=morig1",
+  Canva: "/assets/products/m-orig-canva.png?v=morig1",
+  CapCut: "/assets/products/m-orig-capcut.png?v=morig1",
+  Duolingo: "/assets/products/m-orig-duolingo.png?v=morig1",
 };
 const MOBILE_OFFICIAL_SLIDE = {
-  xAI: "/assets/products/photo-xai-slide.png?v=mfix1",
-  Canva: "/assets/products/cover-canva-official-slide.png?v=mfix1",
-  CapCut: "/assets/products/photo-capcut-slide.png?v=capcutorig2",
-  Duolingo: "/assets/products/photo-duolingo-slide.png?v=mfix1",
+  xAI: "/assets/products/m-orig-xai-slide.png?v=morig1",
+  Canva: "/assets/products/m-orig-canva-slide.png?v=morig1",
+  CapCut: "/assets/products/m-orig-capcut-slide.png?v=morig1",
+  Duolingo: "/assets/products/m-orig-duolingo-slide.png?v=morig1",
 };
 
 /** Match storefront mobile layout (CSS max-width: 900px). */
@@ -575,7 +575,10 @@ function card(d, highlightQ = "") {
   const photo = isProductPhoto(img);
   const fillFrame =
     brandUsesCover(d.brand) ||
-    (photo && /photo-(xai|canva|capcut|duolingo)|cover-canva|cover-capcut/i.test(img));
+    (photo &&
+      (/m-orig-(xai|canva|capcut|duolingo)/i.test(img) ||
+        /photo-(xai|canva|capcut|duolingo)/i.test(img) ||
+        /cover-canva|cover-capcut/i.test(img)));
   const logoFit = !fillFrame;
   const photoFit = photo && !fillFrame;
   /* Always show retail + deal price on every card */
@@ -1034,6 +1037,7 @@ function viewHome() {
             const brandLabel = d.brand === "xAI" ? "SuperGrok" : d.brand || "";
             const isCover =
               brandUsesCover(d.brand) ||
+              /m-orig-(xai|canva|capcut|duolingo)/i.test(slideSrc) ||
               /photo-(xai|canva|capcut|duolingo)|cover-canva|cover-capcut/i.test(slideSrc);
             const coverClass = isCover
               ? d.brand === "Canva"
@@ -3851,6 +3855,4 @@ init().catch((e) => {
   const root = document.getElementById("app");
   if (root) {
     root.innerHTML =
-      '<div class="page"><div class="page-inner empty"><h2>Store failed to load</h2><p class="muted">Please hard-refresh (Ctrl+F5). If it continues, contact support.</p><a class="btn solid" href="/">Reload</a></div></div>';
-  }
-});
+      '<div class="page"><div class="page-inner empty"><h2>Store failed to load</h2><p class="muted">Please hard-refresh (Ctrl+F5). If it continues, contact support
