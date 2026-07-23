@@ -14690,3 +14690,86 @@ html[data-theme="light"] .co-method {
     box-sizing: border-box !important;
   }
 }
+
+/* ============================================================
+   Mobile All Deals: fix Canva / CapCut / Grok / Duolingo photos
+   Full-bleed official plates, no logo shrink
+   ============================================================ */
+
+@media (max-width: 900px) {
+  #view-all-deals .product-card[data-brand="Canva"] .product-card-media,
+  #view-all-deals .product-card[data-brand="CapCut"] .product-card-media,
+  #view-all-deals .product-card[data-brand="xAI"] .product-card-media,
+  #view-all-deals .product-card[data-brand="Duolingo"] .product-card-media,
+  .deals-grid .product-card[data-brand="Canva"] .product-card-media,
+  .deals-grid .product-card[data-brand="CapCut"] .product-card-media,
+  .deals-grid .product-card[data-brand="xAI"] .product-card-media,
+  .deals-grid .product-card[data-brand="Duolingo"] .product-card-media,
+  .home-deals-inner .product-card[data-brand="Canva"] .product-card-media,
+  .home-deals-inner .product-card[data-brand="CapCut"] .product-card-media,
+  .home-deals-inner .product-card[data-brand="xAI"] .product-card-media,
+  .home-deals-inner .product-card[data-brand="Duolingo"] .product-card-media,
+  .grid.search-grid .product-card[data-brand="Canva"] .product-card-media,
+  .grid.search-grid .product-card[data-brand="CapCut"] .product-card-media,
+  .grid.search-grid .product-card[data-brand="xAI"] .product-card-media,
+  .grid.search-grid .product-card[data-brand="Duolingo"] .product-card-media {
+    position: relative !important;
+    padding: 0 !important;
+    aspect-ratio: 1 / 1 !important;
+    display: block !important;
+    overflow: hidden !important;
+    background: var(--brand-bg, #0a0e16) !important;
+  }
+
+  #view-all-deals .product-card[data-brand="Canva"] .product-card-img,
+  #view-all-deals .product-card[data-brand="CapCut"] .product-card-img,
+  #view-all-deals .product-card[data-brand="xAI"] .product-card-img,
+  #view-all-deals .product-card[data-brand="Duolingo"] .product-card-img,
+  .deals-grid .product-card[data-brand="Canva"] .product-card-img,
+  .deals-grid .product-card[data-brand="CapCut"] .product-card-img,
+  .deals-grid .product-card[data-brand="xAI"] .product-card-img,
+  .deals-grid .product-card[data-brand="Duolingo"] .product-card-img,
+  .home-deals-inner .product-card[data-brand="Canva"] .product-card-img,
+  .home-deals-inner .product-card[data-brand="CapCut"] .product-card-img,
+  .home-deals-inner .product-card[data-brand="xAI"] .product-card-img,
+  .home-deals-inner .product-card[data-brand="Duolingo"] .product-card-img,
+  .grid.search-grid .product-card[data-brand="Canva"] .product-card-img,
+  .grid.search-grid .product-card[data-brand="CapCut"] .product-card-img,
+  .grid.search-grid .product-card[data-brand="xAI"] .product-card-img,
+  .grid.search-grid .product-card[data-brand="Duolingo"] .product-card-img,
+  #view-all-deals .product-card[data-brand="Canva"] .product-cover-img,
+  #view-all-deals .product-card[data-brand="CapCut"] .product-cover-img,
+  #view-all-deals .product-card[data-brand="xAI"] .product-cover-img,
+  #view-all-deals .product-card[data-brand="Duolingo"] .product-cover-img,
+  .deals-grid .product-card[data-brand="Canva"] .product-cover-img,
+  .deals-grid .product-card[data-brand="CapCut"] .product-cover-img,
+  .deals-grid .product-card[data-brand="xAI"] .product-cover-img,
+  .deals-grid .product-card[data-brand="Duolingo"] .product-cover-img {
+    position: absolute !important;
+    inset: 0 !important;
+    display: block !important;
+    width: 100% !important;
+    height: 100% !important;
+    max-width: none !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    object-fit: cover !important;
+    object-position: center center !important;
+    transform: none !important;
+    filter: none !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+  }
+
+  /* Grok + Duolingo plates: keep mark fully visible (contain) */
+  #view-all-deals .product-card[data-brand="xAI"] .product-card-img,
+  #view-all-deals .product-card[data-brand="Duolingo"] .product-card-img,
+  .deals-grid .product-card[data-brand="xAI"] .product-card-img,
+  .deals-grid .product-card[data-brand="Duolingo"] .product-card-img,
+  .home-deals-inner .product-card[data-brand="xAI"] .product-card-img,
+  .home-deals-inner .product-card[data-brand="Duolingo"] .product-card-img {
+    object-fit: contain !important;
+    background: var(--brand-bg, #000) !important;
+  }
+}
