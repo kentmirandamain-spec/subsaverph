@@ -10273,3 +10273,54 @@ html[data-theme="light"] .hero-cats-lead {
 html[data-theme="light"] .hero-cat-box-count strong {
   color: #0f172a;
 }
+
+/* ============================================================
+   Hero slider: bigger brand logos; smaller Canva wordmark
+   ============================================================ */
+
+/* Non-Canva brand logos — much larger & centered */
+.product-slider--hero .product-slide--logo-fit .product-slide-logo-wrap,
+.product-slider--hero .product-slide:not(.product-slide--cover) .product-slide-logo-wrap {
+  padding: 6vh 6vw !important;
+}
+.product-slider--hero .product-slide--logo-fit .product-logo-img,
+.product-slider--hero .product-slide--logo-fit .product-logo-img--fit,
+.product-slider--hero .product-slide:not(.product-slide--cover) .product-logo-img {
+  max-width: min(72vw, 720px) !important;
+  max-height: min(48vh, 420px) !important;
+  width: auto !important;
+  height: auto !important;
+  transform: scale(1.08) !important;
+  transform-origin: center center !important;
+  filter: drop-shadow(0 16px 36px rgba(0, 0, 0, 0.45)) !important;
+}
+
+/* Canva cover — zoom out so the Canva text looks smaller */
+.product-slider--hero .product-slide--cover .product-cover-img {
+  object-fit: cover !important;
+  object-position: center center !important;
+  transform: scale(0.72) !important;
+  transform-origin: center center !important;
+  /* keep edges filled with brand color from slide bg */
+}
+.product-slider--hero .product-slide--cover {
+  background: #00c4cc !important;
+  overflow: hidden;
+}
+.product-slider--hero .product-slide--cover .product-slide-logo-wrap {
+  overflow: hidden;
+  background: #00c4cc !important;
+}
+
+@media (max-width: 720px) {
+  .product-slider--hero .product-slide--logo-fit .product-logo-img,
+  .product-slider--hero .product-slide--logo-fit .product-logo-img--fit,
+  .product-slider--hero .product-slide:not(.product-slide--cover) .product-logo-img {
+    max-width: min(78vw, 340px) !important;
+    max-height: min(36vh, 260px) !important;
+    transform: scale(1.12) !important;
+  }
+  .product-slider--hero .product-slide--cover .product-cover-img {
+    transform: scale(0.68) !important;
+  }
+}
