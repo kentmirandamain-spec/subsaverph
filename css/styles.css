@@ -10930,3 +10930,51 @@ html[data-theme="light"] .hero-title-line--accent::after {
     height: 1.65rem !important;
   }
 }
+
+/* ============================================================
+   Category boxes — transparent frosted glass
+   ============================================================ */
+
+.hero-cat-box {
+  background: rgba(8, 12, 22, 0.28) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  backdrop-filter: blur(14px) saturate(1.2) !important;
+  -webkit-backdrop-filter: blur(14px) saturate(1.2) !important;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22) !important;
+}
+.hero-cat-box-mesh {
+  opacity: 0.35 !important;
+  background:
+    radial-gradient(circle at 85% 15%, var(--cat-soft, rgba(56, 189, 248, 0.16)), transparent 48%) !important;
+}
+.hero-cat-box:hover {
+  background: rgba(10, 16, 28, 0.4) !important;
+  border-color: color-mix(in srgb, var(--cat-accent, #38bdf8) 50%, rgba(255, 255, 255, 0.18)) !important;
+  backdrop-filter: blur(18px) saturate(1.25) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(1.25) !important;
+  box-shadow:
+    0 16px 36px rgba(0, 0, 0, 0.32),
+    0 0 24px color-mix(in srgb, var(--cat-accent, #38bdf8) 16%, transparent) !important;
+}
+.hero-cat-box-icon {
+  background: color-mix(in srgb, var(--cat-accent, #38bdf8) 12%, rgba(6, 10, 18, 0.25)) !important;
+  border-color: color-mix(in srgb, var(--cat-accent, #38bdf8) 35%, transparent) !important;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.hero-cat-box--all {
+  background: rgba(8, 12, 22, 0.22) !important;
+  border-style: dashed !important;
+  border-color: rgba(125, 211, 252, 0.35) !important;
+}
+
+html[data-theme="light"] .hero-cat-box {
+  background: rgba(255, 255, 255, 0.45) !important;
+  border-color: rgba(15, 23, 42, 0.1) !important;
+  backdrop-filter: blur(14px) saturate(1.15) !important;
+  -webkit-backdrop-filter: blur(14px) saturate(1.15) !important;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08) !important;
+}
+html[data-theme="light"] .hero-cat-box:hover {
+  background: rgba(255, 255, 255, 0.62) !important;
+}
