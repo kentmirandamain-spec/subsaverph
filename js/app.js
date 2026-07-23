@@ -2713,6 +2713,7 @@ function bindProductSlider() {
   stopProductSlider();
   const root = $("#productSlider");
   if (!root) return;
+  const stage = root.querySelector(".product-slider-stage") || root;
   const slides = $$(".product-slide", root);
   const dots = $$(".product-slider-dot", root);
   const progress = $("#productSliderProgress");
@@ -2732,6 +2733,8 @@ function bindProductSlider() {
       slide.classList.toggle("is-active", on);
       if (on) slide.removeAttribute("hidden");
       else slide.setAttribute("hidden", "");
+      const link = slide.querySelector("a");
+      if (link) link.tabIndex = on ? 0 : -1;
     });
     dots.forEach((dot, n) => {
       const on = n === index;
@@ -2755,8 +2758,11 @@ function bindProductSlider() {
 
   const startAuto = () => {
     stopProductSlider();
-    if (paused) return;
+    if (paused || document.hidden) return;
     if (progress) {
+      progress.style.transition = "none";
+      progress.style.width = "0%";
+      void progress.offsetWidth;
       progress.style.transition = `width ${DURATION}ms linear`;
       progress.style.width = "100%";
     }
@@ -2797,10 +2803,47 @@ function bindProductSlider() {
     }
   });
 
+  /* Mobile swipe between brands */
+  let touchX = 0;
+  let touchY = 0;
+  let touchActive = false;
+  stage.addEventListener(
+    "touchstart",
+    (e) => {
+      const t = e.changedTouches && e.changedTouches[0];
+      if (!t) return;
+      touchActive = true;
+      touchX = t.clientX;
+      touchY = t.clientY;
+    },
+    { passive: true }
+  );
+  stage.addEventListener(
+    "touchend",
+    (e) => {
+      if (!touchActive) return;
+      touchActive = false;
+      const t = e.changedTouches && e.changedTouches[0];
+      if (!t) return;
+      const dx = t.clientX - touchX;
+      const dy = t.clientY - touchY;
+      if (Math.abs(dx) < 42 || Math.abs(dx) < Math.abs(dy) * 1.15) return;
+      if (dx < 0) next();
+      else prev();
+      startAuto();
+    },
+    { passive: true }
+  );
+
+  window.__ssphSliderResume = () => {
+    if (!paused && !document.hidden) startAuto();
+  };
+
   if (!window.__ssphSliderVisBound) {
     window.__ssphSliderVisBound = true;
     document.addEventListener("visibilitychange", () => {
       if (document.hidden) stopProductSlider();
+      else if (typeof window.__ssphSliderResume === "function") window.__ssphSliderResume();
     });
   }
 

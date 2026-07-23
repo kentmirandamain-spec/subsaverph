@@ -11514,3 +11514,180 @@ html[data-theme="light"] .hero-cat-box:hover {
     max-width: 100% !important;
   }
 }
+
+/* ============================================================
+   Mobile homepage slider fix — centered brands + smooth stage
+   ============================================================ */
+
+.product-slider--hero,
+.product-slider--hero .product-slider-stage,
+.product-slider--hero .product-slider-track {
+  overflow: hidden;
+}
+
+/* Brand plate + logo always dead-center of the hero stage */
+.product-slider--hero .product-slide--logo-fit .product-slide-logo-wrap,
+.product-slider--hero .product-slide:not(.product-slide--cover) .product-slide-logo-wrap {
+  position: absolute !important;
+  inset: 0 !important;
+  top: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  place-items: center !important;
+  box-sizing: border-box !important;
+  background: var(--brand-bg, #0a0e16) !important;
+  z-index: 1 !important;
+}
+
+.product-slider--hero .product-slide--logo-fit .product-logo-img,
+.product-slider--hero .product-slide--logo-fit .product-logo-img--fit,
+.product-slider--hero .product-slide:not(.product-slide--cover) .product-logo-img,
+.product-slider--hero .product-slide:not(.product-slide--cover) .product-slide-img {
+  position: relative !important;
+  inset: auto !important;
+  top: auto !important;
+  left: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  display: block !important;
+  width: auto !important;
+  height: auto !important;
+  max-width: min(48vw, 420px) !important;
+  max-height: min(30vh, 240px) !important;
+  margin: 0 auto !important;
+  object-fit: contain !important;
+  object-position: center center !important;
+  transform: none !important;
+  transform-origin: center center !important;
+  filter: drop-shadow(0 14px 32px rgba(0, 0, 0, 0.42)) !important;
+  z-index: 2 !important;
+}
+
+/* Cover slides (Canva) stay full-bleed and centered */
+.product-slider--hero .product-slide--cover .product-slide-logo-wrap {
+  position: absolute !important;
+  inset: 0 !important;
+  display: block !important;
+  padding: 0 !important;
+  background: var(--brand-bg, #00c4cc) !important;
+}
+.product-slider--hero .product-slide--cover .product-cover-img,
+.product-slider--hero .product-slide--canva .product-cover-img,
+.product-slider--hero .product-slide--canva .product-cover-img--canva {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  max-height: none !important;
+  margin: 0 !important;
+  object-fit: cover !important;
+  object-position: center center !important;
+  transform: none !important;
+}
+
+/* Brand name pill — always centered horizontally */
+.product-slider--hero .product-slide-brand-tag {
+  left: 50% !important;
+  right: auto !important;
+  transform: translateX(-50%) !important;
+  text-align: center !important;
+  max-width: min(90vw, 280px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Smooth crossfade on all devices */
+.product-slider--hero .product-slide {
+  transition: opacity 0.45s ease !important;
+  will-change: opacity;
+}
+.product-slider--hero .product-slide.is-active {
+  z-index: 2 !important;
+}
+
+@media (max-width: 900px) {
+  /* Full viewport stage so brands sit in true page center */
+  .hero.hero--with-slider {
+    min-height: 100svh !important;
+    min-height: 100dvh !important;
+  }
+  .hero--with-slider .hero-orbit-chrome {
+    min-height: 100svh !important;
+    min-height: 100dvh !important;
+  }
+  .product-slider--hero,
+  .product-slider--hero .product-slider-stage,
+  .product-slider--hero .product-slider-track {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 100% !important;
+    max-height: none !important;
+  }
+
+  /* Logos: larger, perfectly centered on mobile homepage */
+  .product-slider--hero .product-slide--logo-fit .product-logo-img,
+  .product-slider--hero .product-slide--logo-fit .product-logo-img--fit,
+  .product-slider--hero .product-slide:not(.product-slide--cover) .product-logo-img,
+  .product-slider--hero .product-slide:not(.product-slide--cover) .product-slide-img {
+    max-width: min(72vw, 300px) !important;
+    max-height: min(28vh, 200px) !important;
+    margin: 0 auto !important;
+    transform: none !important;
+  }
+
+  .product-slider--hero .product-slide--logo-fit .product-slide-logo-wrap,
+  .product-slider--hero .product-slide:not(.product-slide--cover) .product-slide-logo-wrap {
+    padding: 0 !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  /* Brand tag above mobile tab bar, still centered */
+  .product-slider--hero .product-slide-brand-tag {
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    bottom: max(5.5rem, calc(var(--mobile-tabbar-h, 64px) + 1.25rem)) !important;
+    font-size: 0.68rem !important;
+    padding: 0.35rem 0.8rem !important;
+  }
+
+  /* Controls / dots stay clear of edges */
+  .product-slider--hero .product-slider-controls {
+    top: calc(var(--nav-h, 60px) + 8px) !important;
+    right: 10px !important;
+  }
+  .product-slider--hero .product-slider-dots {
+    left: 50% !important;
+    right: auto !important;
+    transform: translateX(-50%) !important;
+    bottom: max(0.65rem, env(safe-area-inset-bottom, 0px)) !important;
+    justify-content: center !important;
+    max-width: 92% !important;
+  }
+
+  /* Light shade so centered brand plate stays readable under frost */
+  .product-slider--hero .product-slide-shade--logo {
+    background:
+      linear-gradient(180deg, rgba(4, 6, 12, 0.12) 0%, transparent 42%, rgba(4, 6, 12, 0.28) 100%) !important;
+  }
+}
+
+@media (max-width: 420px) {
+  .product-slider--hero .product-slide--logo-fit .product-logo-img,
+  .product-slider--hero .product-slide--logo-fit .product-logo-img--fit,
+  .product-slider--hero .product-slide:not(.product-slide--cover) .product-logo-img {
+    max-width: min(78vw, 260px) !important;
+    max-height: min(26vh, 170px) !important;
+  }
+}
