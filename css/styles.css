@@ -7236,3 +7236,80 @@ body.orbit-skin .toast {
   background: rgba(15, 20, 32, 0.96);
   border-radius: 10px;
 }
+
+/* Categories under hero search bar */
+.hero--orbit .hero-categories {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin: 14px auto 0;
+  max-width: 640px;
+}
+.hero--orbit .hero-cat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: rgba(10, 14, 22, 0.55);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  transition: border-color 0.2s var(--ease), background 0.2s var(--ease),
+    color 0.2s var(--ease), box-shadow 0.2s var(--ease), transform 0.2s var(--ease);
+}
+.hero--orbit .hero-cat-chip:hover {
+  border-color: rgba(56, 189, 248, 0.45);
+  background: var(--accent-soft);
+  color: #e0f2fe;
+  box-shadow: 0 0 20px rgba(56, 189, 248, 0.12);
+  transform: translateY(-1px);
+}
+.hero--orbit .hero-cat-icon {
+  color: var(--accent);
+  font-size: 0.85rem;
+  line-height: 1;
+}
+.hero--orbit .hero-cat-label {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.72rem;
+}
+.hero--orbit .hero-cat-count {
+  min-width: 1.4em;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(56, 189, 248, 0.15);
+  color: var(--accent);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-align: center;
+}
+.hero--orbit .hero-cat-chip-all {
+  border-style: dashed;
+  border-color: rgba(56, 189, 248, 0.28);
+}
+html[data-theme="light"] .hero--orbit .hero-cat-chip {
+  background: rgba(255, 255, 255, 0.85);
+  border-color: rgba(15, 23, 42, 0.12);
+  color: var(--text);
+}
+html[data-theme="light"] .hero--orbit .hero-cat-chip:hover {
+  color: var(--text);
+  background: var(--accent-soft);
+}
+/* Hero no longer uses bottom category dock */
+.hero--orbit .hero-orbit-chrome {
+  justify-content: center;
+}
+.hero--orbit .hero-orbit-main {
+  flex: 1;
+  align-items: center;
+  padding: 2rem 0 3rem;
+}
