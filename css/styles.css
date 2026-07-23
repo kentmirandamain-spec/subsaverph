@@ -11379,3 +11379,174 @@ html[data-theme="light"] .hero-cat-box:hover {
 .product-slider--hero .product-slide--canva {
   background: #00c4cc !important;
 }
+
+/* ============================================================
+   Mobile: easier nav, 2-col categories, less noise
+   ============================================================ */
+
+@media (max-width: 900px) {
+  /* ---- Categories: always 2 columns ---- */
+  .hero-cat-board,
+  .hero-cats-block--v4 .hero-cat-board {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 0.5rem !important;
+  }
+  .hero-cat-box,
+  .hero-cats-block--v4 .hero-cat-box {
+    min-height: 0 !important;
+    padding: 0.65rem 0.55rem 0.55rem !important;
+    gap: 0.35rem !important;
+    border-radius: 14px !important;
+  }
+  .hero-cat-box--all {
+    grid-column: 1 / -1 !important;
+  }
+  .hero-cat-box-num {
+    display: none !important; /* less noise */
+  }
+  .hero-cat-box-desc,
+  .hero-cats-lead {
+    display: none !important; /* less noise */
+  }
+  .hero-cat-box-mesh {
+    opacity: 0.2 !important;
+  }
+  .hero-cat-box-icon {
+    width: 2rem !important;
+    height: 2rem !important;
+  }
+  .hero-cat-box-name {
+    font-size: 0.8rem !important;
+  }
+
+  /* ---- Less hero noise ---- */
+  .hero--with-slider .hero-badge {
+    font-size: 0.62rem !important;
+    padding: 0.3rem 0.65rem !important;
+  }
+  .hero--with-slider .search-tags {
+    display: none !important; /* noise under search */
+  }
+  .hero--with-slider .hero-stats,
+  .hero--with-slider .meta.hero-stats {
+    display: none !important; /* redundant stats on mobile */
+  }
+  .hero--with-slider .hero-cta {
+    margin-top: 0.75rem !important;
+    gap: 8px !important;
+  }
+  .hero--with-slider .hero-cta .btn-ghost-orbit {
+    display: none !important; /* one primary CTA is enough */
+  }
+  .hero--with-slider .hero-sub,
+  .hero--with-slider .lead {
+    font-size: 0.88rem !important;
+    max-width: 28ch !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+  .product-slide-brand-tag {
+    font-size: 0.65rem !important;
+    padding: 0.28rem 0.65rem !important;
+    opacity: 0.9;
+  }
+  /* quieter glass / overlays on mobile hero */
+  .hero--with-slider .hero-orbit-chrome {
+    background: rgba(4, 6, 12, 0.28) !important;
+    backdrop-filter: blur(2px) !important;
+    -webkit-backdrop-filter: blur(2px) !important;
+  }
+  .product-slider--hero .product-slide-shade--logo {
+    background: linear-gradient(
+      180deg,
+      rgba(4, 6, 12, 0.12) 0%,
+      transparent 40%,
+      rgba(4, 6, 12, 0.28) 100%
+    ) !important;
+  }
+  .hero-cats-kicker-line {
+    width: 18px !important;
+  }
+
+  /* ---- Easier navigation ---- */
+  .mobile-tabbar {
+    z-index: 1600 !important;
+    background: rgba(6, 8, 15, 0.98) !important;
+  }
+  .mobile-tab {
+    min-height: 50px !important;
+    gap: 3px !important;
+  }
+  .mobile-tab-label {
+    font-size: 0.64rem !important;
+  }
+  .mobile-tab.is-active {
+    color: #7dd3fc !important;
+  }
+  /* Compact header tools for clearer top bar */
+  .nav-inner {
+    width: min(100% - 12px, var(--max)) !important;
+  }
+  .tools {
+    gap: 4px !important;
+  }
+  .tools .icon,
+  .tools .menu,
+  .tools .prefs-btn,
+  .tools .cart-icon-btn {
+    min-width: 42px !important;
+    min-height: 42px !important;
+    width: 42px !important;
+    height: 42px !important;
+  }
+  .fx-btn {
+    max-width: 72px !important;
+    min-height: 42px !important;
+    font-size: 0.72rem !important;
+  }
+  /* Menu links clearer */
+  .links.open a {
+    min-height: 52px !important;
+    font-size: 1rem !important;
+    font-weight: 600 !important;
+  }
+
+  /* Deals page: less chrome */
+  .deals-filters .filter-group-title {
+    font-size: 0.62rem !important;
+    margin-bottom: 0.3rem !important;
+  }
+  .page-title {
+    font-size: 1.35rem !important;
+  }
+  .muted,
+  .rates {
+    font-size: 0.78rem !important;
+  }
+  .product-badge:not(.sold-out-badge) {
+    font-size: 0.5rem !important;
+    padding: 0.2rem 0.35rem !important;
+  }
+
+  /* Hide galaxy noise layers on mobile */
+  .galaxy-bg {
+    opacity: 0.2 !important;
+  }
+  body.galaxy::before,
+  body.galaxy::after,
+  body.game-ui::before,
+  body.game-ui::after {
+    display: none !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .hero-cat-board {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+  /* Single primary CTA full width */
+  .hero--with-slider .hero-cta .btn.solid {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
