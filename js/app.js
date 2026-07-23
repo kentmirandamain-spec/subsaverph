@@ -787,6 +787,13 @@ function viewHome() {
     Streaming: "◎",
     Learning: "▣",
   };
+  const catBlurb = {
+    AI: "Assistants & models",
+    Design: "Creative tools",
+    Video: "Editors & creators",
+    Streaming: "Watch & listen",
+    Learning: "Study & languages",
+  };
 
   const slides = all.slice(0, 12);
   const sliderTrack =
@@ -879,21 +886,51 @@ function viewHome() {
               ${searchBarHTML(t("search_placeholder"))}
             </div>
 
-            <div class="hero-categories" id="home-categories" role="list" aria-label="${escapeAttr(t("categories_title") || "Categories")}">
-              ${categories
-                .map(
-                  (cat) => `
-                <button type="button" class="hero-cat-chip" data-category="${escapeAttr(cat.key)}" role="listitem">
-                  <span class="hero-cat-icon" aria-hidden="true">${catIcons[cat.key] || cat.mono}</span>
-                  <span class="hero-cat-label">${escapeHtml(cat.label)}</span>
-                  <span class="hero-cat-count">${cat.count}</span>
-                </button>`
-                )
-                .join("")}
-              <button type="button" class="hero-cat-chip hero-cat-chip-all" data-category="All" role="listitem">
-                <span class="hero-cat-label">${escapeHtml(t("all_deals") || "All deals")}</span>
-                <span class="hero-cat-count">${all.length}</span>
-              </button>
+            <div class="hero-cats-block" id="home-categories">
+              <div class="hero-cats-head">
+                <div>
+                  <p class="hero-cats-eyebrow">01 · Loadout</p>
+                  <h2 class="hero-cats-title">${escapeHtml(t("categories_title") || "Categories")}</h2>
+                </div>
+                <button type="button" class="link-arrow hero-cats-all" data-category="All">
+                  ${escapeHtml(t("all_deals") || "All deals")} →
+                </button>
+              </div>
+              <div class="hero-cat-grid" role="list" aria-label="${escapeAttr(t("categories_title") || "Categories")}">
+                ${categories
+                  .map(
+                    (cat, i) => `
+                  <button type="button" class="hero-cat-card" data-category="${escapeAttr(cat.key)}" role="listitem">
+                    <div class="hero-cat-card-top">
+                      <span class="hero-cat-card-icon" aria-hidden="true">${catIcons[cat.key] || cat.mono}</span>
+                      <span class="hero-cat-card-index">${String(i + 1).padStart(2, "0")}</span>
+                    </div>
+                    <div class="hero-cat-card-body">
+                      <h3 class="hero-cat-card-name">${escapeHtml(cat.label)}</h3>
+                      <p class="hero-cat-card-blurb">${escapeHtml(catBlurb[cat.key] || cat.label)}</p>
+                    </div>
+                    <div class="hero-cat-card-foot">
+                      <span class="hero-cat-card-count"><strong>${cat.count}</strong> ${escapeHtml(t("meta_plans") || "plans")}</span>
+                      <span class="hero-cat-card-go">Browse</span>
+                    </div>
+                  </button>`
+                  )
+                  .join("")}
+                <button type="button" class="hero-cat-card hero-cat-card--all" data-category="All" role="listitem">
+                  <div class="hero-cat-card-top">
+                    <span class="hero-cat-card-icon" aria-hidden="true">∞</span>
+                    <span class="hero-cat-card-index">${String(categories.length + 1).padStart(2, "0")}</span>
+                  </div>
+                  <div class="hero-cat-card-body">
+                    <h3 class="hero-cat-card-name">${escapeHtml(t("all_deals") || "All deals")}</h3>
+                    <p class="hero-cat-card-blurb">Full catalog</p>
+                  </div>
+                  <div class="hero-cat-card-foot">
+                    <span class="hero-cat-card-count"><strong>${all.length}</strong> ${escapeHtml(t("meta_plans") || "plans")}</span>
+                    <span class="hero-cat-card-go">Open</span>
+                  </div>
+                </button>
+              </div>
             </div>
 
             <div class="cta hero-cta">
