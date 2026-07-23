@@ -1,42 +1,47 @@
-﻿/* SubSaverPH — monochrome galaxy storefront — no product images */
+/* SubSaverPH — Orbit Market visual style (cockpit HUD + cyan accents) */
 
-@import url("https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Orbitron:wght@500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Orbitron:wght@500;600;700&display=swap");
 
 :root,
 html[data-theme="dark"] {
-  /* Pure black / white monochrome */
-  --bg: #000000;
-  --panel: rgba(10, 10, 10, 0.82);
-  --panel-solid: #0a0a0a;
-  --line: rgba(255, 255, 255, 0.14);
-  --line-strong: rgba(255, 255, 255, 0.32);
-  --text: #ffffff;
-  --mute: rgba(255, 255, 255, 0.62);
-  --mute-2: rgba(255, 255, 255, 0.4);
-  --surface: #111111;
-  --btn-solid-bg: #ffffff;
-  --btn-solid-fg: #000000;
-  --btn-solid-bg-flat: #ffffff;
-  --nav-scrolled: rgba(0, 0, 0, 0.88);
-  --icon-hover: rgba(255, 255, 255, 0.08);
-  --focus-ring: rgba(255, 255, 255, 0.55);
-  --selection-bg: rgba(255, 255, 255, 0.18);
-  --selection-fg: #ffffff;
-  --hover-fill: rgba(255, 255, 255, 0.08);
-  --soft-fill: rgba(255, 255, 255, 0.04);
-  --mark-bg: rgba(255, 255, 255, 0.16);
-  --input-bg: rgba(0, 0, 0, 0.55);
-  --shadow: 0 20px 60px rgba(0, 0, 0, 0.65);
-  --shadow-glow: 0 0 32px rgba(255, 255, 255, 0.08);
-  --accent: #ffffff;
-  --accent-2: #ffffff;
-  --accent-hot: #ffffff;
-  --radius: 16px;
+  /* Orbit cockpit palette */
+  --bg: #06080f;
+  --bg-elevated: #0b0f18;
+  --bg-card: #0f1420;
+  --panel: rgba(15, 20, 32, 0.92);
+  --panel-solid: #0f1420;
+  --line: rgba(148, 163, 184, 0.12);
+  --line-strong: rgba(148, 163, 184, 0.28);
+  --text: #eef2f7;
+  --mute: #94a3b8;
+  --mute-2: #64748b;
+  --surface: #141b2a;
+  --btn-solid-bg: linear-gradient(135deg, #e8f4ff 0%, #bae6fd 40%, #7dd3fc 100%);
+  --btn-solid-fg: #061018;
+  --btn-solid-bg-flat: #7dd3fc;
+  --nav-scrolled: rgba(6, 8, 15, 0.94);
+  --icon-hover: rgba(56, 189, 248, 0.1);
+  --focus-ring: rgba(56, 189, 248, 0.55);
+  --selection-bg: rgba(56, 189, 248, 0.22);
+  --selection-fg: #eef2f7;
+  --hover-fill: rgba(56, 189, 248, 0.08);
+  --soft-fill: rgba(255, 255, 255, 0.035);
+  --mark-bg: rgba(56, 189, 248, 0.18);
+  --input-bg: rgba(6, 8, 15, 0.65);
+  --shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+  --shadow-glow: 0 0 48px rgba(56, 189, 248, 0.12);
+  --accent: #38bdf8;
+  --accent-2: #818cf8;
+  --accent-hot: #7dd3fc;
+  --accent-soft: rgba(56, 189, 248, 0.12);
+  --success: #34d399;
+  --danger: #f87171;
+  --radius: 12px;
   --radius-sm: 10px;
   --radius-pill: 999px;
-  --font: "DM Sans", system-ui, sans-serif;
-  --display: "Orbitron", system-ui, sans-serif;
-  --nav-h: 72px;
+  --font: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --display: "Orbitron", "Inter", system-ui, sans-serif;
+  --nav-h: 68px;
   --max: 1180px;
   --space-1: 8px;
   --space-2: 16px;
@@ -44,38 +49,41 @@ html[data-theme="dark"] {
   --space-4: 40px;
   --space-5: 64px;
   --space-6: 88px;
-  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
   --dur: 0.28s;
 }
 
-/* Light: white canvas, black type (still mono) */
+/* Light: soft slate + cyan accent (Orbit-inspired) */
 html[data-theme="light"] {
-  --bg: #f5f5f5;
-  --panel: rgba(255, 255, 255, 0.92);
+  --bg: #f1f5f9;
+  --bg-elevated: #ffffff;
+  --bg-card: #ffffff;
+  --panel: rgba(255, 255, 255, 0.94);
   --panel-solid: #ffffff;
-  --line: rgba(0, 0, 0, 0.12);
-  --line-strong: rgba(0, 0, 0, 0.28);
-  --text: #000000;
-  --mute: rgba(0, 0, 0, 0.62);
-  --mute-2: rgba(0, 0, 0, 0.4);
-  --surface: #ececec;
-  --btn-solid-bg: #000000;
-  --btn-solid-fg: #ffffff;
-  --btn-solid-bg-flat: #000000;
-  --nav-scrolled: rgba(245, 245, 245, 0.92);
-  --icon-hover: rgba(0, 0, 0, 0.06);
-  --focus-ring: rgba(0, 0, 0, 0.45);
-  --selection-bg: rgba(0, 0, 0, 0.14);
-  --selection-fg: #000000;
-  --hover-fill: rgba(0, 0, 0, 0.05);
-  --soft-fill: rgba(0, 0, 0, 0.03);
-  --mark-bg: rgba(0, 0, 0, 0.1);
+  --line: rgba(15, 23, 42, 0.1);
+  --line-strong: rgba(15, 23, 42, 0.2);
+  --text: #0f172a;
+  --mute: #64748b;
+  --mute-2: #94a3b8;
+  --surface: #e2e8f0;
+  --btn-solid-bg: linear-gradient(135deg, #0ea5e9 0%, #38bdf8 50%, #7dd3fc 100%);
+  --btn-solid-fg: #041018;
+  --btn-solid-bg-flat: #0ea5e9;
+  --nav-scrolled: rgba(241, 245, 249, 0.94);
+  --icon-hover: rgba(14, 165, 233, 0.1);
+  --focus-ring: rgba(14, 165, 233, 0.45);
+  --selection-bg: rgba(14, 165, 233, 0.18);
+  --selection-fg: #0f172a;
+  --hover-fill: rgba(14, 165, 233, 0.08);
+  --soft-fill: rgba(15, 23, 42, 0.04);
+  --mark-bg: rgba(14, 165, 233, 0.15);
   --input-bg: rgba(255, 255, 255, 0.95);
-  --shadow: 0 16px 48px rgba(0, 0, 0, 0.1);
-  --shadow-glow: 0 0 24px rgba(0, 0, 0, 0.06);
-  --accent: #000000;
-  --accent-2: #000000;
-  --accent-hot: #000000;
+  --shadow: 0 16px 48px rgba(15, 23, 42, 0.1);
+  --shadow-glow: 0 0 32px rgba(14, 165, 233, 0.12);
+  --accent: #0284c7;
+  --accent-2: #6366f1;
+  --accent-hot: #0ea5e9;
+  --accent-soft: rgba(14, 165, 233, 0.1);
 }
 
 html {
@@ -138,16 +146,59 @@ body {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   position: relative;
+  /* Orbit quiet cockpit atmosphere */
+  background-image:
+    radial-gradient(ellipse 90% 50% at 50% -15%, rgba(56, 189, 248, 0.07), transparent 55%),
+    radial-gradient(ellipse 60% 40% at 100% 50%, rgba(129, 140, 248, 0.05), transparent 50%),
+    linear-gradient(180deg, #06080f 0%, #070a12 100%);
+  background-attachment: fixed;
 }
 
-/* ========== GALAXY / STARFIELD ========== */
+html[data-theme="light"] body {
+  background-image:
+    radial-gradient(ellipse 90% 50% at 50% -10%, rgba(14, 165, 233, 0.12), transparent 50%),
+    linear-gradient(180deg, #f1f5f9 0%, #e2e8f0 100%);
+}
+
+/* Soft HUD frame corners (Orbit) */
+body.galaxy::before,
+body.galaxy::after {
+  content: "";
+  position: fixed;
+  width: 48px;
+  height: 48px;
+  pointer-events: none;
+  z-index: 300;
+  opacity: 0.35;
+  border: 1px solid rgba(56, 189, 248, 0.35);
+}
+body.galaxy::before {
+  top: calc(var(--nav-h) + 10px);
+  left: 12px;
+  border-right: none;
+  border-bottom: none;
+}
+body.galaxy::after {
+  bottom: 14px;
+  right: 12px;
+  border-left: none;
+  border-top: none;
+}
+@media (max-width: 720px) {
+  body.galaxy::before,
+  body.galaxy::after {
+    display: none;
+  }
+}
+
+/* ========== GALAXY / STARFIELD (Orbit-tinted) ========== */
 .galaxy-bg {
   position: fixed;
   inset: 0;
   z-index: 0;
   pointer-events: none;
   overflow: hidden;
-  background: #000000;
+  background: transparent;
 }
 
 .galaxy-nebula {
@@ -602,14 +653,26 @@ img.qr-preview-img {
   overflow: visible;
 }
 
+.nav {
+  background: rgba(6, 8, 15, 0.72);
+  backdrop-filter: blur(18px) saturate(1.2);
+  -webkit-backdrop-filter: blur(18px) saturate(1.2);
+  box-shadow: 0 1px 0 rgba(56, 189, 248, 0.06);
+}
+
 .nav.scrolled {
   background: var(--nav-scrolled);
-  backdrop-filter: blur(14px) saturate(1.2);
-  border-bottom-color: var(--line);
+  backdrop-filter: blur(18px) saturate(1.2);
+  border-bottom-color: rgba(56, 189, 248, 0.12);
 }
 
 html[data-theme="dark"] .nav.scrolled {
-  background: rgba(0, 0, 8, 0.72);
+  background: rgba(6, 8, 15, 0.94);
+}
+
+html[data-theme="light"] .nav {
+  background: rgba(241, 245, 249, 0.88);
+  box-shadow: 0 1px 0 rgba(14, 165, 233, 0.1);
 }
 
 .nav-inner {
@@ -1256,48 +1319,52 @@ html[data-theme="light"] .prefs-panel {
   min-width: 18px;
   height: 18px;
   padding: 0 5px;
-  background: #ffffff;
-  color: #000000;
+  background: var(--accent);
+  color: #061018;
   font-size: 0.62rem;
   font-weight: 800;
   display: grid;
   place-items: center;
   border-radius: var(--radius-pill);
-  box-shadow: none;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.45);
 }
 
 html[data-theme="light"] .badge {
-  background: #000000;
-  color: #ffffff;
+  background: var(--accent);
+  color: #fff;
 }
 
 .menu {
   display: none;
 }
 
-/* BUTTONS — SpaceX ghost / solid */
+/* BUTTONS — Orbit mission controls */
 .btn {
   appearance: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 2px solid var(--text);
-  background: transparent;
+  gap: 0.5rem;
+  border: 1px solid var(--line-strong);
+  background: rgba(255, 255, 255, 0.02);
   color: var(--text);
-  padding: 14px 32px;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
+  padding: 0.8rem 1.4rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
+  border-radius: var(--radius);
   cursor: pointer;
   transition: background var(--dur) var(--ease), color var(--dur) var(--ease),
-    border-color var(--dur) var(--ease), transform var(--dur) var(--ease);
+    border-color var(--dur) var(--ease), transform 0.2s var(--ease),
+    box-shadow var(--dur) var(--ease);
   text-decoration: none;
 }
 
 .btn:hover {
-  background: var(--btn-solid-bg);
-  color: var(--btn-solid-fg);
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--line-strong));
+  background: var(--accent-soft);
+  color: #e0f2fe;
 }
 
 .btn:active {
@@ -1305,12 +1372,20 @@ html[data-theme="light"] .badge {
 }
 
 .btn.solid {
-  background: var(--btn-solid-bg);
-  color: var(--btn-solid-fg);
+  background: linear-gradient(135deg, #e8f4ff 0%, #bae6fd 40%, #7dd3fc 100%);
+  color: #061018;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 8px 24px rgba(56, 189, 248, 0.18);
 }
 
 .btn.solid:hover {
-  background: transparent;
+  background: linear-gradient(135deg, #fff 0%, #e0f2fe 50%, #7dd3fc 100%);
+  color: #061018;
+  box-shadow: 0 10px 28px rgba(56, 189, 248, 0.28);
+  transform: translateY(-1px);
+}
+
+html[data-theme="light"] .btn:hover {
   color: var(--text);
 }
 
@@ -1349,7 +1424,7 @@ html[data-theme="light"] .badge {
   width: 480px;
   height: 480px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.14) 0%, rgba(129, 140, 248, 0.06) 40%, transparent 70%);
   pointer-events: none;
   filter: blur(4px);
 }
@@ -1364,11 +1439,12 @@ html[data-theme="light"] .badge {
 
 .eyebrow {
   font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.22em;
+  font-weight: 600;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--mute);
+  color: var(--accent);
   margin: 0 0 18px;
+  opacity: 0.95;
 }
 
 .display {
@@ -1572,40 +1648,48 @@ html[data-theme="light"] .badge {
   font-weight: 600;
 }
 
-/* DEAL GRID — text only */
+/* DEAL GRID — Orbit card grid */
 .grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 1px;
-  background: var(--line);
-  border: 1px solid var(--line);
+  gap: 14px;
+  background: transparent;
+  border: none;
 }
 
 .card {
   position: relative;
-  background: var(--bg);
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.035) 0%, transparent 48%), var(--bg-card, var(--panel-solid));
   color: var(--text);
   padding: 32px 24px;
   display: flex;
   flex-direction: column;
   gap: 10px;
   min-height: 320px;
-  transition: background var(--dur) var(--ease);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease),
+    transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+}
+
+.card:hover {
+  border-color: rgba(56, 189, 248, 0.28);
+  box-shadow: var(--shadow), var(--shadow-glow);
+  transform: translateY(-3px);
+  background: linear-gradient(165deg, rgba(56, 189, 248, 0.06) 0%, transparent 48%), var(--surface);
 }
 
 .card-accent {
   position: absolute;
   top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--line-strong), transparent);
+  left: 16px;
+  right: 16px;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
   opacity: 0;
   transition: opacity var(--dur) var(--ease);
-}
-
-.card:hover {
-  background: var(--surface);
 }
 
 .card:hover .card-accent {
@@ -4858,10 +4942,9 @@ html[data-theme="light"] .display {
 }
 
 .card:hover {
-  transform: translateY(-4px);
-  border-color: rgba(255, 255, 255, 0.35);
+  transform: translateY(-3px);
+  border-color: rgba(56, 189, 248, 0.3);
   box-shadow: var(--shadow), var(--shadow-glow);
-  background: var(--surface) !important;
 }
 
 .card-accent {
@@ -4871,7 +4954,7 @@ html[data-theme="light"] .display {
   right: 16px;
   width: auto;
   border-radius: 2px;
-  background: linear-gradient(90deg, transparent, #fff, transparent);
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
   opacity: 0;
 }
 
@@ -4882,8 +4965,8 @@ html[data-theme="light"] .display {
 .mono-box {
   border-radius: 12px;
   border-color: var(--line);
-  background: rgba(255, 255, 255, 0.04);
-  color: #fff;
+  background: rgba(56, 189, 248, 0.08);
+  color: var(--text);
 }
 
 html[data-theme="light"] .mono-box {
