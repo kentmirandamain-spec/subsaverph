@@ -111,20 +111,14 @@ const OFFICIAL_BRAND_SLIDE = {
 };
 
 /**
- * Mobile-only official brand photos (CapCut, Canva, Grok, Duolingo).
- * Full-bleed cover plates for cards + slider on small screens.
+ * Mobile official brand logos (Canva, CapCut, Duolingo, Grok).
+ * Centered logo-fit on brand plates — not full-bleed photos.
  */
-const MOBILE_OFFICIAL_PHOTO = {
-  xAI: "/assets/products/photo-xai.png?v=mphoto1",
-  Canva: "/assets/products/photo-canva.png?v=mphoto1",
-  CapCut: "/assets/products/photo-capcut.png?v=mphoto1",
-  Duolingo: "/assets/products/photo-duolingo.png?v=mphoto1",
-};
-const MOBILE_OFFICIAL_SLIDE = {
-  xAI: "/assets/products/photo-xai-slide.png?v=mphoto1",
-  Canva: "/assets/products/photo-canva-slide.png?v=mphoto1",
-  CapCut: "/assets/products/photo-capcut-slide.png?v=mphoto1",
-  Duolingo: "/assets/products/photo-duolingo-slide.png?v=mphoto1",
+const MOBILE_OFFICIAL_LOGO = {
+  xAI: "/assets/products/logos/brand-xai-fixed.svg?v=mlogo1",
+  Canva: "/assets/products/logos/brand-canva.png?v=mlogo1",
+  CapCut: "/assets/products/logos/brand-capcut-official.svg?v=mlogo1",
+  Duolingo: "/assets/products/logos/brand-duolingo-fixed.svg?v=mlogo1",
 };
 
 /** Match storefront mobile layout (CSS max-width: 900px). */
@@ -139,6 +133,9 @@ function isMobileView() {
 /** Official brand logo path (SVG mark). */
 function productLogo(d) {
   if (!d) return "";
+  if (isMobileView() && d.brand && MOBILE_OFFICIAL_LOGO[d.brand]) {
+    return MOBILE_OFFICIAL_LOGO[d.brand];
+  }
   if (d.brand && OFFICIAL_BRAND_LOGO[d.brand]) return OFFICIAL_BRAND_LOGO[d.brand];
   if (d.logo) return String(d.logo);
   const brand = String(d.brand || "").toLowerCase().replace(/\s+/g, "");
@@ -155,18 +152,18 @@ function isProductPhoto(src) {
   return /\.(png|jpe?g|webp|gif)(\?|$)/i.test(s);
 }
 
-/** Full-bleed official photos on mobile for CapCut / Canva / Grok / Duolingo. */
+/** Full-bleed covers off — official logos use logo-fit (including mobile). */
 function brandUsesCover(brand) {
-  return Boolean(isMobileView() && brand && MOBILE_OFFICIAL_PHOTO[brand]);
+  return false;
 }
 
 /**
- * Card/detail image: mobile official photos for key brands; logos elsewhere.
+ * Card/detail image: mobile official logos for Canva/CapCut/Grok/Duolingo.
  */
 function productImage(d) {
   if (!d) return "";
-  if (isMobileView() && d.brand && MOBILE_OFFICIAL_PHOTO[d.brand]) {
-    return MOBILE_OFFICIAL_PHOTO[d.brand];
+  if (isMobileView() && d.brand && MOBILE_OFFICIAL_LOGO[d.brand]) {
+    return MOBILE_OFFICIAL_LOGO[d.brand];
   }
   if (d.brand && OFFICIAL_BRAND_LOGO[d.brand]) return OFFICIAL_BRAND_LOGO[d.brand];
   if (d.brand && OFFICIAL_BRAND_COVER[d.brand]) return OFFICIAL_BRAND_COVER[d.brand];
@@ -175,14 +172,11 @@ function productImage(d) {
   return productLogo(d);
 }
 
-/** Homepage slider image: mobile official photos when available. */
+/** Homepage slider: mobile official logos for key brands. */
 function productSlideImage(d) {
   if (!d) return "";
-  if (isMobileView() && d.brand && MOBILE_OFFICIAL_SLIDE[d.brand]) {
-    return MOBILE_OFFICIAL_SLIDE[d.brand];
-  }
-  if (isMobileView() && d.brand && MOBILE_OFFICIAL_PHOTO[d.brand]) {
-    return MOBILE_OFFICIAL_PHOTO[d.brand];
+  if (isMobileView() && d.brand && MOBILE_OFFICIAL_LOGO[d.brand]) {
+    return MOBILE_OFFICIAL_LOGO[d.brand];
   }
   if (d.brand && OFFICIAL_BRAND_SLIDE[d.brand]) return OFFICIAL_BRAND_SLIDE[d.brand];
   if (d.brand && OFFICIAL_BRAND_LOGO[d.brand]) return OFFICIAL_BRAND_LOGO[d.brand];
@@ -191,7 +185,7 @@ function productSlideImage(d) {
 }
 
 function productBrandColor(d) {
-  /* Brand-colored plates so real logos stay visible in cards / slider */
+  /* Brand-colored plates so official logos stay visible in cards / slider */
   const map = {
     xAI: "#000000",
     Canva: "#00c4cc",
@@ -571,10 +565,10 @@ function card(d, highlightQ = "") {
   const wished = isWished(d.id);
   const typeLabel = (d.category || "Plan").toUpperCase();
   const brandLabel = d.brand === "xAI" ? "SuperGrok" : d.brand || "";
-  /* Mobile: official full-bleed photos for CapCut/Canva/Grok/Duolingo; desktop logos */
+  /* Official logos centered on brand color (mobile + desktop logo-fit) */
   const photo = isProductPhoto(img);
-  const fillFrame = brandUsesCover(d.brand) || (photo && /photo-(xai|canva|capcut|duolingo)/i.test(img));
-  const logoFit = !fillFrame;
+  const fillFrame = false;
+  const logoFit = true;
   const photoFit = photo && !fillFrame;
   const saveHtml =
     !soldOut && d.original > d.price
@@ -1029,22 +1023,13 @@ function viewHome() {
           .map((d, i) => {
             const slideSrc = productSlideImage(d) || "";
             const brandLabel = d.brand === "xAI" ? "SuperGrok" : d.brand || "";
-            const isCover =
-              brandUsesCover(d.brand) ||
-              /photo-(xai|canva|capcut|duolingo)/i.test(slideSrc);
-            const coverClass = isCover
-              ? d.brand === "Canva"
-                ? " product-slide--cover product-slide--canva"
-                : d.brand === "CapCut"
-                  ? " product-slide--cover product-slide--capcut"
-                  : " product-slide--cover"
-              : " product-slide--logo-fit";
+            /* Mobile + desktop: official logos centered (logo-fit) */
             return `
-            <article class="product-slide${i === 0 ? " is-active" : ""}${coverClass}" data-slide-index="${i}" data-brand="${escapeAttr(d.brand || "")}" ${i === 0 ? "" : "hidden"} style="--brand-bg:${escapeAttr(productBrandColor(d))}">
+            <article class="product-slide${i === 0 ? " is-active" : ""} product-slide--logo-fit" data-slide-index="${i}" data-brand="${escapeAttr(d.brand || "")}" ${i === 0 ? "" : "hidden"} style="--brand-bg:${escapeAttr(productBrandColor(d))}">
               <a class="product-slide-link product-slide-link--logo" href="#/deal/${escapeAttr(d.id)}" tabindex="${i === 0 ? "0" : "-1"}">
                 <div class="product-slide-logo-wrap">
                   <img
-                    class="product-img product-slide-img${isCover ? " product-cover-img" : " product-logo-img product-logo-img--fit"}${d.brand === "Canva" && isCover ? " product-cover-img--canva" : ""}"
+                    class="product-img product-slide-img product-logo-img product-logo-img--fit"
                     src="${escapeAttr(slideSrc)}"
                     alt="${escapeAttr(brandLabel || d.name)}"
                     width="1280"
