@@ -45,6 +45,8 @@ SETTINGS_FILE = STORE / "settings.json"
 AUTH_FILE = STORE / "auth.json"
 INVENTORY_FILE = STORE / "inventory.json"
 ORDERS_FILE = STORE / "orders.json"
+# Incomplete e-wallet checkouts (no payment reference yet) — NOT real orders
+EWALLET_CHECKOUTS_FILE = STORE / "ewallet_checkouts.json"
 
 app = Flask(__name__, static_folder=None)
 # Stable secret so admin sessions survive restarts (set SECRET_KEY on Render)
@@ -445,6 +447,8 @@ def ensure_store() -> None:
             INVENTORY_FILE.write_text("{}", encoding="utf-8")
         if not ORDERS_FILE.exists():
             ORDERS_FILE.write_text("[]", encoding="utf-8")
+        if not EWALLET_CHECKOUTS_FILE.exists():
+            EWALLET_CHECKOUTS_FILE.write_text("{}", encoding="utf-8")
         pending_file = STORE / "pending_payments.json"
         if not pending_file.exists():
             pending_file.write_text("{}", encoding="utf-8")
@@ -503,6 +507,48 @@ def load_orders() -> list:
 
 def save_orders(orders: list) -> None:
     write_json(ORDERS_FILE, orders)
+
+
+def load_ewallet_checkouts() -> dict:
+    """Incomplete QR checkouts keyed by order id (no stock hold, not admin-pending)."""
+    data = read_json(EWALLET_CHECKOUTS_FILE, {})
+    return data if isinstance(data, dict) else {}
+
+
+def save_ewallet_checkouts(data: dict) -> None:
+    write_json(EWALLET_CHECKOUTS_FILE, data)
+
+
+def purge_stale_ewallet_checkouts(max_age_hours: float = 48.0) -> None:
+    """Drop abandoned QR checkouts so they never clog storage or look like orders."""
+    from datetime import datetime, timezone
+
+    checkouts = load_ewallet_checkouts()
+    if not checkouts:
+        return
+    now = datetime.now(timezone.utc)
+    kept = {}
+    changed = False
+    for oid, row in checkouts.items():
+        if not isinstance(row, dict):
+            changed = True
+            continue
+        created = str(row.get("createdAt") or "")
+        try:
+            # support ...Z
+            ts = created.replace("Z", "+00:00")
+            dt = datetime.fromisoformat(ts)
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            age_h = (now - dt).total_seconds() / 3600.0
+            if age_h > max_age_hours:
+                changed = True
+                continue
+        except Exception:
+            pass
+        kept[oid] = row
+    if changed or len(kept) != len(checkouts):
+        save_ewallet_checkouts(kept)
 
 
 def stock_count(product_id: str) -> int:
@@ -2108,7 +2154,17 @@ def api_checkout_start():
 
 
 def _manual_ewallet_checkout(email, name, method, normalized, cart_meta):
-    """Create awaiting_payment order with GCash/Maya QR pay instructions (no codes yet)."""
+    """
+    Start a GCash/Maya QR checkout.
+
+    Incomplete checkouts (no payment reference yet):
+      - stored only in ewallet_checkouts.json
+      - NOT saved as orders
+      - do NOT hold stock / reserve codes
+      - do NOT appear as admin pending
+
+    Stock is reserved only when admin confirms after payment_submitted.
+    """
     cfg = manual_ewallet_config()
     if not cfg.get("enabled"):
         return jsonify(
@@ -2127,7 +2183,7 @@ def _manual_ewallet_checkout(email, name, method, normalized, cart_meta):
     if amount_php < 1:
         return jsonify({"error": "Order total too low for e-wallet payment."}), 400
 
-    # Line items for display (no codes until admin confirms)
+    # Line items for display only — no codes reserved
     line_results = []
     for row in normalized:
         deal = row["deal"]
@@ -2154,6 +2210,11 @@ def _manual_ewallet_checkout(email, name, method, normalized, cart_meta):
             }
         )
 
+    try:
+        purge_stale_ewallet_checkouts()
+    except Exception:
+        pass
+
     order_id = "PH" + uuid.uuid4().hex[:10].upper()
     name_bit = f" ({account_name})" if account_name else ""
     order = {
@@ -2163,6 +2224,7 @@ def _manual_ewallet_checkout(email, name, method, normalized, cart_meta):
         "currency": "PHP",
         "items": line_results,
         "cart": cart_meta,
+        # Incomplete until buyer submits payment reference
         "status": "awaiting_payment",
         "paymentMode": "manual_ewallet",
         "method": method,
@@ -2181,6 +2243,7 @@ def _manual_ewallet_checkout(email, name, method, normalized, cart_meta):
                 f"Pay exactly ₱{amount_php:,.2f}{name_bit}.",
                 f"Put Order ID {order_id} in the message / notes field if asked.",
                 "After paying, paste your payment reference below and submit.",
+                "Stock is not held until you submit your payment reference.",
                 "Delivery of login codes: usually 10–30 minutes after we verify payment.",
             ],
             "note": cfg.get("note") or "",
@@ -2192,21 +2255,39 @@ def _manual_ewallet_checkout(email, name, method, normalized, cart_meta):
         "createdAt": __import__("datetime").datetime.utcnow().isoformat() + "Z",
         "delivery": "after_confirm",
         "deliveryEta": "10–30 minutes",
+        # Explicit flags for clients / admin tooling
+        "stockHeld": False,
+        "countsAsPending": False,
+        "isIncompleteCheckout": True,
         "message": (
             f"Scan the {wallet} QR and pay ₱{amount_php:,.2f}. "
             f"Use Order ID {order_id} as reference. "
+            f"Product stock is not held until you submit your payment reference. "
             f"Login codes are delivered in about 10–30 minutes after payment is verified."
         ),
         "emailSent": False,
     }
-    orders = load_orders()
-    orders.insert(0, order)
-    save_orders(orders[:500])
+    # Store as incomplete checkout only — never as a real order / pending sale
+    with _STORE_LOCK:
+        checkouts = load_ewallet_checkouts()
+        checkouts[order_id] = order
+        # Cap size
+        if len(checkouts) > 500:
+            # drop oldest by createdAt
+            items = sorted(
+                checkouts.items(),
+                key=lambda kv: str((kv[1] or {}).get("createdAt") or ""),
+            )
+            checkouts = dict(items[-400:])
+        save_ewallet_checkouts(checkouts)
+
     return jsonify(
         {
             "ok": True,
             "provider": "manual",
-            "pending": True,
+            "pending": False,  # not admin-pending until reference submitted
+            "incompleteCheckout": True,
+            "stockHeld": False,
             "order": order,
         }
     )
@@ -2214,7 +2295,11 @@ def _manual_ewallet_checkout(email, name, method, normalized, cart_meta):
 
 @app.post("/api/checkout/manual/proof")
 def api_manual_proof():
-    """Customer submits e-wallet reference after sending payment."""
+    """
+    Customer submits e-wallet reference after sending payment.
+    Only then does the checkout become a real order (payment_submitted / admin-pending).
+    Still does NOT reserve stock until admin confirms.
+    """
     data = request.get_json(silent=True) or {}
     order_id = str(data.get("orderId") or data.get("id") or "").strip()
     ref = str(data.get("paymentReference") or data.get("reference") or "").strip()
@@ -2226,6 +2311,56 @@ def api_manual_proof():
     if not ref or len(ref) < 4:
         return jsonify({"error": "Enter your GCash/Maya reference number (at least 4 characters)"}), 400
 
+    # 1) Prefer incomplete checkout (not yet an order)
+    with _STORE_LOCK:
+        checkouts = load_ewallet_checkouts()
+        draft = checkouts.get(order_id)
+        if draft and isinstance(draft, dict):
+            if email and str(draft.get("email") or "").strip().lower() != email:
+                return jsonify({"error": "Email does not match this order"}), 403
+            # Re-check stock is still available (no hold was placed earlier)
+            cart = draft.get("cart") or [
+                {"id": it.get("id"), "qty": it.get("qty") or 1}
+                for it in (draft.get("items") or [])
+            ]
+            try:
+                validate_cart_items(cart)
+            except ValueError as e:
+                return jsonify(
+                    {
+                        "error": str(e),
+                        "hint": "This product may have sold out. Contact support with your payment reference.",
+                    }
+                ), 409
+
+            order = {
+                **draft,
+                "status": "payment_submitted",
+                "paymentReference": ref[:120],
+                "paymentProofNote": note,
+                "paymentSubmittedAt": __import__("datetime").datetime.utcnow().isoformat()
+                + "Z",
+                "deliveryEta": draft.get("deliveryEta") or "10–30 minutes",
+                "stockHeld": False,  # still not reserved until admin confirm
+                "countsAsPending": True,
+                "isIncompleteCheckout": False,
+                "message": (
+                    "Payment reference received. We are verifying your transfer. "
+                    "Login codes are usually delivered within 10–30 minutes after confirmation. "
+                    "Stock is reserved when we confirm your payment."
+                ),
+            }
+            # Promote to real orders list (admin pending)
+            orders = load_orders()
+            # de-dupe if somehow already present
+            orders = [o for o in orders if str(o.get("id") or "") != order_id]
+            orders.insert(0, order)
+            save_orders(orders[:500])
+            checkouts.pop(order_id, None)
+            save_ewallet_checkouts(checkouts)
+            return jsonify({"ok": True, "order": order, "promoted": True})
+
+    # 2) Already a real order (legacy awaiting_payment or payment_submitted)
     orders = load_orders()
     found = None
     idx = None
@@ -2235,7 +2370,7 @@ def api_manual_proof():
             idx = i
             break
     if not found:
-        return jsonify({"error": "Order not found"}), 404
+        return jsonify({"error": "Order not found. Start checkout again or contact support."}), 404
     if found.get("paymentMode") != "manual_ewallet":
         return jsonify({"error": "This order is not a manual e-wallet payment"}), 400
     st = str(found.get("status") or "").lower()
@@ -2243,7 +2378,6 @@ def api_manual_proof():
         return jsonify({"ok": True, "order": found, "alreadyPaid": True})
     if st == "cancelled":
         return jsonify({"error": "This order was cancelled"}), 400
-    # Soft email check if provided
     if email and str(found.get("email") or "").strip().lower() != email:
         return jsonify({"error": "Email does not match this order"}), 403
 
@@ -2254,6 +2388,9 @@ def api_manual_proof():
         "paymentProofNote": note,
         "paymentSubmittedAt": __import__("datetime").datetime.utcnow().isoformat() + "Z",
         "deliveryEta": found.get("deliveryEta") or "10–30 minutes",
+        "stockHeld": False,
+        "countsAsPending": True,
+        "isIncompleteCheckout": False,
         "message": (
             "Payment reference received. We are verifying your transfer. "
             "Login codes are usually delivered within 10–30 minutes after confirmation."
@@ -2266,9 +2403,26 @@ def api_manual_proof():
 
 @app.get("/api/checkout/manual/<order_id>")
 def api_manual_order_status(order_id: str):
-    """Public status poll for manual e-wallet orders (no codes until paid)."""
+    """Public status poll for manual e-wallet (draft checkout or real order)."""
     oid = str(order_id or "").strip()
     email = (request.args.get("email") or "").strip().lower()
+
+    def _public_view(o: dict) -> dict:
+        public = dict(o)
+        if str(o.get("status") or "").lower() != "paid":
+            safe_items = []
+            for it in public.get("items") or []:
+                safe_items.append({**it, "codes": [], "credentials": []})
+            public["items"] = safe_items
+        return public
+
+    # Incomplete checkouts first
+    draft = load_ewallet_checkouts().get(oid)
+    if isinstance(draft, dict):
+        if email and str(draft.get("email") or "").strip().lower() != email:
+            return jsonify({"error": "Email does not match this order"}), 403
+        return jsonify({"ok": True, "order": _public_view(draft), "incompleteCheckout": True})
+
     for o in load_orders():
         if str(o.get("id") or "") != oid:
             continue
@@ -2276,26 +2430,21 @@ def api_manual_order_status(order_id: str):
             return jsonify({"error": "Not a manual e-wallet order"}), 400
         if email and str(o.get("email") or "").strip().lower() != email:
             return jsonify({"error": "Email does not match this order"}), 403
-        # Never leak codes until paid
-        public = dict(o)
-        if str(o.get("status") or "").lower() != "paid":
-            safe_items = []
-            for it in public.get("items") or []:
-                safe_items.append(
-                    {
-                        **it,
-                        "codes": [],
-                        "credentials": [],
-                    }
-                )
-            public["items"] = safe_items
-        return jsonify({"ok": True, "order": public})
+        return jsonify({"ok": True, "order": _public_view(o)})
     return jsonify({"error": "Order not found"}), 404
 
 
 def _fulfill_manual_order_inplace(order: dict) -> dict:
-    """Reserve codes on a pending manual order and mark paid. Idempotent if already paid."""
-    if str(order.get("status") or "").lower() == "paid" and any(
+    """
+    Reserve codes on a payment_submitted manual order and mark paid.
+    Idempotent if already paid. Never call for incomplete checkouts without reference.
+    """
+    st = str(order.get("status") or "").lower()
+    if st == "awaiting_payment" or order.get("isIncompleteCheckout"):
+        raise ValueError(
+            "Buyer has not submitted a payment reference yet — cannot hold stock or fulfill."
+        )
+    if st == "paid" and any(
         (it.get("codes") or it.get("credentials")) for it in (order.get("items") or [])
     ):
         if not order.get("emailSent"):
@@ -4321,8 +4470,26 @@ def admin_clear_all_inventory():
 @app.get("/api/admin/orders")
 @require_admin
 def admin_orders():
-    orders = load_orders()[:500]
-    return jsonify({"orders": orders, "total": len(load_orders())})
+    """
+    Real orders only. Incomplete e-wallet checkouts (no payment reference)
+    live in ewallet_checkouts.json and are intentionally excluded.
+    """
+    try:
+        purge_stale_ewallet_checkouts()
+    except Exception:
+        pass
+    # Hide legacy incomplete e-wallet rows that never got a payment reference
+    raw = load_orders()
+    orders = []
+    for o in raw:
+        if (
+            o.get("paymentMode") == "manual_ewallet"
+            and str(o.get("status") or "").lower() == "awaiting_payment"
+            and not (o.get("paymentReference") or "").strip()
+        ):
+            continue
+        orders.append(o)
+    return jsonify({"orders": orders[:500], "total": len(orders)})
 
 
 @app.post("/api/admin/orders/<order_id>/status")
@@ -4349,7 +4516,7 @@ def admin_order_set_status(order_id: str):
                 new_status == "paid"
                 and o.get("paymentMode") == "manual_ewallet"
                 and str(o.get("status") or "").lower()
-                in ("awaiting_payment", "payment_submitted")
+                in ("awaiting_payment", "payment_submitted", "checkout_open")
             ):
                 return (
                     jsonify(
@@ -4405,6 +4572,18 @@ def admin_confirm_manual_payment(order_id: str):
         return jsonify({"error": "Order is cancelled"}), 400
     if st == "refunded":
         return jsonify({"error": "Order is refunded"}), 400
+    if st == "awaiting_payment" or found.get("isIncompleteCheckout"):
+        return (
+            jsonify(
+                {
+                    "error": "Buyer has not submitted a payment reference yet.",
+                    "hint": "Incomplete e-wallet checkouts do not hold stock and are not pending until they submit a reference.",
+                }
+            ),
+            400,
+        )
+    if st not in ("payment_submitted", "paid"):
+        return jsonify({"error": f"Cannot confirm order in status: {st or 'unknown'}"}), 400
 
     if note:
         found["adminConfirmNote"] = note
@@ -4412,6 +4591,9 @@ def admin_confirm_manual_payment(order_id: str):
     try:
         with _STORE_LOCK:
             paid = _fulfill_manual_order_inplace(found)
+            paid["stockHeld"] = True
+            paid["countsAsPending"] = False
+            _persist_order_update(paid)
     except ValueError as e:
         return jsonify({"error": str(e)}), 409
     except Exception as e:

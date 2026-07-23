@@ -1653,6 +1653,11 @@ function viewManualEwalletPending(order) {
         <div class="ewallet-eta-notice ewallet-eta-notice-page" role="status">
           <strong>Delivery time: 10–30 minutes</strong>
           <p>E-wallet payments are verified manually. After you pay and we confirm, your login codes are usually delivered within <strong>10–30 minutes</strong> (not instant).</p>
+          ${
+            !submitted
+              ? `<p style="margin-top:8px">Stock is <strong>not held</strong> until you submit your payment reference below. If you leave without submitting, this checkout is discarded.</p>`
+              : `<p style="margin-top:8px">Payment reference received — we will confirm and release codes (stock reserved only when we confirm).</p>`
+          }
         </div>
 
         <div class="manual-pay-box" role="region" aria-label="Payment QR instructions">

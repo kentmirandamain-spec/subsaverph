@@ -1684,9 +1684,12 @@ function ordersView() {
       const st = orderStatusKey(o);
       const isRefunded = st === "refunded" || st === "refund" || st === "reversed" || st === "chargeback";
       const isPaid = ["paid", "completed", "succeeded", "complete", "success"].includes(st);
+      // Only payment_submitted counts as admin-pending (buyer sent a reference).
+      // Incomplete QR checkouts never appear here — stock not held until confirm.
       const isManualPending =
         o.paymentMode === "manual_ewallet" &&
-        (st === "awaiting_payment" || st === "payment_submitted");
+        st === "payment_submitted" &&
+        !!(o.paymentReference || "").trim();
       const lineTotal =
         o.amountPhp != null && o.paymentMode === "manual_ewallet"
           ? Number(o.amountPhp)
@@ -1700,9 +1703,7 @@ function ordersView() {
           : "badge";
       let actions = "";
       if (isManualPending) {
-        const ref = o.paymentReference
-          ? `Ref: ${escapeHtml(o.paymentReference)}`
-          : "No ref yet";
+        const ref = `Ref: ${escapeHtml(o.paymentReference || "—")}`;
         const wallet = (o.payTo && o.payTo.wallet) || o.method || "e-wallet";
         actions = `
           <div class="muted" style="margin:4px 0;font-size:0.78rem">${escapeHtml(String(wallet))} · ${ref}</div>
