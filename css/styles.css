@@ -10605,3 +10605,17 @@ html[data-theme="light"] .hero-cat-box-count strong {
     background: rgba(0, 0, 0, 0.55) !important;
   }
 }
+
+/* Header: hide currency, settings, cart icons (upper right) */
+.nav-tools-hidden,
+#navFxMount.nav-tools-hidden,
+#prefsPicker.nav-tools-hidden,
+#cartBtn.nav-tools-hidden {
+  display: none !important;
+}
+/* Keep hamburger available on mobile only (existing rules) */
+@media (min-width: 901px) {
+  .tools .menu {
+    display: none !important;
+  }
+}

@@ -203,7 +203,7 @@
   }
   </script>
 
-  <link rel="stylesheet" href="css/styles.css?v=mobile-fix2" />
+  <link rel="stylesheet" href="css/styles.css?v=nav-clean1" />
 </head>
 <body class="game-ui orbit-skin galaxy">
   <!-- Quiet cockpit atmosphere (Orbit-style — minimal starfield) -->
@@ -243,7 +243,8 @@
         <div id="searchSuggest" class="search-suggest" hidden role="listbox"></div>
       </div>
       <div class="tools">
-        <div id="navFxMount">
+        <!-- Currency / settings / cart removed from header; available via page controls + mobile tab bar -->
+        <div id="navFxMount" class="nav-tools-hidden" hidden>
           <div class="currency-picker" id="navCurrencyPicker">
             <button type="button" class="fx-btn" data-fx-btn>
               <span class="fx-caption" data-i18n="nav_pay">Pay</span>
@@ -258,7 +259,7 @@
             </div>
           </div>
         </div>
-        <div class="prefs-picker" id="prefsPicker">
+        <div class="prefs-picker nav-tools-hidden" id="prefsPicker" hidden>
           <button type="button" class="icon prefs-btn" id="prefsBtn" aria-label="Settings" data-i18n-aria="nav_prefs" aria-expanded="false" aria-controls="prefsPanel" title="Language &amp; theme">
             ⚙
           </button>
@@ -268,7 +269,6 @@
               <label class="prefs-label" for="prefLang" data-i18n="prefs_language">Language</label>
               <p class="prefs-hint" data-i18n="prefs_lang_hint">UI language for menus and buttons.</p>
               <select id="prefLang" class="prefs-select" aria-label="Language">
-                <!-- Filled by js/prefs.js (all languages) -->
                 <option value="en">English</option>
               </select>
             </div>
@@ -283,7 +283,7 @@
             </div>
           </div>
         </div>
-        <button type="button" id="cartBtn" class="icon cart-icon-btn" aria-label="Cart" data-i18n-aria="nav_cart" title="Cart / Checkout">
+        <button type="button" id="cartBtn" class="icon cart-icon-btn nav-tools-hidden" hidden aria-label="Cart" data-i18n-aria="nav_cart" title="Cart / Checkout">
           <svg class="cart-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M6 6h15l-1.5 9h-12z"/>
             <path d="M6 6 5 3H2"/>
