@@ -823,17 +823,50 @@ function viewHome() {
     Streaming: "stream",
     Learning: "learn",
   };
-  /** Clean line icons for category tiles */
+  /** Category icons — clearly related to each use case */
   const catSvgIcon = (key) => {
     const common =
       'class="hero-cat-svg" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"';
     const icons = {
-      AI: `<svg ${common}><path d="M12 3v2"/><path d="M12 19v2"/><path d="M5 12H3"/><path d="M21 12h-2"/><path d="M6.3 6.3l1.4 1.4"/><path d="M16.3 16.3l1.4 1.4"/><path d="M6.3 17.7l1.4-1.4"/><path d="M16.3 7.7l1.4-1.4"/><circle cx="12" cy="12" r="3.2"/><path d="M9.5 14.5c.7.7 1.6 1 2.5 1s1.8-.3 2.5-1"/></svg>`,
-      Design: `<svg ${common}><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3z"/><path d="M18.5 15.5l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7.7-2z"/></svg>`,
-      Video: `<svg ${common}><rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10.5l5-2.5v8l-5-2.5v-3z"/></svg>`,
-      Streaming: `<svg ${common}><path d="M4.9 8.1a8 8 0 0 1 14.2 0"/><path d="M7.8 11a4.5 4.5 0 0 1 8.4 0"/><circle cx="12" cy="16.5" r="1.6"/><path d="M12 18v2.5"/></svg>`,
-      Learning: `<svg ${common}><path d="M4 19.5V7.8c0-.7.4-1.3 1-1.5L12 4l7 2.3c.6.2 1 .8 1 1.5v11.7"/><path d="M12 4v15.5"/><path d="M4 19.5l8 2 8-2"/><path d="M8 10h2"/><path d="M8 13h2"/></svg>`,
-      All: `<svg ${common}><circle cx="12" cy="12" r="8"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>`,
+      /* AI: chip / neural node */
+      AI: `<svg ${common}>
+        <rect x="7" y="7" width="10" height="10" rx="2"/>
+        <path d="M9 1v3M15 1v3M9 20v3M15 20v3M1 9h3M1 15h3M20 9h3M20 15h3"/>
+        <circle cx="12" cy="12" r="2"/>
+        <path d="M12 9.5v1M12 13.5v1M9.5 12h1M13.5 12h1"/>
+      </svg>`,
+      /* Design: pen tool + palette */
+      Design: `<svg ${common}>
+        <path d="M12 20h9"/>
+        <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4L16.5 3.5z"/>
+      </svg>`,
+      /* Video: film / clapper */
+      Video: `<svg ${common}>
+        <rect x="2" y="6" width="20" height="14" rx="2"/>
+        <path d="M7 6V3M12 6V3M17 6V3"/>
+        <path d="M2 10h20"/>
+        <path d="M10 14l4 2.2-4 2.2V14z"/>
+      </svg>`,
+      /* Streaming: TV with play */
+      Streaming: `<svg ${common}>
+        <rect x="2" y="5" width="20" height="13" rx="2"/>
+        <path d="M8 21h8"/>
+        <path d="M12 18v3"/>
+        <path d="M10 10.5l4 2.5-4 2.5v-5z"/>
+      </svg>`,
+      /* Learning: graduation cap */
+      Learning: `<svg ${common}>
+        <path d="M22 10L12 5 2 10l10 5 10-5z"/>
+        <path d="M6 12v5c0 0 2.5 3 6 3s6-3 6-3v-5"/>
+        <path d="M22 10v6"/>
+      </svg>`,
+      /* All: grid of apps */
+      All: `<svg ${common}>
+        <rect x="3" y="3" width="7" height="7" rx="1.5"/>
+        <rect x="14" y="3" width="7" height="7" rx="1.5"/>
+        <rect x="3" y="14" width="7" height="7" rx="1.5"/>
+        <rect x="14" y="14" width="7" height="7" rx="1.5"/>
+      </svg>`,
     };
     return icons[key] || icons.All;
   };
