@@ -112,7 +112,7 @@ const EN = {
   currency_search: "Search currency (PHP, USD, euro…)",
   // Homepage / content
   hero_eyebrow: "SubSaverPH · Subscription access",
-  hero_title: "Premium\nplans.\nLower\ncost.",
+  hero_title: "Premium plans.\nLower cost.",
   hero_lead: "Prepaid access to premium subscriptions at outlet rates. Checkout in any currency.",
   platforms_title: "",
   catalog_title: "Highest savings",

@@ -10619,3 +10619,155 @@ html[data-theme="light"] .hero-cat-box-count strong {
     display: none !important;
   }
 }
+
+/* ============================================================
+   Hero title redesign — Premium plans / Lower cost
+   ============================================================ */
+
+.hero-title--pro,
+.hero--orbit .hero-title.hero-title--pro,
+.hero--with-slider .hero-title.hero-title--pro {
+  margin: 0.65rem auto 0 !important;
+  max-width: 16ch;
+  font-size: clamp(2.35rem, 7.2vw, 4.1rem) !important;
+  font-weight: 750 !important;
+  letter-spacing: -0.045em !important;
+  line-height: 1.02 !important;
+  text-align: center;
+}
+
+.hero-title-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.12em;
+}
+
+.hero-title-line {
+  display: block;
+  width: 100%;
+}
+
+.hero-title-line--main {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff;
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.55),
+    0 8px 32px rgba(0, 0, 0, 0.35);
+  font-weight: 650;
+}
+
+.hero-title-word {
+  display: inline;
+}
+.hero-title-word--lead {
+  font-weight: 800;
+  letter-spacing: -0.05em;
+}
+
+.hero-title-line--accent {
+  position: relative;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  width: auto !important;
+  margin-top: 0.08em;
+  padding: 0.06em 0.12em 0.1em;
+  background: none !important;
+  -webkit-background-clip: unset !important;
+  background-clip: unset !important;
+  filter: none !important;
+}
+
+.hero-title-accent-text {
+  display: inline-block;
+  background: linear-gradient(
+    105deg,
+    #ffffff 0%,
+    #bae6fd 28%,
+    #7dd3fc 55%,
+    #c4b5fd 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent !important;
+  -webkit-text-fill-color: transparent;
+  font-weight: 800;
+  letter-spacing: -0.05em;
+  filter: drop-shadow(0 0 28px rgba(56, 189, 248, 0.35));
+}
+
+/* Soft underline glow under accent line */
+.hero-title-line--accent::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 0.02em;
+  transform: translateX(-50%);
+  width: min(100%, 9.5ch);
+  height: 0.12em;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(125, 211, 252, 0.85),
+    rgba(167, 139, 250, 0.75),
+    transparent
+  );
+  box-shadow: 0 0 18px rgba(56, 189, 248, 0.45);
+  opacity: 0.9;
+  pointer-events: none;
+}
+
+/* Override older force-white rules for accent in slider hero */
+.hero--with-slider .hero-title--pro .hero-title-line--main {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  background: none !important;
+}
+.hero--with-slider .hero-title--pro .hero-title-accent-text {
+  background: linear-gradient(
+    105deg,
+    #ffffff 0%,
+    #bae6fd 28%,
+    #7dd3fc 55%,
+    #c4b5fd 100%
+  ) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  color: transparent !important;
+  -webkit-text-fill-color: transparent !important;
+  filter: drop-shadow(0 0 28px rgba(56, 189, 248, 0.4)) !important;
+}
+.hero--with-slider .hero-title--pro .hero-title-line--accent {
+  background: none !important;
+  -webkit-text-fill-color: unset !important;
+  color: inherit !important;
+  text-shadow: none !important;
+}
+
+html[data-theme="light"] .hero-title-line--main {
+  color: #0f172a !important;
+  -webkit-text-fill-color: #0f172a !important;
+  text-shadow: none;
+}
+html[data-theme="light"] .hero-title-accent-text {
+  background: linear-gradient(105deg, #0f172a 0%, #0284c7 45%, #6366f1 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent !important;
+  -webkit-text-fill-color: transparent;
+  filter: none;
+}
+html[data-theme="light"] .hero-title-line--accent::after {
+  background: linear-gradient(90deg, transparent, rgba(2, 132, 199, 0.7), transparent);
+  box-shadow: none;
+}
+
+@media (max-width: 720px) {
+  .hero-title--pro,
+  .hero--with-slider .hero-title.hero-title--pro {
+    max-width: 12ch;
+    font-size: clamp(1.85rem, 9vw, 2.55rem) !important;
+  }
+}

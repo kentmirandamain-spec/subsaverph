@@ -673,17 +673,23 @@ function heroTitleHtml() {
     .map((l) => l.trim())
     .filter(Boolean);
   if (!lines.length) {
-    return `<span class="hero-title-line">Premium plans.</span><span class="hero-title-line hero-title-line--accent">Lower cost.</span>`;
+    lines.push("Premium plans.", "Lower cost.");
   }
-  return lines
-    .map((line, i) => {
-      const cls =
-        i === lines.length - 1 && lines.length > 1
-          ? "hero-title-line hero-title-line--accent"
-          : "hero-title-line";
-      return `<span class="${cls}">${escapeHtml(line)}</span>`;
-    })
-    .join("");
+  const parts = lines.map((line, i) => {
+    const isAccent = i === lines.length - 1 && lines.length > 1;
+    if (isAccent) {
+      return `<span class="hero-title-line hero-title-line--accent"><span class="hero-title-accent-text">${escapeHtml(line)}</span></span>`;
+    }
+    // Split "Premium plans." into word spans for polish when default-ish
+    const words = line.split(/\s+/).filter(Boolean);
+    if (words.length > 1) {
+      return `<span class="hero-title-line hero-title-line--main">${words
+        .map((w, wi) => `<span class="hero-title-word${wi === 0 ? " hero-title-word--lead" : ""}">${escapeHtml(w)}</span>`)
+        .join(" ")}</span>`;
+    }
+    return `<span class="hero-title-line hero-title-line--main">${escapeHtml(line)}</span>`;
+  });
+  return `<span class="hero-title-stack">${parts.join("")}</span>`;
 }
 
 /**
@@ -972,7 +978,7 @@ function viewHome() {
               <span class="hero-badge-dot" aria-hidden="true"></span>
               ${escapeHtml(c("hero_eyebrow", "heroEyebrow") || "Live · PH digital store")}
             </p>
-            <h1 class="display hero-title">${heroTitleHtml()}</h1>
+            <h1 class="display hero-title hero-title--pro">${heroTitleHtml()}</h1>
             <p class="lead hero-sub">${escapeHtml(c("hero_lead", "heroLead"))}</p>
 
             <div class="hero-search-wrap">
