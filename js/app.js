@@ -990,15 +990,25 @@ function viewHome() {
             const slideSrc = productSlideImage(d) || "";
             const isCover =
               d.brand === "Canva" ||
-              /cover-canva/i.test(slideSrc) ||
-              /cover-canva-slide/i.test(slideSrc);
+              d.brand === "CapCut" ||
+              d.brand === "YouTube" ||
+              /cover-/i.test(slideSrc) ||
+              /photo-youtube/i.test(slideSrc);
             const brandLabel = d.brand === "xAI" ? "SuperGrok" : d.brand || "";
+            const coverClass =
+              d.brand === "Canva"
+                ? " product-slide--cover product-slide--canva"
+                : d.brand === "CapCut"
+                  ? " product-slide--cover product-slide--capcut"
+                  : isCover
+                    ? " product-slide--cover"
+                    : " product-slide--logo-fit";
             return `
-            <article class="product-slide${i === 0 ? " is-active" : ""}${isCover ? " product-slide--cover product-slide--canva" : " product-slide--logo-fit"}" data-slide-index="${i}" data-brand="${escapeAttr(d.brand || "")}" ${i === 0 ? "" : "hidden"} style="--brand-bg:${escapeAttr(productBrandColor(d))}">
+            <article class="product-slide${i === 0 ? " is-active" : ""}${coverClass}" data-slide-index="${i}" data-brand="${escapeAttr(d.brand || "")}" ${i === 0 ? "" : "hidden"} style="--brand-bg:${escapeAttr(productBrandColor(d))}">
               <a class="product-slide-link product-slide-link--logo" href="#/deal/${escapeAttr(d.id)}" tabindex="${i === 0 ? "0" : "-1"}">
                 <div class="product-slide-logo-wrap">
                   <img
-                    class="product-img product-slide-img${isCover ? " product-cover-img product-cover-img--canva" : " product-logo-img product-logo-img--fit"}"
+                    class="product-img product-slide-img${isCover ? " product-cover-img" : " product-logo-img product-logo-img--fit"}${d.brand === "Canva" ? " product-cover-img--canva" : ""}"
                     src="${escapeAttr(slideSrc)}"
                     alt="${escapeAttr(brandLabel || d.name)}"
                     width="1280"
