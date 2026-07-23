@@ -3124,8 +3124,14 @@ function bind() {
   }
 
   $$("[data-add]").forEach((btn) => {
-    btn.addEventListener("click", () => {
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
       const deal = getDeal(btn.dataset.add);
+      if (!deal) {
+        toast("Product not found", true);
+        return;
+      }
       if (isSoldOut(deal)) {
         toast("SOLD OUT — no stock left");
         return;
@@ -3173,7 +3179,9 @@ function bind() {
   });
 
   $$("[data-category]").forEach((btn) => {
-    btn.addEventListener("click", () => {
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
       const cat = btn.dataset.category || "All";
       state.category = cat;
       state.brand = "All";
@@ -3665,13 +3673,39 @@ async function init() {
     });
   }
 
-  $("#cartBtn").addEventListener("click", openCart);
-  $("#closeCart").addEventListener("click", closeCart);
-  $("#overlay").addEventListener("click", closeCart);
-  $("#goCheckout").addEventListener("click", () => {
-    closeCart();
-    location.hash = "#/checkout";
-  });
+  const cartBtn = $("#cartBtn");
+  if (cartBtn && cartBtn.dataset.bound !== "1") {
+    cartBtn.dataset.bound = "1";
+    cartBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      openCart();
+    });
+  }
+  const closeCartBtn = $("#closeCart");
+  if (closeCartBtn && closeCartBtn.dataset.bound !== "1") {
+    closeCartBtn.dataset.bound = "1";
+    closeCartBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      closeCart();
+    });
+  }
+  const overlayEl = $("#overlay");
+  if (overlayEl && overlayEl.dataset.bound !== "1") {
+    overlayEl.dataset.bound = "1";
+    overlayEl.addEventListener("click", () => closeCart());
+  }
+  const goCheckoutBtn = $("#goCheckout");
+  if (goCheckoutBtn && goCheckoutBtn.dataset.bound !== "1") {
+    goCheckoutBtn.dataset.bound = "1";
+    goCheckoutBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      closeCart();
+      location.hash = "#/checkout";
+    });
+  }
 
   $("#cartBody").addEventListener("click", (e) => {
     if (e.target.matches("[data-go-deals]")) {
