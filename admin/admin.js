@@ -1027,12 +1027,27 @@ function stockView() {
       </div>`;
   }
 
+  const host = (location.hostname || "").toLowerCase();
+  const isLocal = host === "localhost" || host === "127.0.0.1" || host.endsWith(".local");
+  const stockWarning = isLocal
+    ? `<div class="panel" style="border-color:#e8b84a;margin-bottom:14px">
+        <p style="margin:0;font-weight:700;color:#e8b84a">⚠ Local admin only</p>
+        <p class="muted" style="margin:8px 0 0">Stock saved here stays on this PC. The <strong>live website</strong> (subsaverph.com) will still show SOLD OUT unless you either:
+        <br/>1) Open <strong>https://subsaverph.com/admin</strong> and add stock there, or
+        <br/>2) Deploy / push <code>data/store/inventory.json</code> to production after saving stock.</p>
+      </div>`
+    : `<div class="panel" style="margin-bottom:14px">
+        <p class="muted" style="margin:0">Stock is saved on the <strong>live server</strong> and updates the storefront immediately (hard-refresh the shop if a tab was already open). A new code deploy can reset stock if inventory was empty in git — re-add stock after big deploys if needed.</p>
+      </div>`;
+
   return `
     <div class="top"><h1>Codes / Stock (instant delivery)</h1></div>
-    <p class="muted">Load digital codes for each product. Checkout auto-sends an unused code after payment.</p>
+    <p class="muted">Load digital codes for each product. Storefront stock count = <strong>Available</strong> codes below (not the product “Stock label” field alone).</p>
+    ${stockWarning}
     <div class="row-actions" style="margin-bottom:12px">
       <button type="button" class="btn ghost" id="clearSoldOnly">Clear sold only</button>
       <button type="button" class="btn ghost" id="clearAllStock">Clear all stock (available + sold + total)</button>
+      <button type="button" class="btn ghost" id="checkLiveStock">Check live store stock</button>
     </div>
     ${form}
     <div class="panel" style="overflow:auto">
@@ -2239,14 +2254,31 @@ function bindShell() {
         /* inventory toast still ok */
       }
       const left = data.available ?? data.stockLeft;
+      const host = (location.hostname || "").toLowerCase();
+      const isLocal = host === "localhost" || host === "127.0.0.1";
       toast(
         data.added
-          ? `Added ${data.added} codes · ${left} available on storefront (refresh shop if open)`
+          ? isLocal
+            ? `Saved ${data.added} codes locally (${left} available). Live site needs live /admin or a deploy of inventory.json`
+            : `Added ${data.added} codes · ${left} available on this live server — hard-refresh the shop`
           : `No new codes added (duplicates?) · ${left} available`
       );
       render();
     } catch (err) {
       toast(err.message, true);
+    }
+  });
+
+  $("#checkLiveStock")?.addEventListener("click", async () => {
+    try {
+      const res = await fetch("/api/catalog", { cache: "no-store", credentials: "same-origin" });
+      const data = await res.json();
+      const lines = (data.deals || [])
+        .map((d) => `${d.name || d.id}: ${d.stockLeft ?? "?"} (${d.stock || "—"})`)
+        .join("\n");
+      alert(`Storefront stock on THIS server:\n\n${lines || "No deals"}`);
+    } catch (err) {
+      toast(err.message || "Could not load catalog", true);
     }
   });
 

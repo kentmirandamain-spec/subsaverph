@@ -1,8 +1,51 @@
 {
-  "supergrok-7d": [],
-  "supergrok-1m": [],
-  "canva-pro": [],
-  "canva-teams": [],
+  "supergrok-7d": [
+    {
+      "code": "Username: Test Password: Test",
+      "status": "available",
+      "addedAt": "2026-07-23T05:55:02.082145Z"
+    },
+    {
+      "code": "test",
+      "status": "available",
+      "addedAt": "2026-07-23T08:54:09.762902Z"
+    }
+  ],
+  "supergrok-1m": [
+    {
+      "code": "test",
+      "status": "available",
+      "addedAt": "2026-07-23T08:54:15.522650Z"
+    }
+  ],
+  "canva-pro": [
+    {
+      "code": "testuser1:testpass1",
+      "status": "available",
+      "addedAt": "2026-07-23T06:05:35.572442Z"
+    },
+    {
+      "code": "testuser2:testpass2",
+      "status": "available",
+      "addedAt": "2026-07-23T06:05:35.572442Z"
+    }
+  ],
+  "canva-teams": [
+    {
+      "code": "u1:p1",
+      "status": "available",
+      "addedAt": "2026-07-23T06:08:19.135699Z",
+      "username": "u1",
+      "password": "p1"
+    },
+    {
+      "code": "u2:p2",
+      "status": "available",
+      "addedAt": "2026-07-23T06:08:19.135699Z",
+      "username": "u2",
+      "password": "p2"
+    }
+  ],
   "capcut-pro": [],
   "capcut-std": [],
   "netflix-prem": [],

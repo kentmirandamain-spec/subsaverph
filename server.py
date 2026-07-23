@@ -1000,6 +1000,16 @@ def health():
     except Exception:
         mail_ok = False
     outbound = get_outbound_ip()
+    # Stock snapshot (helps diagnose SOLD OUT vs admin inventory)
+    stock_summary = {}
+    try:
+        for d in load_deals(include_inactive=False):
+            pid = d.get("id") or ""
+            if pid:
+                stock_summary[pid] = stock_count(pid)
+    except Exception:
+        stock_summary = {}
+
     return jsonify(
         {
             "ok": True,
@@ -1013,6 +1023,8 @@ def health():
             "cryptoConfigured": crypto_configured(),
             "liqpayConfigured": liqpay_configured(),
             "ewalletProvider": ewallet_provider(),
+            "stockByProduct": stock_summary,
+            "inventoryFile": str(INVENTORY_FILE),
             # Add this IP in NOWPayments → Settings → Payments → IP addresses
             "outboundIp": outbound,
             "outboundIpHint": (
