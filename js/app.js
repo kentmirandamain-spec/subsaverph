@@ -76,14 +76,15 @@ function dealsList() {
 }
 
 /** Official brand photo (PNG) per brand — used on product cards. */
+/** Real brand product photos (logo on brand plate / official cover art). */
 const OFFICIAL_BRAND_PHOTO = {
-  xAI: "/assets/products/brand-xai.png?v=official1",
-  Canva: "/assets/products/cover-canva.png?v=official1",
-  CapCut: "/assets/products/cover-capcut-official.png?v=official1",
-  Netflix: "/assets/products/brand-netflix.png?v=official1",
-  YouTube: "/assets/products/brand-youtube.png?v=official1",
-  Duolingo: "/assets/products/brand-duolingo.png?v=official1",
-  Spotify: "/assets/products/brand-spotify.png?v=official1",
+  xAI: "/assets/products/photo-xai.png?v=realbrand2",
+  Canva: "/assets/products/photo-canva.png?v=realbrand2",
+  CapCut: "/assets/products/photo-capcut.png?v=realbrand2",
+  Netflix: "/assets/products/photo-netflix.png?v=realbrand2",
+  YouTube: "/assets/products/photo-youtube.png?v=realbrand2",
+  Duolingo: "/assets/products/photo-duolingo.png?v=realbrand2",
+  Spotify: "/assets/products/photo-spotify.png?v=realbrand2",
 };
 
 /** Official brand logo SVG (icons / fallback). */
@@ -123,7 +124,16 @@ function productImage(d) {
 function productSlideImage(d) {
   if (!d) return "";
   if (d.imageSlide && isProductPhoto(d.imageSlide)) return String(d.imageSlide);
-  if (d.brand === "Canva") return "/assets/products/cover-canva-official-slide.png?v=official2";
+  const slides = {
+    xAI: "/assets/products/photo-xai-slide.png?v=realbrand2",
+    Canva: "/assets/products/photo-canva-slide.png?v=realbrand2",
+    CapCut: "/assets/products/photo-capcut-slide.png?v=realbrand2",
+    Netflix: "/assets/products/photo-netflix-slide.png?v=realbrand2",
+    YouTube: "/assets/products/photo-youtube-slide.png?v=realbrand2",
+    Duolingo: "/assets/products/photo-duolingo-slide.png?v=realbrand2",
+    Spotify: "/assets/products/photo-spotify-slide.png?v=realbrand2",
+  };
+  if (d.brand && slides[d.brand]) return slides[d.brand];
   if (d.brand && OFFICIAL_BRAND_PHOTO[d.brand]) return OFFICIAL_BRAND_PHOTO[d.brand];
   return productImage(d) || productLogo(d);
 }

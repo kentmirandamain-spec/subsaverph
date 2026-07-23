@@ -1,4 +1,4 @@
-/** SubSaverPH catalog — official product photos */
+/** SubSaverPH catalog — real brand product photos */
 window.DEALS = [
   {
     "id": "supergrok-7d",
@@ -36,8 +36,8 @@ window.DEALS = [
     ],
     "active": true,
     "stockLeft": 2,
-    "image": "/assets/products/brand-xai.png?v=official1",
-    "imageSlide": "/assets/products/brand-xai.png?v=official1",
+    "image": "/assets/products/photo-xai.png?v=realbrand2",
+    "imageSlide": "/assets/products/photo-xai-slide.png?v=realbrand2",
     "logo": "/assets/products/logos/brand-xai-fixed.svg?v=2",
     "imageBg": "/assets/products/plate-xai.png",
     "brandColor": "#000000"
@@ -78,8 +78,8 @@ window.DEALS = [
     ],
     "active": true,
     "stockLeft": 1,
-    "image": "/assets/products/brand-xai.png?v=official1",
-    "imageSlide": "/assets/products/brand-xai.png?v=official1",
+    "image": "/assets/products/photo-xai.png?v=realbrand2",
+    "imageSlide": "/assets/products/photo-xai-slide.png?v=realbrand2",
     "logo": "/assets/products/logos/brand-xai-fixed.svg?v=2",
     "imageBg": "/assets/products/plate-xai.png",
     "brandColor": "#000000"
@@ -117,8 +117,8 @@ window.DEALS = [
     "extraDetails": [],
     "active": true,
     "stockLeft": 2,
-    "image": "/assets/products/canva-pro.png?v=official1",
-    "imageSlide": "/assets/products/cover-canva-official-slide.png?v=official2",
+    "image": "/assets/products/photo-canva.png?v=realbrand2",
+    "imageSlide": "/assets/products/photo-canva-slide.png?v=realbrand2",
     "logo": "/assets/products/logos/brand-canva-fixed.svg?v=2",
     "imageBg": "/assets/products/plate-canva.png",
     "brandColor": "#00c4cc"
@@ -156,8 +156,8 @@ window.DEALS = [
     "extraDetails": [],
     "active": true,
     "stockLeft": 2,
-    "image": "/assets/products/canva-teams.png?v=official1",
-    "imageSlide": "/assets/products/cover-canva-official-slide.png?v=official2",
+    "image": "/assets/products/photo-canva.png?v=realbrand2",
+    "imageSlide": "/assets/products/photo-canva-slide.png?v=realbrand2",
     "logo": "/assets/products/logos/brand-canva-fixed.svg?v=2",
     "imageBg": "/assets/products/plate-canva.png",
     "brandColor": "#00c4cc"
@@ -195,8 +195,8 @@ window.DEALS = [
     "extraDetails": [],
     "active": true,
     "stockLeft": 0,
-    "image": "/assets/products/cover-capcut-official.png?v=official1",
-    "imageSlide": "/assets/products/cover-capcut-official.png?v=official1",
+    "image": "/assets/products/photo-capcut.png?v=realbrand2",
+    "imageSlide": "/assets/products/photo-capcut-slide.png?v=realbrand2",
     "logo": "/assets/products/logos/brand-capcut-official.svg?v=logo1",
     "imageBg": "/assets/products/plate-capcut.png",
     "brandColor": "#000000"
@@ -233,8 +233,8 @@ window.DEALS = [
     "extraDetails": [],
     "active": true,
     "stockLeft": 0,
-    "image": "/assets/products/cover-capcut-official.png?v=official1",
-    "imageSlide": "/assets/products/cover-capcut-official.png?v=official1",
+    "image": "/assets/products/photo-capcut.png?v=realbrand2",
+    "imageSlide": "/assets/products/photo-capcut-slide.png?v=realbrand2",
     "logo": "/assets/products/logos/brand-capcut-official.svg?v=logo1",
     "imageBg": "/assets/products/plate-capcut.png",
     "brandColor": "#000000"
@@ -269,8 +269,8 @@ window.DEALS = [
     "howToRedeem": "1. Open the official website or app for this product.\n2. Sign in with the Username and Password from your delivery package.\n3. Do not change the password, email, or billing details.\n4. Use the account only as provided for the full access period.\n5. If login fails, contact support with your Order ID before trying other fixes.",
     "importantNotes": "Do not change the username, email, password, billing address, or subscription plan.\nDo not share, resell, or post the login publicly.\nPersonal use only — follow the official service terms.\nBreaking these rules voids refunds and support.\nRefunds only if the product is defective or not delivered.",
     "stockLeft": 0,
-    "image": "/assets/products/brand-netflix.png?v=official1",
-    "imageSlide": "/assets/products/brand-netflix.png?v=official1",
+    "image": "/assets/products/photo-netflix.png?v=realbrand2",
+    "imageSlide": "/assets/products/photo-netflix-slide.png?v=realbrand2",
     "logo": "/assets/products/logos/brand-netflix-fixed.svg",
     "imageBg": "/assets/products/plate-netflix.png",
     "brandColor": "#000000"
@@ -305,8 +305,8 @@ window.DEALS = [
     "howToRedeem": "1. Open the official website or app for this product.\n2. Sign in with the Username and Password from your delivery package.\n3. Do not change the password, email, or billing details.\n4. Use the account only as provided for the full access period.\n5. If login fails, contact support with your Order ID before trying other fixes.",
     "importantNotes": "Do not change the username, email, password, billing address, or subscription plan.\nDo not share, resell, or post the login publicly.\nPersonal use only — follow the official service terms.\nBreaking these rules voids refunds and support.\nRefunds only if the product is defective or not delivered.",
     "stockLeft": 0,
-    "image": "/assets/products/brand-netflix.png?v=official1",
-    "imageSlide": "/assets/products/brand-netflix.png?v=official1",
+    "image": "/assets/products/photo-netflix.png?v=realbrand2",
+    "imageSlide": "/assets/products/photo-netflix-slide.png?v=realbrand2",
     "logo": "/assets/products/logos/brand-netflix-fixed.svg",
     "imageBg": "/assets/products/plate-netflix.png",
     "brandColor": "#000000"
@@ -341,8 +341,8 @@ window.DEALS = [
     "howToRedeem": "1. Open the official website or app for this product.\n2. Sign in with the Username and Password from your delivery package.\n3. Do not change the password, email, or billing details.\n4. Use the account only as provided for the full access period.\n5. If login fails, contact support with your Order ID before trying other fixes.",
     "importantNotes": "Do not change the username, email, password, billing address, or subscription plan.\nDo not share, resell, or post the login publicly.\nPersonal use only — follow the official service terms.\nBreaking these rules voids refunds and support.\nRefunds only if the product is defective or not delivered.",
     "stockLeft": 0,
-    "image": "/assets/products/brand-youtube.png?v=official1",
-    "imageSlide": "/assets/products/brand-youtube.png?v=official1",
+    "image": "/assets/products/photo-youtube.png?v=realbrand2",
+    "imageSlide": "/assets/products/photo-youtube-slide.png?v=realbrand2",
     "logo": "/assets/products/logos/brand-youtube-fixed.svg",
     "imageBg": "/assets/products/plate-youtube.png",
     "brandColor": "#ffffff"
@@ -377,8 +377,8 @@ window.DEALS = [
     "howToRedeem": "1. Open the official website or app for this product.\n2. Sign in with the Username and Password from your delivery package.\n3. Do not change the password, email, or billing details.\n4. Use the account only as provided for the full access period.\n5. If login fails, contact support with your Order ID before trying other fixes.",
     "importantNotes": "Do not change the username, email, password, billing address, or subscription plan.\nDo not share, resell, or post the login publicly.\nPersonal use only — follow the official service terms.\nBreaking these rules voids refunds and support.\nRefunds only if the product is defective or not delivered.",
     "stockLeft": 0,
-    "image": "/assets/products/brand-youtube.png?v=official1",
-    "imageSlide": "/assets/products/brand-youtube.png?v=official1",
+    "image": "/assets/products/photo-youtube.png?v=realbrand2",
+    "imageSlide": "/assets/products/photo-youtube-slide.png?v=realbrand2",
     "logo": "/assets/products/logos/brand-youtube-fixed.svg",
     "imageBg": "/assets/products/plate-youtube.png",
     "brandColor": "#ffffff"
@@ -420,8 +420,8 @@ window.DEALS = [
     ],
     "active": true,
     "stockLeft": 0,
-    "image": "/assets/products/brand-duolingo.png?v=official1",
-    "imageSlide": "/assets/products/brand-duolingo.png?v=official1",
+    "image": "/assets/products/photo-duolingo.png?v=realbrand2",
+    "imageSlide": "/assets/products/photo-duolingo-slide.png?v=realbrand2",
     "logo": "/assets/products/logos/brand-duolingo-fixed.svg",
     "imageBg": "/assets/products/plate-duolingo.png",
     "brandColor": "#ffffff"
@@ -463,8 +463,8 @@ window.DEALS = [
     ],
     "active": true,
     "stockLeft": 0,
-    "image": "/assets/products/brand-spotify.png?v=official1",
-    "imageSlide": "/assets/products/brand-spotify.png?v=official1",
+    "image": "/assets/products/photo-spotify.png?v=realbrand2",
+    "imageSlide": "/assets/products/photo-spotify-slide.png?v=realbrand2",
     "logo": "/assets/products/logos/brand-spotify-fixed.svg",
     "imageBg": "/assets/products/plate-spotify.png",
     "brandColor": "#191414"
