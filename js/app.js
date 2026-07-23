@@ -1243,9 +1243,10 @@ function settingsLines(text, fallbackLines = []) {
     .filter(Boolean);
 }
 
-function bulletsHtml(lines) {
+function bulletsHtml(lines, listClass = "") {
   if (!lines.length) return "";
-  return `<ul>${lines.map((l) => `<li>${formatRuleLine(l)}</li>`).join("")}</ul>`;
+  const cls = listClass ? ` class="${escapeAttr(listClass)}"` : "";
+  return `<ul${cls}>${lines.map((l) => `<li>${formatRuleLine(l)}</li>`).join("")}</ul>`;
 }
 
 /** Allow **bold** markers in admin text for rules */
@@ -1841,54 +1842,34 @@ function viewCheckout() {
   const defaultBtn = payButtonLabel(defaultMethod);
 
   return `
-    <div class="page">
-      <div class="page-inner">
-        <p class="eyebrow">Payment</p>
-        <h1 class="page-title">Checkout</h1>
-        <p class="muted" style="margin-bottom:16px">
-          Pay as a Filipino shopper with
-          <strong style="color:var(--text)">GCash</strong>,
-          <strong style="color:var(--text)">Maya</strong>,
-          <strong style="color:var(--text)">GrabPay</strong>, or
-          <strong style="color:var(--text)">ShopeePay</strong>
-          (plus Card). Codes deliver <strong style="color:var(--text)">instantly</strong> after payment.
-        </p>
-        ${cancelled ? `<p class="err" style="color:#ff8a8a;margin-bottom:12px">Payment cancelled. You can try again.</p>` : ""}
-        <div class="checkout">
-          <form id="payForm" class="form" novalidate>
-            <h3>Contact</h3>
-            <label>Email for delivery<input required type="email" name="email" placeholder="you@email.com" /></label>
-            <label>Full name<input required name="name" placeholder="Juan Dela Cruz" /></label>
-            <h3>Payment currency</h3>
-            <div id="pageFxMount" style="margin-bottom:16px"></div>
-            <p class="muted" style="margin:-8px 0 16px;font-size:0.78rem;text-transform:none;letter-spacing:0;font-weight:400">
-              PH e-wallets always bill in <strong>PHP</strong> (converted automatically from your display currency).
-            </p>
-            <h3>Payment method</h3>
-            <div class="pay-methods" role="radiogroup" aria-label="Payment method">
-              ${methodRadios}
-            </div>
-            ${payHelp}
-            <p class="muted" style="font-size:0.8rem;margin:12px 0 0;text-transform:none;letter-spacing:0;font-weight:400">
-              Next you will review purchase rules and must accept the terms before payment.
-            </p>
-            <p class="err" id="checkoutErr" style="color:#ff8a8a;font-size:0.85rem;min-height:1.2em"></p>
-            <button class="btn solid full" type="submit" id="payBtn" data-total="${escapeHtml(formatMoney(t.total))}">
-              Review &amp; continue · ${formatMoney(t.total)}
-            </button>
-          </form>
+    <div class="page page-checkout">
+      <div class="page-inner page-inner--checkout">
+        <header class="checkout-page-head">
+          <p class="eyebrow">Payment</p>
+          <h1 class="page-title">Checkout</h1>
+          <p class="muted checkout-lead">
+            Pay with
+            <strong style="color:var(--text)">GCash</strong>,
+            <strong style="color:var(--text)">Maya</strong>,
+            <strong style="color:var(--text)">GrabPay</strong>,
+            <strong style="color:var(--text)">ShopeePay</strong>
+            or card. Codes deliver after payment.
+          </p>
+        </header>
+        ${cancelled ? `<p class="err checkout-banner-err">Payment cancelled. You can try again.</p>` : ""}
+        <div class="checkout checkout--ordered">
           <aside class="summary">
-            <h3 style="font-family:var(--display);letter-spacing:.12em;text-transform:uppercase;font-size:.8rem;margin:0 0 14px">Order</h3>
+            <h3 class="checkout-section-title">1. Your order</h3>
             ${cart
               .map(
                 (i) => `
               <div class="line">
                 <span class="mono-box">${escapeHtml(i.monogram)}</span>
-                <div>
+                <div class="line-copy">
                   <strong>${escapeHtml(i.name)}</strong>
                   <em>${escapeHtml(i.duration)} × ${i.qty}</em>
                 </div>
-                <span>${formatLinePrice(i)}</span>
+                <span class="line-price">${formatLinePrice(i)}</span>
               </div>`
               )
               .join("")}
@@ -1897,8 +1878,30 @@ function viewCheckout() {
               <div><span>You save</span><span>−${formatMoney(t.saved)}</span></div>
               <div class="grand"><span>Total</span><span>${formatMoney(t.total)}</span></div>
             </div>
-            <p class="rates" data-rates style="margin-top:12px">${ratesNote()}</p>
+            <p class="rates" data-rates>${ratesNote()}</p>
           </aside>
+          <form id="payForm" class="form" novalidate>
+            <h3 class="checkout-section-title">2. Contact</h3>
+            <label>Email for delivery<input required type="email" name="email" placeholder="you@email.com" autocomplete="email" /></label>
+            <label>Full name<input required name="name" placeholder="Juan Dela Cruz" autocomplete="name" /></label>
+            <h3 class="checkout-section-title">3. Payment currency</h3>
+            <div id="pageFxMount" class="checkout-fx-mount"></div>
+            <p class="muted checkout-hint">
+              PH e-wallets always bill in <strong>PHP</strong> (converted from your display currency).
+            </p>
+            <h3 class="checkout-section-title">4. Payment method</h3>
+            <div class="pay-methods" role="radiogroup" aria-label="Payment method">
+              ${methodRadios}
+            </div>
+            ${payHelp}
+            <p class="muted checkout-hint checkout-hint--next">
+              Next: review purchase rules and accept the terms before payment.
+            </p>
+            <p class="err" id="checkoutErr"></p>
+            <button class="btn solid full" type="submit" id="payBtn" data-total="${escapeHtml(formatMoney(t.total))}">
+              Review &amp; continue · ${formatMoney(t.total)}
+            </button>
+          </form>
         </div>
       </div>
 
@@ -1941,13 +1944,13 @@ function checkoutTermsModalHtml(cart, totals) {
         <div class="terms-modal-backdrop" data-terms-close></div>
         <div class="terms-modal-panel" role="dialog" aria-modal="true" aria-labelledby="termsModalTitle">
           <div class="terms-modal-head">
-            <p class="eyebrow" style="margin:0">${escapeHtml(eyebrow)}</p>
+            <p class="eyebrow terms-modal-eyebrow">${escapeHtml(eyebrow)}</p>
             <h2 id="termsModalTitle">${escapeHtml(title)}</h2>
             <button type="button" class="icon terms-modal-x" data-terms-close aria-label="Close">×</button>
           </div>
           <div class="terms-modal-body">
-            <section class="terms-block">
-              <h3>Order summary</h3>
+            <section class="terms-block terms-block--order">
+              <h3><span class="terms-step">1</span> Order summary</h3>
               <ul class="terms-order-list">
                 ${cart
                   .map(
@@ -1962,25 +1965,26 @@ function checkoutTermsModalHtml(cart, totals) {
               <p class="terms-total"><span>Total</span><strong>${formatMoney(totals.total)}</strong></p>
             </section>
 
-            <section class="terms-block">
-              <h3>What you are buying</h3>
-              ${bulletsHtml(whatLines)}
+            <section class="terms-block terms-block--what">
+              <h3><span class="terms-step">2</span> What you are buying</h3>
+              ${bulletsHtml(whatLines, "terms-what-list")}
             </section>
 
-            <section class="terms-block">
-              <h3>Rules &amp; regulations</h3>
-              ${bulletsHtml(ruleLines)}
+            <section class="terms-block terms-block--rules">
+              <h3><span class="terms-step">3</span> Rules &amp; regulations</h3>
+              <ol class="terms-rules-list">
+                ${ruleLines.map((l) => `<li>${formatRuleLine(l)}</li>`).join("")}
+              </ol>
             </section>
 
-            <section class="terms-block">
-              <h3>Support</h3>
-              <p class="muted" style="margin:0;text-transform:none;letter-spacing:0;font-weight:400;font-size:0.9rem">
-                ${escapeHtml(supportText)}
-                <br/>
-                <a href="#/support" class="btn ghost js-go-support" style="margin:6px 0 0;padding:6px 12px;font-size:0.85rem">Contact support</a>
-                · <a href="#/terms">Terms of Use</a>
-                · <a href="#/privacy">Privacy Policy</a>
-              </p>
+            <section class="terms-block terms-block--support">
+              <h3><span class="terms-step">4</span> Support</h3>
+              <p class="terms-support-text">${escapeHtml(supportText)}</p>
+              <div class="terms-support-links">
+                <a href="#/support" class="btn ghost js-go-support">Contact support</a>
+                <a href="#/terms">Terms of Use</a>
+                <a href="#/privacy">Privacy Policy</a>
+              </div>
             </section>
           </div>
           <div class="terms-modal-foot">
@@ -1988,7 +1992,7 @@ function checkoutTermsModalHtml(cart, totals) {
               <input type="checkbox" id="termsAccept" />
               <span>${escapeHtml(acceptLabel)}</span>
             </label>
-            <p class="err" id="termsErr" style="color:#ff8a8a;font-size:0.85rem;min-height:1.2em;margin:0"></p>
+            <p class="err" id="termsErr"></p>
             <div class="terms-actions">
               <button type="button" class="btn" data-terms-close>Back</button>
               <button type="button" class="btn solid" id="termsConfirmBtn" disabled data-confirm-prefix="${escapeHtml(confirmPrefix)}">

@@ -3749,9 +3749,7 @@ html[data-theme="light"] .cred-value {
     order: 1;
   }
 
-  .checkout .summary {
-    order: -1;
-  }
+  /* Order summary first is set in HTML (.checkout--ordered) */
 
   .toolbar {
     flex-direction: column;
@@ -11771,7 +11769,7 @@ html[data-theme="light"] .hero-cat-box:hover {
 }
 
 /* ============================================================
-   Shop by category — center incomplete second row
+   Shop by category ï¿½ center incomplete second row
    5 category tiles on a 3-col board leave 2 on row 2; center them.
    ============================================================ */
 
@@ -11818,7 +11816,7 @@ html[data-theme="light"] .hero-cat-box:hover {
 }
 
 /* ============================================================
-   Mobile chrome fix — header tools visible, drop tab/nav clutter
+   Mobile chrome fix ï¿½ header tools visible, drop tab/nav clutter
    ============================================================ */
 
 @media (max-width: 900px) {
@@ -11936,7 +11934,7 @@ html[data-theme="light"] .hero-cat-box:hover {
     display: none !important;
   }
 
-  /* Currency + settings + cart — always on-screen */
+  /* Currency + settings + cart ï¿½ always on-screen */
   .tools,
   .nav-inner > .tools {
     display: flex !important;
@@ -12357,5 +12355,502 @@ html[data-theme="light"] .hero-cat-box:hover {
     max-width: 86% !important;
     max-height: 86% !important;
     transform: none !important;
+  }
+}
+
+/* ============================================================
+   Mobile checkout — center, order, rules & regulations
+   ============================================================ */
+
+.checkout-section-title {
+  font-family: var(--display);
+  font-size: 0.78rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin: 0 0 12px;
+}
+
+.checkout-page-head {
+  margin-bottom: 8px;
+}
+
+.checkout-lead {
+  margin: 0 0 16px;
+  max-width: 40ch;
+}
+
+.checkout-hint {
+  margin: 0 0 16px;
+  font-size: 0.78rem !important;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+  font-weight: 400 !important;
+  line-height: 1.45;
+}
+
+.checkout-hint--next {
+  margin: 12px 0 8px !important;
+  font-size: 0.8rem !important;
+}
+
+.checkout-fx-mount {
+  margin-bottom: 12px;
+}
+
+.checkout-banner-err {
+  color: #ff8a8a;
+  margin: 0 0 12px;
+}
+
+#checkoutErr,
+#termsErr {
+  color: #ff8a8a;
+  font-size: 0.85rem;
+  min-height: 1.2em;
+  margin: 0 0 8px;
+}
+
+/* Terms: numbered rules */
+.terms-step {
+  display: inline-grid;
+  place-items: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  margin-right: 0.35rem;
+  border-radius: 999px;
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  background: rgba(56, 189, 248, 0.12);
+  color: #7dd3fc;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  vertical-align: middle;
+}
+
+.terms-rules-list,
+.terms-what-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: rule;
+}
+
+.terms-rules-list {
+  counter-reset: rule;
+}
+
+.terms-rules-list > li,
+.terms-what-list > li {
+  position: relative;
+  margin: 0 0 10px;
+  padding: 12px 12px 12px 2.6rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--mute);
+  font-size: 0.88rem;
+  line-height: 1.5;
+  text-align: left;
+}
+
+.terms-rules-list > li {
+  counter-increment: rule;
+}
+
+.terms-rules-list > li::before {
+  content: counter(rule);
+  position: absolute;
+  left: 0.7rem;
+  top: 0.85rem;
+  width: 1.35rem;
+  height: 1.35rem;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(56, 189, 248, 0.14);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  color: #e0f2fe;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.terms-what-list > li {
+  padding-left: 12px;
+}
+
+.terms-block li strong {
+  color: var(--text);
+}
+
+.terms-support-text {
+  margin: 0 0 12px;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--mute);
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 400;
+}
+
+.terms-support-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: center;
+}
+
+.terms-support-links a:not(.btn) {
+  font-size: 0.85rem;
+  color: #7dd3fc;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.terms-modal-eyebrow {
+  margin: 0;
+}
+
+@media (max-width: 900px) {
+  /* ---- Checkout page centered & ordered ---- */
+  .page-checkout,
+  .page-inner--checkout {
+    text-align: center !important;
+  }
+
+  .page-inner--checkout {
+    width: min(100% - 20px, 520px) !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    padding-bottom: calc(28px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  .checkout-page-head {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    margin: 0 auto 14px;
+  }
+
+  .checkout-page-head .page-title,
+  .checkout-page-head .eyebrow,
+  .checkout-lead {
+    text-align: center !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+
+  .checkout-lead {
+    max-width: 34ch;
+    font-size: 0.9rem !important;
+    line-height: 1.45;
+  }
+
+  .checkout.checkout--ordered,
+  .page-checkout .checkout {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 14px !important;
+    margin-top: 10px !important;
+    width: 100% !important;
+  }
+
+  .page-checkout .summary,
+  .page-checkout .form {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 auto !important;
+    border-radius: 16px !important;
+    padding: 16px 14px !important;
+    text-align: center !important;
+    box-sizing: border-box !important;
+  }
+
+  .checkout-section-title,
+  .page-checkout .form h3,
+  .page-checkout .summary h3 {
+    text-align: center !important;
+    margin: 18px auto 12px !important;
+  }
+
+  .page-checkout .form h3:first-child,
+  .page-checkout .summary h3:first-child,
+  .page-checkout .checkout-section-title:first-child {
+    margin-top: 0 !important;
+  }
+
+  .page-checkout .form label {
+    text-align: center !important;
+    align-items: center !important;
+    width: 100%;
+  }
+
+  .page-checkout .form input:not([type="checkbox"]) {
+    text-align: center !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .checkout-hint,
+  .page-checkout .muted,
+  .page-checkout .rates {
+    text-align: center !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+
+  .checkout-fx-mount,
+  #pageFxMount {
+    display: flex !important;
+    justify-content: center !important;
+    width: 100% !important;
+  }
+
+  /* Order lines — neat centered stack */
+  .page-checkout .line {
+    grid-template-columns: 40px 1fr auto !important;
+    text-align: left !important;
+    align-items: center !important;
+    gap: 10px !important;
+    width: 100%;
+  }
+
+  .page-checkout .line-copy {
+    min-width: 0;
+    text-align: left;
+  }
+
+  .page-checkout .line strong {
+    text-align: left;
+  }
+
+  .page-checkout .totals > div {
+    justify-content: space-between;
+    width: 100%;
+    text-align: left;
+  }
+
+  .page-checkout .totals .grand {
+    font-size: 1.1rem;
+  }
+
+  /* Payment methods full width, content centered */
+  .page-checkout .pay-methods {
+    width: 100% !important;
+    gap: 10px !important;
+  }
+
+  .page-checkout .pay-group-label {
+    text-align: center !important;
+    width: 100%;
+  }
+
+  .page-checkout .pay-method {
+    width: 100% !important;
+    justify-content: center !important;
+    align-items: center !important;
+    gap: 10px !important;
+  }
+
+  .page-checkout .pay-method input {
+    margin-top: 0 !important;
+    flex-shrink: 0;
+  }
+
+  .page-checkout .pay-method-box {
+    text-align: center !important;
+    align-items: center !important;
+    border-radius: 12px !important;
+    padding: 12px 12px !important;
+  }
+
+  .page-checkout .pay-method-box strong,
+  .page-checkout .pay-method-box em,
+  .page-checkout .pay-method-eta {
+    text-align: center !important;
+  }
+
+  .page-checkout .pay-help,
+  .page-checkout .ewallet-eta-notice {
+    text-align: center !important;
+    border-radius: 12px !important;
+  }
+
+  .page-checkout .pay-help > strong,
+  .page-checkout .pay-help > p,
+  .page-checkout .ewallet-eta-notice strong,
+  .page-checkout .ewallet-eta-notice p {
+    text-align: center !important;
+  }
+
+  .page-checkout #payBtn,
+  .page-checkout .btn.full {
+    width: 100% !important;
+    min-height: 50px !important;
+    margin-top: 6px;
+  }
+
+  .checkout-banner-err,
+  #checkoutErr {
+    text-align: center !important;
+  }
+
+  /* ---- Terms / rules modal — ordered & readable ---- */
+  .terms-modal {
+    align-items: flex-end !important;
+    justify-content: center !important;
+    padding: 0 !important;
+    z-index: 2600 !important;
+  }
+
+  .terms-modal-panel {
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: min(92dvh, 900px) !important;
+    margin: 0 !important;
+    border-radius: 18px 18px 0 0 !important;
+    border-left: none !important;
+    border-right: none !important;
+    border-bottom: none !important;
+  }
+
+  .terms-modal-head {
+    text-align: center !important;
+    padding: 18px 48px 14px 16px !important;
+  }
+
+  .terms-modal-head h2,
+  .terms-modal-eyebrow {
+    text-align: center !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+
+  .terms-modal-x {
+    top: 12px !important;
+    right: 12px !important;
+  }
+
+  .terms-modal-body {
+    max-height: none !important;
+    padding: 12px 14px 8px !important;
+    text-align: center !important;
+  }
+
+  .terms-block {
+    margin: 0 0 16px !important;
+    text-align: center !important;
+  }
+
+  .terms-block h3 {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.35rem !important;
+    text-align: center !important;
+    margin: 0 0 10px !important;
+    font-size: 0.78rem !important;
+    color: #cbd5e1 !important;
+  }
+
+  .terms-order-list {
+    text-align: center !important;
+  }
+
+  .terms-order-list li {
+    align-items: center !important;
+    text-align: center !important;
+    padding: 12px 8px !important;
+  }
+
+  .terms-order-list strong,
+  .terms-order-list span {
+    text-align: center !important;
+  }
+
+  .terms-total {
+    justify-content: center !important;
+    gap: 1rem !important;
+    font-size: 1rem !important;
+  }
+
+  /* Rules: numbered cards, consistent left text inside centered column */
+  .terms-rules-list,
+  .terms-what-list {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 auto !important;
+    text-align: left !important;
+  }
+
+  .terms-rules-list > li,
+  .terms-what-list > li {
+    text-align: left !important;
+    margin-bottom: 8px !important;
+    padding: 12px 12px 12px 2.75rem !important;
+    border-radius: 12px !important;
+    background: rgba(8, 12, 22, 0.55) !important;
+    border-color: rgba(56, 189, 248, 0.16) !important;
+  }
+
+  .terms-what-list > li {
+    padding-left: 12px !important;
+  }
+
+  .terms-support-text {
+    text-align: center !important;
+    max-width: 36ch;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+
+  .terms-support-links {
+    justify-content: center !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 10px !important;
+  }
+
+  .terms-support-links .btn {
+    width: 100% !important;
+    max-width: 280px;
+    min-height: 44px;
+    justify-content: center;
+  }
+
+  .terms-modal-foot {
+    text-align: center !important;
+    padding: 12px 14px calc(14px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  .terms-accept-label {
+    justify-content: center !important;
+    text-align: left !important;
+    max-width: 100% !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    gap: 12px !important;
+  }
+
+  .terms-accept-label span {
+    text-align: left !important;
+    font-size: 0.86rem !important;
+    line-height: 1.4 !important;
+  }
+
+  #termsErr {
+    text-align: center !important;
+  }
+
+  .terms-actions {
+    flex-direction: column-reverse !important;
+    width: 100% !important;
+    gap: 8px !important;
+  }
+
+  .terms-actions .btn {
+    width: 100% !important;
+    min-height: 50px !important;
+    flex: none !important;
   }
 }
