@@ -13271,3 +13271,103 @@ html[data-theme="light"] .hero-cat-box:hover {
     touch-action: pan-y !important;
   }
 }
+
+/* ============================================================
+   Official brand logos on product cards (mobile + desktop)
+   ============================================================ */
+
+/* Logo plates: brand color background, official mark centered */
+.product-card-media.card-media--logo,
+.product-card--logo-fit .product-card-media,
+.product-card-media--logo-fit {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: var(--brand-bg, #0a0e16) !important;
+  aspect-ratio: 1 / 1 !important;
+  padding: 18% 16% !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+}
+
+.product-card-media .product-logo-img,
+.product-card-media .product-logo-img--fit,
+.product-card--logo-fit .product-logo-img,
+.product-logo-img--fit {
+  display: block !important;
+  width: auto !important;
+  height: auto !important;
+  max-width: 78% !important;
+  max-height: 78% !important;
+  margin: 0 auto !important;
+  object-fit: contain !important;
+  object-position: center center !important;
+  transform: none !important;
+  filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.28)) !important;
+}
+
+/* Full-bleed official covers (Canva / CapCut / YouTube) */
+.product-card-media--cover {
+  padding: 0 !important;
+  aspect-ratio: 1 / 1 !important;
+  background: var(--brand-bg, #000) !important;
+}
+.product-card-media--cover .product-cover-img {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  max-height: none !important;
+  object-fit: cover !important;
+  object-position: center center !important;
+  margin: 0 !important;
+}
+
+/* Hero slider: official logos centered on brand plates */
+.product-slider--hero .product-slide--logo-fit .product-slide-logo-wrap,
+.product-slider--hero .product-slide:not(.product-slide--cover) .product-slide-logo-wrap {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  inset: 0 !important;
+  padding: 0 !important;
+  background: var(--brand-bg, #0a0e16) !important;
+}
+.product-slider--hero .product-slide--logo-fit .product-logo-img,
+.product-slider--hero .product-slide--logo-fit .product-logo-img--fit,
+.product-slider--hero .product-slide:not(.product-slide--cover) .product-logo-img {
+  position: relative !important;
+  inset: auto !important;
+  width: auto !important;
+  height: auto !important;
+  max-width: min(52vw, 360px) !important;
+  max-height: min(28vh, 200px) !important;
+  object-fit: contain !important;
+  margin: 0 auto !important;
+  transform: none !important;
+}
+
+@media (max-width: 900px) {
+  .deals-grid .product-card-media.card-media--logo,
+  .deals-grid .product-card-media--logo-fit,
+  .home-deals-inner .product-card-media.card-media--logo,
+  #view-all-deals .product-card-media.card-media--logo {
+    aspect-ratio: 1 / 1 !important;
+    padding: 16% 14% !important;
+    background: var(--brand-bg, #0a0e16) !important;
+  }
+  .deals-grid .product-logo-img,
+  .deals-grid .product-logo-img--fit,
+  .home-deals-inner .product-logo-img,
+  #view-all-deals .product-logo-img {
+    max-width: 82% !important;
+    max-height: 82% !important;
+    object-fit: contain !important;
+    transform: none !important;
+  }
+  .deals-grid .product-card-media--cover .product-cover-img,
+  .home-deals-inner .product-card-media--cover .product-cover-img {
+    object-fit: cover !important;
+  }
+}

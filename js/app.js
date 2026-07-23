@@ -76,29 +76,44 @@ function dealsList() {
 }
 
 /** Official brand photo (PNG) per brand — used on product cards. */
-/** Real brand product photos (logo on brand plate / official cover art). */
-const OFFICIAL_BRAND_PHOTO = {
-  xAI: "/assets/products/photo-xai.png?v=realbrand2",
-  Canva: "/assets/products/photo-canva.png?v=realbrand2",
-  CapCut: "/assets/products/photo-capcut.png?v=realbrand2",
-  Netflix: "/assets/products/photo-netflix.png?v=realbrand2",
-  YouTube: "/assets/products/photo-youtube.png?v=realbrand2",
-  Duolingo: "/assets/products/photo-duolingo.png?v=realbrand2",
-  Spotify: "/assets/products/photo-spotify.png?v=realbrand2",
+/** Official brand logos (SVG marks) + full-bleed brand covers where we have them. */
+const OFFICIAL_BRAND_LOGO = {
+  xAI: "/assets/products/logos/brand-xai-fixed.svg?v=official3",
+  Canva: "/assets/products/logos/brand-canva-fixed.svg?v=official3",
+  CapCut: "/assets/products/logos/brand-capcut-official.svg?v=official3",
+  Netflix: "/assets/products/logos/brand-netflix-fixed.svg?v=official3",
+  YouTube: "/assets/products/logos/brand-youtube-fixed.svg?v=official3",
+  Duolingo: "/assets/products/logos/brand-duolingo-fixed.svg?v=official3",
+  Spotify: "/assets/products/logos/brand-spotify-fixed.svg?v=official3",
+};
+/** Full-bleed official brand art for cards/slider (wordmark covers). */
+const OFFICIAL_BRAND_COVER = {
+  Canva: "/assets/products/cover-canva.png?v=official3",
+  CapCut: "/assets/products/cover-capcut-official.png?v=official3",
+  YouTube: "/assets/products/photo-youtube.png?v=official3",
+};
+const OFFICIAL_BRAND_SLIDE = {
+  xAI: "/assets/products/logos/brand-xai-fixed.svg?v=official3",
+  Canva: "/assets/products/cover-canva-official-slide.png?v=official3",
+  CapCut: "/assets/products/cover-capcut-official.png?v=official3",
+  Netflix: "/assets/products/logos/brand-netflix-fixed.svg?v=official3",
+  YouTube: "/assets/products/photo-youtube-slide.png?v=official3",
+  Duolingo: "/assets/products/logos/brand-duolingo-fixed.svg?v=official3",
+  Spotify: "/assets/products/logos/brand-spotify-fixed.svg?v=official3",
 };
 
-/** Official brand logo SVG (icons / fallback). */
+/** Official brand logo path (SVG mark). */
 function productLogo(d) {
   if (!d) return "";
+  if (d.brand && OFFICIAL_BRAND_LOGO[d.brand]) return OFFICIAL_BRAND_LOGO[d.brand];
   if (d.logo) return String(d.logo);
   const brand = String(d.brand || "").toLowerCase().replace(/\s+/g, "");
-  if (brand) return `/assets/products/logos/brand-${brand === "xai" ? "xai" : brand}.svg`;
-  if (d.image && !/\.svg(\?|$)/i.test(String(d.image))) return String(d.image);
+  if (brand) return `/assets/products/logos/brand-${brand === "xai" ? "xai" : brand}-fixed.svg?v=official3`;
   if (d.id) return `/assets/products/${d.id}.png`;
   return "";
 }
 
-/** True when path points at a raster photo (not an SVG logo). */
+/** True when path is a raster image (png/jpg), not SVG logo. */
 function isProductPhoto(src) {
   if (!src) return false;
   const s = String(src);
@@ -106,35 +121,30 @@ function isProductPhoto(src) {
   return /\.(png|jpe?g|webp|gif)(\?|$)/i.test(s);
 }
 
+/** True when brand uses full-bleed cover art on cards. */
+function brandUsesCover(brand) {
+  return brand === "Canva" || brand === "CapCut";
+}
+
 /**
- * Official product photo for cards/detail.
- * Prefers catalog image when it is a real photo, else brand PNG plate.
+ * Card/detail image: official cover art when available, else official logo SVG.
  */
 function productImage(d) {
   if (!d) return "";
-  // Catalog image when it is already a photo (png/jpg), not an SVG logo
-  if (d.image && isProductPhoto(d.image)) return String(d.image);
-  if (d.brand && OFFICIAL_BRAND_PHOTO[d.brand]) return OFFICIAL_BRAND_PHOTO[d.brand];
-  if (d.imageBg && isProductPhoto(d.imageBg)) return String(d.imageBg);
-  if (d.id) return `/assets/products/${d.id}.png?v=official1`;
+  // Full-bleed official brand art (Canva / CapCut / YouTube)
+  if (d.brand && OFFICIAL_BRAND_COVER[d.brand]) return OFFICIAL_BRAND_COVER[d.brand];
+  // Official logo mark (Grok, Netflix, Duolingo, Spotify, …)
+  if (d.brand && OFFICIAL_BRAND_LOGO[d.brand]) return OFFICIAL_BRAND_LOGO[d.brand];
+  if (d.logo) return String(d.logo);
+  if (d.image) return String(d.image);
   return productLogo(d);
 }
 
-/** Wide slide image for homepage carousel. */
+/** Homepage slider image. */
 function productSlideImage(d) {
   if (!d) return "";
+  if (d.brand && OFFICIAL_BRAND_SLIDE[d.brand]) return OFFICIAL_BRAND_SLIDE[d.brand];
   if (d.imageSlide && isProductPhoto(d.imageSlide)) return String(d.imageSlide);
-  const slides = {
-    xAI: "/assets/products/photo-xai-slide.png?v=realbrand2",
-    Canva: "/assets/products/photo-canva-slide.png?v=realbrand2",
-    CapCut: "/assets/products/photo-capcut-slide.png?v=realbrand2",
-    Netflix: "/assets/products/photo-netflix-slide.png?v=realbrand2",
-    YouTube: "/assets/products/photo-youtube-slide.png?v=realbrand2",
-    Duolingo: "/assets/products/photo-duolingo-slide.png?v=realbrand2",
-    Spotify: "/assets/products/photo-spotify-slide.png?v=realbrand2",
-  };
-  if (d.brand && slides[d.brand]) return slides[d.brand];
-  if (d.brand && OFFICIAL_BRAND_PHOTO[d.brand]) return OFFICIAL_BRAND_PHOTO[d.brand];
   return productImage(d) || productLogo(d);
 }
 
@@ -519,16 +529,13 @@ function card(d, highlightQ = "") {
   const wished = isWished(d.id);
   const typeLabel = (d.category || "Plan").toUpperCase();
   const brandLabel = d.brand === "xAI" ? "SuperGrok" : d.brand || "";
-  /* Official photos: full-bleed cover art vs centered brand photo plate */
+  /* Official logos centered on brand color; Canva/CapCut/YouTube use full-bleed art */
   const photo = isProductPhoto(img);
   const fillFrame =
-    photo &&
-    (d.brand === "Canva" ||
-      d.brand === "CapCut" ||
-      /cover-/i.test(img) ||
-      /cover-canva/i.test(img));
-  const logoFit = !photo; /* SVG logos only */
-  const photoFit = photo && !fillFrame;
+    brandUsesCover(d.brand) ||
+    (photo && (/cover-/i.test(img) || /photo-youtube/i.test(img) || d.brand === "YouTube"));
+  const logoFit = !fillFrame; /* official SVG / logo plate */
+  const photoFit = false; /* prefer logo-fit for official marks */
   const saveHtml =
     !soldOut && d.original > d.price
       ? `<span class="price-compare">${formatDealPrice(d, "original")}</span>`
