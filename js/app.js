@@ -448,9 +448,9 @@ function card(d, highlightQ = "") {
   const wished = isWished(d.id);
   const typeLabel = (d.category || "Plan").toUpperCase();
   const brandLabel = d.brand === "xAI" ? "SuperGrok" : d.brand || "";
-  /* Full-bleed covers only for brands that use cover art; CapCut uses official logo */
+  /* Full-bleed covers only for brands that use cover art; others use centered logos */
   const fillFrame = /cover-canva/i.test(img) || d.brand === "Canva";
-  const logoFit = d.brand === "xAI" || d.brand === "CapCut";
+  const logoFit = !fillFrame;
   const saveHtml =
     !soldOut && d.original > d.price
       ? `<span class="price-compare">${formatDealPrice(d, "original")}</span>`
