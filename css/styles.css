@@ -8353,3 +8353,167 @@ html[data-theme="light"] .hero--orbit .hero-cat-chip:hover {
 .product-card.sold-out .listing-delivery {
   color: #f87171 !important;
 }
+
+/* ============================================================
+   Combined first page: product slider inside hero
+   ============================================================ */
+
+.hero.hero--with-slider {
+  position: relative;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 0 !important;
+  overflow: hidden;
+  border-bottom: none;
+  background: #05060a;
+}
+
+/* Full-bleed slider as first-page stage */
+.product-slider--hero {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+}
+.product-slider--hero .product-slider-stage {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-height: none !important;
+  min-height: 100%;
+  aspect-ratio: auto !important;
+  border-radius: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
+  background: #05060a;
+}
+.product-slider--hero .product-slider-track,
+.product-slider--hero .product-slide,
+.product-slider--hero .product-slide-link {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.product-slider--hero .product-slide-logo-wrap {
+  inset: 0 0 0 0 !important;
+  padding: 0 !important;
+}
+/* Dim slides so hero copy stays readable */
+.product-slider--hero .product-slide-shade--logo {
+  background:
+    linear-gradient(180deg, rgba(5, 6, 10, 0.55) 0%, rgba(5, 6, 10, 0.35) 35%, rgba(5, 6, 10, 0.75) 70%, rgba(5, 6, 10, 0.96) 100%),
+    linear-gradient(90deg, rgba(5, 6, 10, 0.55) 0%, transparent 50%, rgba(5, 6, 10, 0.25) 100%) !important;
+}
+.product-slider--hero .product-slide-content {
+  /* Hide per-slide copy on first page — hero panel has the main CTA */
+  display: none;
+}
+.product-slider--hero .product-slider-controls {
+  top: calc(var(--nav-h) + 12px);
+  right: 14px;
+  z-index: 6;
+}
+.product-slider--hero .product-slider-dots {
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 12px;
+  max-width: 90%;
+  justify-content: center;
+  z-index: 6;
+}
+.product-slider--hero .product-slider-progress {
+  z-index: 5;
+}
+
+/* Hero chrome sits above slider */
+.hero--with-slider .hero-orbit-chrome {
+  position: relative;
+  z-index: 4;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding-top: calc(var(--nav-h) + 1rem);
+  padding-bottom: 2.5rem;
+  pointer-events: none; /* let clicks pass to slides except on controls */
+}
+.hero--with-slider .hero-orbit-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem 0 2rem;
+}
+.hero--with-slider .hero-content {
+  pointer-events: auto;
+  width: min(100% - 2.5rem, 780px);
+  margin-inline: auto;
+  text-align: center;
+  /* glass panel so text is clear over slides */
+  padding: 1.35rem 1.25rem 1.5rem;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(6, 8, 15, 0.62);
+  backdrop-filter: blur(18px) saturate(1.2);
+  -webkit-backdrop-filter: blur(18px) saturate(1.2);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
+}
+.hero--with-slider .product-slider-controls,
+.hero--with-slider .product-slider-dots,
+.hero--with-slider .product-slider-progress {
+  pointer-events: auto;
+}
+
+/* Cover slides still fill */
+.product-slider--hero .product-slide--cover .product-cover-img,
+.product-slider--hero .product-slide-img {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  max-height: none !important;
+  object-fit: cover !important;
+  object-position: center !important;
+}
+.product-slider--hero .product-slide:not(.product-slide--cover) .product-slide-logo-wrap {
+  display: grid;
+  place-items: center;
+  background: var(--brand-bg, #0a0e16);
+}
+.product-slider--hero .product-slide:not(.product-slide--cover) .product-logo-img {
+  position: relative !important;
+  inset: auto !important;
+  width: auto !important;
+  height: auto !important;
+  max-width: min(52vw, 420px) !important;
+  max-height: min(36vh, 220px) !important;
+  object-fit: contain !important;
+  filter: drop-shadow(0 16px 40px rgba(0, 0, 0, 0.45));
+}
+
+@media (max-width: 720px) {
+  .hero--with-slider .hero-content {
+    width: min(100% - 1.25rem, 780px);
+    padding: 1.1rem 0.95rem 1.2rem;
+  }
+  .hero--with-slider .hero-orbit-chrome {
+    padding-bottom: 2.75rem;
+  }
+  .product-slider--hero .product-slider-controls {
+    top: calc(var(--nav-h) + 8px);
+    right: 10px;
+  }
+  .product-slider--hero .product-slider-dots {
+    bottom: 8px;
+  }
+}

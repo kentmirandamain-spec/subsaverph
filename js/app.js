@@ -793,16 +793,13 @@ function viewHome() {
   };
 
   const slides = all.slice(0, 12);
-  const sliderHtml = slides.length
-    ? `
-    <section class="product-slider" id="productSlider" aria-roledescription="carousel" aria-label="Featured products">
-      <div class="product-slider-stage">
-        <div class="product-slider-track" id="productSliderTrack">
-          ${slides
-            .map(
-              (d, i) => `
+  const sliderTrack =
+    slides.length > 0
+      ? slides
+          .map(
+            (d, i) => `
             <article class="product-slide${i === 0 ? " is-active" : ""}${d.brand === "Canva" || d.brand === "CapCut" ? " product-slide--cover" : ""}" data-slide-index="${i}" ${i === 0 ? "" : "hidden"} style="--brand-bg:${escapeAttr(productBrandColor(d))}">
-              <a class="product-slide-link product-slide-link--logo" href="#/deal/${escapeAttr(d.id)}">
+              <a class="product-slide-link product-slide-link--logo" href="#/deal/${escapeAttr(d.id)}" tabindex="${i === 0 ? "0" : "-1"}">
                 <div class="product-slide-logo-wrap">
                   <img
                     class="product-img product-slide-img${d.brand === "Canva" || d.brand === "CapCut" ? " product-cover-img" : " product-logo-img"}"
@@ -826,43 +823,52 @@ function viewHome() {
                 </div>
               </a>
             </article>`
-            )
-            .join("")}
-        </div>
-        <div class="product-slider-progress" aria-hidden="true">
-          <div class="product-slider-progress-bar" id="productSliderProgress"></div>
-        </div>
-        <div class="product-slider-controls">
-          <button type="button" class="product-slider-btn" id="productSliderPrev" aria-label="Previous product">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg>
-          </button>
-          <button type="button" class="product-slider-btn" id="productSliderNext" aria-label="Next product">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>
-          </button>
-          <button type="button" class="product-slider-btn product-slider-pause" id="productSliderPause" aria-label="Pause slideshow" aria-pressed="false">
-            <svg class="icon-pause" viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
-            <svg class="icon-play" viewBox="0 0 24 24" width="14" height="14" fill="currentColor" hidden><path d="M8 5v14l11-7z"/></svg>
-          </button>
-        </div>
-        <div class="product-slider-dots" id="productSliderDots" role="tablist" aria-label="Product slides">
-          ${slides
-            .map(
-              (d, i) =>
-                `<button type="button" class="product-slider-dot${i === 0 ? " is-active" : ""}" role="tab" aria-selected="${i === 0 ? "true" : "false"}" aria-label="${escapeAttr(d.name)}" data-slide-to="${i}"></button>`
-            )
-            .join("")}
-        </div>
-      </div>
-    </section>`
-    : "";
+          )
+          .join("")
+      : "";
 
   return `
-    <section class="hero hero--orbit" aria-label="Featured storefront">
-      <div class="hero-orbit-bg" aria-hidden="true">
+    <section class="hero hero--orbit hero--with-slider" aria-label="Featured storefront" id="homeHero">
+      ${
+        slides.length
+          ? `
+      <div class="product-slider product-slider--hero" id="productSlider" aria-roledescription="carousel" aria-label="Featured products">
+        <div class="product-slider-stage">
+          <div class="product-slider-track" id="productSliderTrack">
+            ${sliderTrack}
+          </div>
+          <div class="product-slider-progress" aria-hidden="true">
+            <div class="product-slider-progress-bar" id="productSliderProgress"></div>
+          </div>
+          <div class="product-slider-controls">
+            <button type="button" class="product-slider-btn" id="productSliderPrev" aria-label="Previous product">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg>
+            </button>
+            <button type="button" class="product-slider-btn" id="productSliderNext" aria-label="Next product">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>
+            </button>
+            <button type="button" class="product-slider-btn product-slider-pause" id="productSliderPause" aria-label="Pause slideshow" aria-pressed="false">
+              <svg class="icon-pause" viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
+              <svg class="icon-play" viewBox="0 0 24 24" width="14" height="14" fill="currentColor" hidden><path d="M8 5v14l11-7z"/></svg>
+            </button>
+          </div>
+          <div class="product-slider-dots" id="productSliderDots" role="tablist" aria-label="Product slides">
+            ${slides
+              .map(
+                (d, i) =>
+                  `<button type="button" class="product-slider-dot${i === 0 ? " is-active" : ""}" role="tab" aria-selected="${i === 0 ? "true" : "false"}" aria-label="${escapeAttr(d.name)}" data-slide-to="${i}"></button>`
+              )
+              .join("")}
+          </div>
+        </div>
+      </div>`
+          : `<div class="hero-orbit-bg" aria-hidden="true">
         <div class="hero-orbit-glow"></div>
         <div class="hero-orbit-grid"></div>
         <div class="hero-orbit-vignette"></div>
-      </div>
+      </div>`
+      }
+
       <div class="hero-orbit-chrome">
         <div class="hero-orbit-main">
           <div class="hero-content">
@@ -908,8 +914,6 @@ function viewHome() {
         </div>
       </div>
     </section>
-
-    ${sliderHtml}
 
     <section class="ops-rail" aria-label="Store status">
       <div class="ops-rail-inner">
