@@ -673,18 +673,14 @@ def support_inbox() -> str:
     Where customer support form messages are delivered (your real Outlook/Gmail).
     Skips brand addresses like support@subsaverph.com (they bounce: Address not found).
 
-    Priority:
-      1. SUPPORT_INBOX env
-      2. settings.json ownerInbox / supportInbox / notifyEmail
+    Priority (Admin ownerInbox wins so you are not stuck on an old Gmail env var):
+      1. settings.json ownerInbox / supportInbox / notifyEmail
+      2. SUPPORT_INBOX env (only if settings owner inbox empty)
       3. ORDER_NOTIFY_EMAIL / MAIL_NOTIFY_TO / MAIL_REPLY_TO env
     """
     candidates: list[str] = []
 
-    env_first = (os.environ.get("SUPPORT_INBOX") or "").strip()
-    if env_first:
-        candidates.append(env_first)
-
-    # Admin → Brand & contact → Owner inbox (persisted on the server)
+    # 1) Admin → Brand & contact → Owner inbox (preferred)
     try:
         from pathlib import Path
         import json
@@ -700,7 +696,9 @@ def support_inbox() -> str:
     except Exception:
         pass
 
+    # 2–3) Environment fallbacks
     for key in (
+        "SUPPORT_INBOX",
         "ORDER_NOTIFY_EMAIL",
         "MAIL_NOTIFY_TO",
         "MAIL_REPLY_TO",
