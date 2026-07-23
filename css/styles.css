@@ -7830,3 +7830,84 @@ html[data-theme="light"] .hero--orbit .hero-cat-chip:hover {
     aspect-ratio: 1 / 1;
   }
 }
+
+/* Official brand logo presentation */
+.card-media--logo {
+  display: grid !important;
+  place-items: center;
+  aspect-ratio: 16 / 10 !important;
+  background: var(--brand-bg, #0a0e16) !important;
+  padding: 1.25rem 1.5rem;
+  box-sizing: border-box;
+}
+.card-media--logo .product-logo-img,
+.product-logo-img {
+  display: block !important;
+  width: auto !important;
+  max-width: min(78%, 240px) !important;
+  max-height: 72% !important;
+  height: auto !important;
+  object-fit: contain !important;
+  margin: 0 auto;
+  filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.25));
+}
+.card-media--logo .card-media-shade {
+  display: none;
+}
+.detail-product-img-wrap--logo {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 16 / 10 !important;
+  background: var(--brand-bg, #0a0e16);
+  padding: 2rem 1.5rem;
+  box-sizing: border-box;
+}
+.detail-product-img-wrap--logo .product-logo-img {
+  max-width: min(86%, 320px) !important;
+  max-height: 80% !important;
+  width: auto !important;
+  height: auto !important;
+  object-fit: contain !important;
+}
+
+.product-slide {
+  background: var(--brand-bg, #05060a);
+}
+.product-slide-link--logo {
+  display: grid;
+  grid-template-rows: 1fr auto;
+  background: var(--brand-bg, #05060a);
+}
+.product-slide-logo-wrap {
+  position: absolute;
+  inset: 0 0 38% 0;
+  display: grid;
+  place-items: center;
+  padding: 2rem 2.5rem 1rem;
+  z-index: 1;
+}
+.product-slide-link--logo .product-slide-img {
+  width: auto !important;
+  height: auto !important;
+  max-width: min(70%, 520px) !important;
+  max-height: min(42vh, 220px) !important;
+  object-fit: contain !important;
+  filter: drop-shadow(0 12px 28px rgba(0, 0, 0, 0.35));
+}
+.product-slide-shade--logo {
+  background:
+    linear-gradient(to top, rgba(5, 6, 10, 0.92) 0%, rgba(5, 6, 10, 0.55) 45%, transparent 75%) !important;
+}
+@media (max-width: 720px) {
+  .product-slide-logo-wrap {
+    inset: 0 0 42% 0;
+    padding: 1.25rem;
+  }
+  .product-slide-link--logo .product-slide-img {
+    max-width: min(80%, 280px) !important;
+    max-height: 140px !important;
+  }
+  .card-media--logo {
+    aspect-ratio: 16 / 11 !important;
+  }
+}

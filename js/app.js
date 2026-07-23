@@ -75,20 +75,39 @@ function dealsList() {
   return Array.isArray(window.DEALS) ? window.DEALS : [];
 }
 
-/** Official product image path (card). Falls back by brand monogram art. */
-function productImage(d) {
+/** Official brand logo for a product. */
+function productLogo(d) {
   if (!d) return "";
+  if (d.logo) return String(d.logo);
   if (d.image) return String(d.image);
+  const brand = String(d.brand || "").toLowerCase().replace(/\s+/g, "");
+  if (brand) return `/assets/products/logos/brand-${brand === "xai" ? "xai" : brand}.svg`;
   if (d.id) return `/assets/products/${d.id}.png`;
   return "";
 }
 
-/** Wide slide image for homepage carousel. */
+/** Official product image path (card) — brand logo. */
+function productImage(d) {
+  return productLogo(d);
+}
+
+/** Wide slide image for homepage carousel — brand logo. */
 function productSlideImage(d) {
-  if (!d) return "";
-  if (d.imageSlide) return String(d.imageSlide);
-  if (d.id) return `/assets/products/${d.id}-slide.png`;
-  return productImage(d);
+  return productLogo(d);
+}
+
+function productBrandColor(d) {
+  if (d && d.brandColor) return String(d.brandColor);
+  const map = {
+    xAI: "#000000",
+    Canva: "#ffffff",
+    CapCut: "#000000",
+    Netflix: "#000000",
+    YouTube: "#ffffff",
+    Duolingo: "#ffffff",
+    Spotify: "#191414",
+  };
+  return map[d?.brand] || "#0a0e16";
 }
 
 /** Apply data-i18n labels across static chrome */
@@ -371,16 +390,16 @@ function card(d, highlightQ = "") {
   const tagHtml = highlightQ ? highlightMatch(d.tagline || "", highlightQ) : escapeHtml(d.tagline || "");
   const soldOut = isSoldOut(d);
   const img = productImage(d);
+  const bg = productBrandColor(d);
   return `
     <article class="card ${soldOut ? "sold-out" : ""}">
       <div class="card-accent"></div>
-      <a class="card-media" href="#/deal/${d.id}" tabindex="-1" aria-hidden="true">
+      <a class="card-media card-media--logo" href="#/deal/${d.id}" tabindex="-1" aria-hidden="true" style="--brand-bg:${escapeAttr(bg)}">
         ${
           img
-            ? `<img class="product-img" src="${escapeAttr(img)}" alt="" loading="lazy" width="400" height="500" />`
+            ? `<img class="product-img product-logo-img" src="${escapeAttr(img)}" alt="${escapeAttr(d.brand || d.name)}" loading="lazy" width="320" height="160" />`
             : `<div class="card-media-fallback mono-box">${escapeHtml(d.monogram)}</div>`
         }
-        <div class="card-media-shade"></div>
         <div class="pills card-media-pills">
           ${soldOut ? `<span class="pill sold-out-pill">${escapeHtml(t("sold_out"))}</span>` : ""}
           ${!soldOut && d.badge ? `<span class="pill">${escapeHtml(d.badge)}</span>` : ""}
@@ -745,17 +764,19 @@ function viewHome() {
           ${slides
             .map(
               (d, i) => `
-            <article class="product-slide${i === 0 ? " is-active" : ""}" data-slide-index="${i}" ${i === 0 ? "" : "hidden"}>
-              <a class="product-slide-link" href="#/deal/${escapeAttr(d.id)}">
-                <img
-                  class="product-img product-slide-img"
-                  src="${escapeAttr(productSlideImage(d))}"
-                  alt="${escapeAttr(d.name)}"
-                  width="1280"
-                  height="720"
-                  loading="${i === 0 ? "eager" : "lazy"}"
-                />
-                <div class="product-slide-shade"></div>
+            <article class="product-slide${i === 0 ? " is-active" : ""}" data-slide-index="${i}" ${i === 0 ? "" : "hidden"} style="--brand-bg:${escapeAttr(productBrandColor(d))}">
+              <a class="product-slide-link product-slide-link--logo" href="#/deal/${escapeAttr(d.id)}">
+                <div class="product-slide-logo-wrap">
+                  <img
+                    class="product-img product-slide-img product-logo-img"
+                    src="${escapeAttr(productSlideImage(d))}"
+                    alt="${escapeAttr(d.brand || d.name)}"
+                    width="480"
+                    height="180"
+                    loading="${i === 0 ? "eager" : "lazy"}"
+                  />
+                </div>
+                <div class="product-slide-shade product-slide-shade--logo"></div>
                 <div class="product-slide-content">
                   <p class="product-slide-brand">${escapeHtml(d.brand)} · ${escapeHtml(d.category)}</p>
                   <h2 class="product-slide-title">${escapeHtml(d.name)}</h2>
@@ -905,8 +926,8 @@ function viewDeal() {
           <div class="detail-panel">
             ${
               productImage(d)
-                ? `<div class="detail-product-img-wrap">
-                    <img class="product-img detail-product-img" src="${escapeAttr(productImage(d))}" alt="${escapeAttr(d.name)}" width="480" height="600" loading="eager" />
+                ? `<div class="detail-product-img-wrap detail-product-img-wrap--logo" style="--brand-bg:${escapeAttr(productBrandColor(d))}">
+                    <img class="product-img detail-product-img product-logo-img" src="${escapeAttr(productImage(d))}" alt="${escapeAttr(d.brand || d.name)}" width="320" height="160" loading="eager" />
                   </div>`
                 : `<div class="mono-box lg">${escapeHtml(d.monogram)}</div>`
             }
