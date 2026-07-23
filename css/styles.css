@@ -8235,3 +8235,67 @@ html[data-theme="light"] .hero--orbit .hero-cat-chip:hover {
     flex-wrap: wrap;
   }
 }
+
+/* Canva + CapCut: full-bleed cover fills entire media frame */
+.product-card-media--cover {
+  padding: 0 !important;
+  aspect-ratio: 16 / 10 !important;
+  background: #000 !important;
+  display: block !important;
+}
+.product-card-media--cover .product-cover-img,
+.product-cover-img {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  max-height: none !important;
+  object-fit: cover !important;
+  object-position: center !important;
+  margin: 0 !important;
+  filter: none !important;
+  position: absolute;
+  inset: 0;
+}
+.product-card-media--cover {
+  position: relative;
+  overflow: hidden;
+}
+.product-card--cover:hover .product-cover-img {
+  transform: scale(1.04);
+  transition: transform 0.45s var(--ease);
+}
+.detail-product-img-wrap--cover {
+  padding: 0 !important;
+  aspect-ratio: 16 / 10 !important;
+  position: relative;
+  overflow: hidden;
+}
+.detail-product-img-wrap--cover .product-cover-img {
+  position: absolute;
+  inset: 0;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  max-height: none !important;
+  object-fit: cover !important;
+}
+
+/* Homepage slider: cover fills stage for Canva/CapCut */
+.product-slide--cover {
+  background: #000;
+}
+.product-slide--cover .product-slide-logo-wrap {
+  inset: 0 !important;
+  padding: 0 !important;
+}
+.product-slide--cover .product-cover-img {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  max-height: none !important;
+  object-fit: cover !important;
+  filter: none !important;
+}

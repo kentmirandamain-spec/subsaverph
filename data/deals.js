@@ -117,11 +117,11 @@ window.DEALS = [
     "extraDetails": [],
     "active": true,
     "stockLeft": 2,
-    "image": "/assets/products/logos/brand-canva.png",
-    "imageSlide": "/assets/products/logos/brand-canva.png",
-    "logo": "/assets/products/logos/brand-canva.png",
+    "image": "/assets/products/cover-canva.png",
+    "imageSlide": "/assets/products/cover-canva.png",
+    "logo": "/assets/products/cover-canva.png",
     "imageBg": "/assets/products/plate-canva.png",
-    "brandColor": "#ffffff"
+    "brandColor": "#00c4cc"
   },
   {
     "id": "canva-teams",
@@ -156,11 +156,11 @@ window.DEALS = [
     "extraDetails": [],
     "active": true,
     "stockLeft": 2,
-    "image": "/assets/products/logos/brand-canva.png",
-    "imageSlide": "/assets/products/logos/brand-canva.png",
-    "logo": "/assets/products/logos/brand-canva.png",
+    "image": "/assets/products/cover-canva.png",
+    "imageSlide": "/assets/products/cover-canva.png",
+    "logo": "/assets/products/cover-canva.png",
     "imageBg": "/assets/products/plate-canva.png",
-    "brandColor": "#ffffff"
+    "brandColor": "#00c4cc"
   },
   {
     "id": "capcut-pro",
@@ -195,9 +195,9 @@ window.DEALS = [
     "extraDetails": [],
     "active": true,
     "stockLeft": 0,
-    "image": "/assets/products/logos/brand-capcut-fixed.svg",
-    "imageSlide": "/assets/products/logos/brand-capcut-fixed.svg",
-    "logo": "/assets/products/logos/brand-capcut-fixed.svg",
+    "image": "/assets/products/cover-capcut.png",
+    "imageSlide": "/assets/products/cover-capcut.png",
+    "logo": "/assets/products/cover-capcut.png",
     "imageBg": "/assets/products/plate-capcut.png",
     "brandColor": "#000000"
   },
@@ -233,9 +233,9 @@ window.DEALS = [
     "extraDetails": [],
     "active": true,
     "stockLeft": 0,
-    "image": "/assets/products/logos/brand-capcut-fixed.svg",
-    "imageSlide": "/assets/products/logos/brand-capcut-fixed.svg",
-    "logo": "/assets/products/logos/brand-capcut-fixed.svg",
+    "image": "/assets/products/cover-capcut.png",
+    "imageSlide": "/assets/products/cover-capcut.png",
+    "logo": "/assets/products/cover-capcut.png",
     "imageBg": "/assets/products/plate-capcut.png",
     "brandColor": "#000000"
   },

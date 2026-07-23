@@ -417,16 +417,17 @@ function card(d, highlightQ = "") {
   const rating = Number(d.rating || 4.9).toFixed(2);
   const typeLabel = (d.category || "Plan").toUpperCase();
   const brandLabel = d.brand === "xAI" ? "SuperGrok" : d.brand || "";
+  const fillFrame = /cover-(canva|capcut)/i.test(img) || d.brand === "Canva" || d.brand === "CapCut";
   const saveHtml =
     !soldOut && d.original > d.price
       ? `<span class="price-compare">${formatDealPrice(d, "original")}</span>`
       : "";
   return `
-    <article class="card product-card ${soldOut ? "sold-out" : ""}" data-product-id="${escapeAttr(d.id)}">
-      <a class="product-card-media card-media--logo${img ? " has-product-photo" : ""}" href="#/deal/${d.id}" style="--brand-bg:${escapeAttr(bg)}">
+    <article class="card product-card ${soldOut ? "sold-out" : ""}${fillFrame ? " product-card--cover" : ""}" data-product-id="${escapeAttr(d.id)}">
+      <a class="product-card-media${fillFrame ? " product-card-media--cover" : " card-media--logo"}${img ? " has-product-photo" : ""}" href="#/deal/${d.id}" style="--brand-bg:${escapeAttr(bg)}">
         ${
           img
-            ? `<img class="product-img product-card-img product-logo-img" src="${escapeAttr(img)}" alt="${escapeAttr(d.brand || d.name)}" loading="lazy" decoding="async" width="600" height="400" />`
+            ? `<img class="product-img product-card-img${fillFrame ? " product-cover-img" : " product-logo-img"}" src="${escapeAttr(img)}" alt="${escapeAttr(d.brand || d.name)}" loading="lazy" decoding="async" width="600" height="400" />`
             : `<span class="product-monogram">${escapeHtml(d.monogram || "")}</span>`
         }
         ${
@@ -800,15 +801,15 @@ function viewHome() {
           ${slides
             .map(
               (d, i) => `
-            <article class="product-slide${i === 0 ? " is-active" : ""}" data-slide-index="${i}" ${i === 0 ? "" : "hidden"} style="--brand-bg:${escapeAttr(productBrandColor(d))}">
+            <article class="product-slide${i === 0 ? " is-active" : ""}${d.brand === "Canva" || d.brand === "CapCut" ? " product-slide--cover" : ""}" data-slide-index="${i}" ${i === 0 ? "" : "hidden"} style="--brand-bg:${escapeAttr(productBrandColor(d))}">
               <a class="product-slide-link product-slide-link--logo" href="#/deal/${escapeAttr(d.id)}">
                 <div class="product-slide-logo-wrap">
                   <img
-                    class="product-img product-slide-img product-logo-img"
+                    class="product-img product-slide-img${d.brand === "Canva" || d.brand === "CapCut" ? " product-cover-img" : " product-logo-img"}"
                     src="${escapeAttr(productSlideImage(d))}"
                     alt="${escapeAttr(d.brand || d.name)}"
-                    width="480"
-                    height="180"
+                    width="1280"
+                    height="800"
                     loading="${i === 0 ? "eager" : "lazy"}"
                   />
                 </div>
@@ -962,9 +963,15 @@ function viewDeal() {
           <div class="detail-panel">
             ${
               productImage(d)
-                ? `<div class="detail-product-img-wrap detail-product-img-wrap--logo" style="--brand-bg:${escapeAttr(productBrandColor(d))}">
-                    <img class="product-img detail-product-img product-logo-img" src="${escapeAttr(productImage(d))}" alt="${escapeAttr(d.brand || d.name)}" width="320" height="160" loading="eager" />
-                  </div>`
+                ? (() => {
+                    const cover =
+                      /cover-(canva|capcut)/i.test(productImage(d)) ||
+                      d.brand === "Canva" ||
+                      d.brand === "CapCut";
+                    return `<div class="detail-product-img-wrap${cover ? " detail-product-img-wrap--cover" : " detail-product-img-wrap--logo"}" style="--brand-bg:${escapeAttr(productBrandColor(d))}">
+                    <img class="product-img detail-product-img${cover ? " product-cover-img" : " product-logo-img"}" src="${escapeAttr(productImage(d))}" alt="${escapeAttr(d.brand || d.name)}" width="640" height="400" loading="eager" />
+                  </div>`;
+                  })()
                 : `<div class="mono-box lg">${escapeHtml(d.monogram)}</div>`
             }
             ${
