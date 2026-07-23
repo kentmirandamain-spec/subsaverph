@@ -888,39 +888,14 @@ function viewHome() {
             </div>
 
             <div class="hero-cats-block" id="home-categories">
-              <div class="hero-cats-head hero-cats-head--pro">
-                <div class="hero-cats-head-main">
-                  <div class="hero-cats-module">
-                    <span class="hero-cats-module-tag">MOD</span>
-                    <span class="hero-cats-module-code">01 · LOADOUT</span>
-                    <span class="hero-cats-module-status">
-                      <span class="hero-cats-module-pulse" aria-hidden="true"></span>
-                      ACTIVE
-                    </span>
-                  </div>
-                  <div class="hero-cats-title-wrap">
-                    <span class="hero-cats-bracket" aria-hidden="true"></span>
-                    <h2 class="hero-cats-title">
-                      <span class="hero-cats-title-glow">${escapeHtml(t("categories_title") || "Categories")}</span>
-                    </h2>
-                    <span class="hero-cats-bracket hero-cats-bracket--end" aria-hidden="true"></span>
-                  </div>
-                  <p class="hero-cats-sub">Select a trade lane · ${categories.length} sectors online</p>
+              <div class="hero-cats-head">
+                <div>
+                  <p class="hero-cats-eyebrow">01 · Loadout</p>
+                  <h2 class="hero-cats-title">${escapeHtml(t("categories_title") || "Categories")}</h2>
                 </div>
-                <div class="hero-cats-head-aside">
-                  <div class="hero-cats-stat-pill">
-                    <strong>${categories.length}</strong>
-                    <span>sectors</span>
-                  </div>
-                  <div class="hero-cats-stat-pill">
-                    <strong>${all.length}</strong>
-                    <span>plans</span>
-                  </div>
-                  <button type="button" class="hero-cats-all hero-cats-all--btn" data-category="All">
-                    <span>${escapeHtml(t("all_deals") || "All deals")}</span>
-                    <span class="hero-cats-all-arrow" aria-hidden="true">→</span>
-                  </button>
-                </div>
+                <button type="button" class="link-arrow hero-cats-all" data-category="All">
+                  ${escapeHtml(t("all_deals") || "All deals")} →
+                </button>
               </div>
               <div class="hero-cat-grid" role="list" aria-label="${escapeAttr(t("categories_title") || "Categories")}">
                 ${categories
