@@ -1706,11 +1706,14 @@ function ordersView() {
         const ref = `Ref: ${escapeHtml(o.paymentReference || "—")}`;
         const wallet = (o.payTo && o.payTo.wallet) || o.method || "e-wallet";
         actions = `
-          <div class="muted" style="margin:4px 0;font-size:0.78rem">${escapeHtml(String(wallet))} · ${ref}</div>
-          <button type="button" class="btn solid btn-sm" data-confirm-manual="${escapeAttr(o.id)}">Confirm payment</button>
+          <div class="muted" style="margin:4px 0;font-size:0.78rem">${escapeHtml(String(wallet))} · ${ref} · <em>Paid | Preparing</em></div>
+          <button type="button" class="btn solid btn-sm" data-confirm-manual="${escapeAttr(o.id)}">Confirm &amp; deliver</button>
+          <button type="button" class="btn ghost btn-sm" data-copy-g2g="${escapeAttr(o.id)}" style="margin-left:4px">Copy G2G</button>
           <button type="button" class="btn ghost btn-sm" data-order-status="cancelled" data-order-id="${escapeAttr(o.id)}" style="margin-left:4px">Cancel</button>`;
       } else if (isPaid) {
-        actions = `<button type="button" class="btn ghost btn-sm" data-order-status="refunded" data-order-id="${escapeAttr(o.id)}">Mark refunded</button>`;
+        actions = `
+          <button type="button" class="btn solid btn-sm" data-copy-g2g="${escapeAttr(o.id)}">Copy G2G delivery</button>
+          <button type="button" class="btn ghost btn-sm" data-order-status="refunded" data-order-id="${escapeAttr(o.id)}" style="margin-left:4px">Mark refunded</button>`;
       } else if (isRefunded) {
         actions = `<button type="button" class="btn ghost btn-sm" data-order-status="paid" data-order-id="${escapeAttr(o.id)}">Undo refund</button>`;
       }
@@ -2107,11 +2110,96 @@ function bindShell() {
           body: JSON.stringify({}),
         });
         await loadOrders();
-        toast("Payment confirmed — codes released");
+        toast("Payment confirmed — codes released (use Copy G2G delivery)");
         render();
       } catch (err) {
         toast(err.message, true);
         btn.disabled = false;
+      }
+    });
+  });
+
+  /** Build G2G-style paste text after buyer paid (for chat / manual delivery). */
+  function buildG2gDeliveryText(o) {
+    const wallet =
+      (o.payTo && o.payTo.wallet) ||
+      (o.method === "manual_maya"
+        ? "Maya"
+        : o.method === "manual_gcash"
+          ? "GCash"
+          : o.method || "—");
+    const amount =
+      o.amountFormatted ||
+      (o.amountPhp != null ? `₱${Number(o.amountPhp).toFixed(2)}` : money(orderLineTotal(o)));
+    const lines = [
+      "=== SubSaverPH / G2G delivery ===",
+      `Order ID: ${o.id || "—"}`,
+      `Status: ${o.status || "—"}`,
+      `Buyer: ${o.name || "—"} <${o.email || "—"}>`,
+      `Payment method: ${wallet}`,
+      `Amount: ${amount}`,
+      `Payment reference: ${o.paymentReference || o.providerRef || "—"}`,
+      `Paid at: ${o.paymentSubmittedAt || o.paidAt || o.createdAt || "—"}`,
+      "",
+      "--- Product delivery ---",
+    ];
+    const items = Array.isArray(o.items) ? o.items : [];
+    if (!items.length) {
+      lines.push("(no items)");
+    }
+    items.forEach((it, idx) => {
+      lines.push("");
+      lines.push(`[${idx + 1}] ${it.name || it.id || "Product"} × ${it.qty || 1}`);
+      let creds = Array.isArray(it.credentials) ? it.credentials : [];
+      if (!creds.length && Array.isArray(it.codes)) {
+        creds = it.codes.map((c) => ({ raw: c, code: c }));
+      }
+      if (!creds.length) {
+        lines.push("Username: (pending delivery)");
+        lines.push("Password: (pending delivery)");
+        return;
+      }
+      creds.forEach((cr, cidx) => {
+        const u = cr.username || cr.user || "";
+        const p = cr.password || cr.pass || "";
+        const code = cr.code || cr.raw || "";
+        if (creds.length > 1) lines.push(`-- Login #${cidx + 1} --`);
+        if (u || p) {
+          lines.push(`Username: ${u || "—"}`);
+          lines.push(`Password: ${p || "—"}`);
+        } else if (code) {
+          lines.push(`Code: ${code}`);
+        } else {
+          lines.push(String(cr.raw || cr || "—"));
+        }
+      });
+    });
+    lines.push("");
+    lines.push("Thank you for your order.");
+    return lines.join("\n");
+  }
+
+  $$("[data-copy-g2g]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const id = btn.dataset.copyG2g;
+      const o = (state.orders || []).find((x) => String(x.id) === String(id));
+      if (!o) {
+        toast("Order not found", true);
+        return;
+      }
+      const text = buildG2gDeliveryText(o);
+      try {
+        await navigator.clipboard.writeText(text);
+        toast("G2G delivery text copied — paste into chat");
+      } catch {
+        // Fallback select
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        ta.remove();
+        toast("G2G delivery text copied");
       }
     });
   });

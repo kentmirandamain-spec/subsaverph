@@ -2297,6 +2297,59 @@ html[data-theme="light"] .badge {
   margin: 16px 0 20px !important;
 }
 
+/* G2G-style order progress tracker */
+.g2g-tracker {
+  list-style: none;
+  margin: 16px 0 8px;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  text-align: center;
+}
+.g2g-tracker li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  opacity: 0.4;
+  font-size: 0.65rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--mute);
+}
+.g2g-tracker li.is-done,
+.g2g-tracker li.is-current {
+  opacity: 1;
+  color: var(--text);
+}
+.g2g-step-num {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--line-strong);
+  display: grid;
+  place-items: center;
+  font-size: 0.75rem;
+  background: var(--soft-fill);
+}
+.g2g-tracker li.is-done .g2g-step-num,
+.g2g-tracker li.is-current .g2g-step-num {
+  border-color: var(--text);
+  background: var(--btn-solid-bg);
+  color: var(--btn-solid-fg);
+}
+.g2g-status-pill {
+  font-size: 0.9rem;
+}
+@media (max-width: 480px) {
+  .g2g-tracker {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+}
+
 /* E-wallet delivery ETA notice (checkout + pay page) */
 .ewallet-eta-notice {
   margin: 12px 0 0;

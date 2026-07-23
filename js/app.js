@@ -1607,6 +1607,58 @@ function checkoutTermsModalHtml(cart, totals) {
       </div>`;
 }
 
+/** G2G-style order stage for e-wallet (buyer-facing). */
+function g2gStageForOrder(order) {
+  const st = String(order?.status || "").toLowerCase();
+  if (st === "paid" || st === "completed" || st === "success") {
+    return {
+      key: "delivered",
+      label: "Delivered",
+      g2g: "Completed",
+      step: 4,
+    };
+  }
+  if (st === "payment_submitted") {
+    return {
+      key: "paid_preparing",
+      label: "Paid | Preparing",
+      g2g: "Paid · Preparing delivery",
+      step: 3,
+    };
+  }
+  // awaiting_payment / incomplete
+  return {
+    key: "to_pay",
+    label: "To Pay",
+    g2g: "To Pay · Scan QR",
+    step: 1,
+  };
+}
+
+function g2gTrackerHtml(activeStep) {
+  const stages = [
+    { n: 1, t: "To Pay" },
+    { n: 2, t: "Verifying" },
+    { n: 3, t: "Paid | Preparing" },
+    { n: 4, t: "Delivered" },
+  ];
+  // Map: step 1 = to pay, 2 = verifying (same as submitted before confirm), 3 = paid preparing, 4 = delivered
+  const visual = activeStep === 3 ? 3 : activeStep === 4 ? 4 : activeStep === 1 ? 1 : 2;
+  return `
+    <ol class="g2g-tracker" aria-label="Order progress">
+      ${stages
+        .map((s) => {
+          const done = s.n < visual;
+          const cur = s.n === visual;
+          return `<li class="${done ? "is-done" : ""} ${cur ? "is-current" : ""}">
+            <span class="g2g-step-num">${s.n}</span>
+            <span class="g2g-step-label">${escapeHtml(s.t)}</span>
+          </li>`;
+        })
+        .join("")}
+    </ol>`;
+}
+
 function viewManualEwalletPending(order) {
   const payTo = order.payTo || {};
   const wallet = payTo.wallet || (order.method === "manual_maya" ? "Maya" : "GCash");
@@ -1629,6 +1681,9 @@ function viewManualEwalletPending(order) {
   const note = (order.paymentInstructions && order.paymentInstructions.note) || "";
   const st = String(order.status || "").toLowerCase();
   const submitted = st === "payment_submitted";
+  const stage = g2gStageForOrder(order);
+  // After reference: treat as Verifying → Paid|Preparing (step 3 for display)
+  const trackerStep = submitted ? 3 : 1;
   const itemsHtml = (order.items || [])
     .map(
       (i) =>
@@ -1639,28 +1694,38 @@ function viewManualEwalletPending(order) {
   return `
     <div class="success">
       <div class="success-card success-card-wide">
-        <div class="ok">${submitted ? "…" : "₱"}</div>
-        <h1>${submitted ? "Payment under review" : "Scan to pay with " + escapeHtml(wallet)}</h1>
+        <div class="ok">${submitted ? "✓" : "₱"}</div>
+        <h1>${submitted ? "Paid | Preparing" : "Scan to pay with " + escapeHtml(wallet)}</h1>
         <p class="muted">Order <strong class="success-order-id">${escapeHtml(order.id || "")}</strong>
           · ${escapeHtml(order.email || "")}</p>
-        <p style="margin-top:10px;font-weight:600">${escapeHtml(
+        <p class="g2g-status-pill" style="margin-top:10px">
+          Status: <strong style="color:var(--text)">${escapeHtml(stage.g2g)}</strong>
+        </p>
+        ${g2gTrackerHtml(trackerStep)}
+        <p style="margin-top:12px;font-weight:600">${escapeHtml(
           order.message ||
             (submitted
-              ? "We received your reference. Login codes usually arrive in 10–30 minutes after confirmation."
+              ? "Payment received. We are preparing your delivery (usually 10–30 minutes)."
               : "Scan the QR, pay the exact amount, then submit your reference.")
         )}</p>
 
         <div class="ewallet-eta-notice ewallet-eta-notice-page" role="status">
-          <strong>Delivery time: 10–30 minutes</strong>
-          <p>E-wallet payments are verified manually. After you pay and we confirm, your login codes are usually delivered within <strong>10–30 minutes</strong> (not instant).</p>
+          <strong>${submitted ? "Paid · Preparing delivery" : "To Pay · Delivery after confirm: 10–30 minutes"}</strong>
+          <p>${
+            submitted
+              ? "Like G2G: once payment is confirmed, the seller prepares delivery. Your login codes are released after we verify — usually <strong>10–30 minutes</strong>."
+              : "E-wallet QR checkout (G2G-style offline pay). Pay first, then submit your reference so we can verify."
+          }</p>
           ${
             !submitted
-              ? `<p style="margin-top:8px">Stock is <strong>not held</strong> until you submit your payment reference below. If you leave without submitting, this checkout is discarded.</p>`
-              : `<p style="margin-top:8px">Payment reference received — we will confirm and release codes (stock reserved only when we confirm).</p>`
+              ? `<p style="margin-top:8px">Stock is <strong>not held</strong> until you submit your payment reference. If you leave without submitting, this checkout is discarded.</p>`
+              : `<p style="margin-top:8px">Payment reference on file — status is <strong>Paid | Preparing</strong>. Refresh this page after delivery.</p>`
           }
         </div>
 
-        <div class="manual-pay-box" role="region" aria-label="Payment QR instructions">
+        ${
+          !submitted
+            ? `<div class="manual-pay-box" role="region" aria-label="Payment QR instructions">
           <h2 class="manual-pay-title">Pay exactly this amount</h2>
           <div class="manual-pay-amount">${escapeHtml(amount)}</div>
           ${
@@ -1685,7 +1750,42 @@ function viewManualEwalletPending(order) {
             ${steps.map((s) => `<li>${escapeHtml(s)}</li>`).join("")}
           </ol>
           ${note ? `<p class="muted" style="margin:12px 0 0;font-size:0.85rem">${escapeHtml(note)}</p>` : ""}
-        </div>
+        </div>`
+            : `<div class="manual-pay-box" role="region" aria-label="Payment received">
+          <h2 class="manual-pay-title">Payment method</h2>
+          <div class="manual-pay-grid">
+            <div>
+              <span class="manual-pay-label">Method</span>
+              <div class="manual-pay-value-row">
+                <code class="manual-pay-value">${escapeHtml(wallet)} (QR)</code>
+                <button type="button" class="btn sm cred-copy" data-copy="${escapeAttr(wallet + " QR")}">Copy</button>
+              </div>
+            </div>
+            <div>
+              <span class="manual-pay-label">Amount paid</span>
+              <div class="manual-pay-value-row">
+                <code class="manual-pay-value">${escapeHtml(amount)}</code>
+                <button type="button" class="btn sm cred-copy" data-copy="${escapeAttr(String(amount))}">Copy</button>
+              </div>
+            </div>
+            <div>
+              <span class="manual-pay-label">Payment reference</span>
+              <div class="manual-pay-value-row">
+                <code class="manual-pay-value">${escapeHtml(order.paymentReference || "—")}</code>
+                <button type="button" class="btn sm cred-copy" data-copy="${escapeAttr(order.paymentReference || "")}">Copy</button>
+              </div>
+            </div>
+            <div>
+              <span class="manual-pay-label">Order ID</span>
+              <div class="manual-pay-value-row">
+                <code class="manual-pay-value">${escapeHtml(order.id || "")}</code>
+                <button type="button" class="btn sm cred-copy" data-copy="${escapeAttr(order.id || "")}">Copy</button>
+              </div>
+            </div>
+          </div>
+          <p class="muted" style="margin:14px 0 0;font-size:0.85rem">Keep these details for support. Delivery usually within <strong style="color:var(--text)">10–30 minutes</strong>.</p>
+        </div>`
+        }
 
         <div class="manual-pay-order-summary">
           <h3 style="margin:0 0 8px;font-size:0.85rem;text-transform:uppercase;letter-spacing:.08em">Your order</h3>
@@ -1695,16 +1795,17 @@ function viewManualEwalletPending(order) {
         ${
           submitted
             ? `<div class="manual-pay-submitted">
-            <p><strong>Reference submitted:</strong> <code>${escapeHtml(order.paymentReference || "—")}</code></p>
-            <p class="muted" style="margin-top:8px">Status: <strong style="color:var(--text)">${escapeHtml(order.status)}</strong>.
-              Typical delivery: <strong style="color:var(--text)">10–30 minutes</strong> after we confirm.
-              Keep this page — refresh to see your login codes, or check email.
-              Support: Order ID <strong style="color:var(--text)">${escapeHtml(order.id || "")}</strong>.</p>
-            <button type="button" class="btn solid" id="manualRefreshBtn" style="margin-top:14px">Check payment status</button>
+            <p><strong>G2G-style status:</strong> <span style="color:var(--text)">Paid | Preparing</span></p>
+            <p class="muted" style="margin-top:8px">
+              We received your payment reference. Delivery is being prepared.
+              Refresh this page when codes are ready, or check your email.
+            </p>
+            <button type="button" class="btn solid" id="manualRefreshBtn" style="margin-top:14px">Check delivery status</button>
             <p class="err" id="manualProofErr" style="color:#ff8a8a;font-size:0.85rem;min-height:1.2em;margin-top:8px"></p>
           </div>`
             : `<form id="manualProofForm" class="form manual-proof-form" style="margin-top:20px">
-            <h3 style="margin:0 0 10px">I already sent payment</h3>
+            <h3 style="margin:0 0 10px">I already paid</h3>
+            <p class="muted" style="margin:0 0 12px;font-size:0.85rem;text-transform:none;letter-spacing:0;font-weight:400">After you transfer, submit your reference so status becomes <strong>Paid | Preparing</strong>.</p>
             <label>GCash / Maya reference number
               <input required name="paymentReference" placeholder="e.g. 1234 567 890123" autocomplete="off" />
             </label>
