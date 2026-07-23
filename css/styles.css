@@ -8446,10 +8446,10 @@ html[data-theme="light"] .hero--orbit .hero-cat-chip:hover {
   padding: 0;
   margin: 0;
   pointer-events: none;
-  /* expand blur box to cover entire top page — light frost */
-  background: rgba(6, 8, 15, 0.28);
-  backdrop-filter: blur(8px) saturate(1.1);
-  -webkit-backdrop-filter: blur(8px) saturate(1.1);
+  /* light frost over slider — keep brands visible */
+  background: rgba(6, 8, 15, 0.18);
+  backdrop-filter: blur(3px) saturate(1.05);
+  -webkit-backdrop-filter: blur(3px) saturate(1.05);
   border: none;
   border-radius: 0;
   box-shadow: none;
@@ -8526,9 +8526,9 @@ html[data-theme="light"] .hero--orbit .hero-cat-chip:hover {
     padding: calc(var(--nav-h) + 0.85rem) 0 2.5rem;
   }
   .hero--with-slider .hero-orbit-chrome {
-    backdrop-filter: blur(6px) saturate(1.08);
-    -webkit-backdrop-filter: blur(6px) saturate(1.08);
-    background: rgba(6, 8, 15, 0.32);
+    backdrop-filter: blur(3px) saturate(1.02);
+    -webkit-backdrop-filter: blur(3px) saturate(1.02);
+    background: rgba(6, 8, 15, 0.28);
   }
   .product-slider--hero .product-slider-controls {
     top: calc(var(--nav-h) + 8px);
@@ -8752,17 +8752,17 @@ html[data-theme="light"] .hero-cats-title {
    ============================================================ */
 
 .hero--with-slider .hero-orbit-chrome {
-  background: rgba(4, 6, 12, 0.62) !important;
-  backdrop-filter: blur(10px) saturate(1.05) !important;
-  -webkit-backdrop-filter: blur(10px) saturate(1.05) !important;
+  background: rgba(4, 6, 12, 0.32) !important;
+  backdrop-filter: blur(3px) saturate(1.02) !important;
+  -webkit-backdrop-filter: blur(3px) saturate(1.02) !important;
 }
 .product-slider--hero .product-slide-shade--logo {
   background:
     linear-gradient(
       180deg,
-      rgba(4, 6, 12, 0.55) 0%,
-      rgba(4, 6, 12, 0.45) 40%,
-      rgba(4, 6, 12, 0.72) 100%
+      rgba(4, 6, 12, 0.22) 0%,
+      rgba(4, 6, 12, 0.12) 40%,
+      rgba(4, 6, 12, 0.38) 100%
     ) !important;
 }
 
@@ -8887,9 +8887,9 @@ html[data-theme="light"] .hero-cats-title {
 
 @media (max-width: 720px) {
   .hero--with-slider .hero-orbit-chrome {
-    background: rgba(4, 6, 12, 0.7) !important;
-    backdrop-filter: blur(10px) saturate(1.05) !important;
-    -webkit-backdrop-filter: blur(10px) saturate(1.05) !important;
+    background: rgba(4, 6, 12, 0.38) !important;
+    backdrop-filter: blur(3px) saturate(1.02) !important;
+    -webkit-backdrop-filter: blur(3px) saturate(1.02) !important;
   }
 }
 
@@ -9352,7 +9352,7 @@ html[data-theme="light"] .ops-signal {
 .product-slider--hero .product-slide-shade--logo {
   z-index: 3;
   background:
-    linear-gradient(180deg, rgba(4, 6, 12, 0.2) 0%, transparent 35%, rgba(4, 6, 12, 0.45) 100%) !important;
+    linear-gradient(180deg, rgba(4, 6, 12, 0.1) 0%, transparent 40%, rgba(4, 6, 12, 0.22) 100%) !important;
   pointer-events: none;
 }
 
