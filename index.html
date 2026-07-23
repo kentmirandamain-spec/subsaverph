@@ -203,7 +203,7 @@
   }
   </script>
 
-  <link rel="stylesheet" href="css/styles.css?v=cats-v3" />
+  <link rel="stylesheet" href="css/styles.css?v=mobile-ux1" />
 </head>
 <body class="game-ui orbit-skin galaxy">
   <!-- Quiet cockpit atmosphere (Orbit-style — minimal starfield) -->
@@ -412,8 +412,33 @@
 
   <div id="toast" class="toast" role="status"></div>
 
+  <!-- Mobile bottom navigation -->
+  <nav class="mobile-tabbar" id="mobileTabbar" aria-label="Mobile navigation">
+    <a class="mobile-tab" href="#/home" data-tab="home">
+      <span class="mobile-tab-ico" aria-hidden="true">⌂</span>
+      <span class="mobile-tab-label">Home</span>
+    </a>
+    <a class="mobile-tab" href="#/deals" data-tab="deals">
+      <span class="mobile-tab-ico" aria-hidden="true">▣</span>
+      <span class="mobile-tab-label">Deals</span>
+    </a>
+    <a class="mobile-tab" href="#/search" data-tab="search">
+      <span class="mobile-tab-ico" aria-hidden="true">⌕</span>
+      <span class="mobile-tab-label">Search</span>
+    </a>
+    <button type="button" class="mobile-tab" id="mobileTabCart" data-tab="cart">
+      <span class="mobile-tab-ico" aria-hidden="true">🛒</span>
+      <span class="mobile-tab-label">Cart</span>
+      <span class="mobile-tab-badge" id="mobileCartBadge" hidden>0</span>
+    </button>
+    <a class="mobile-tab" href="#/support" data-tab="support">
+      <span class="mobile-tab-ico" aria-hidden="true">?</span>
+      <span class="mobile-tab-label">Help</span>
+    </a>
+  </nav>
+
   <script src="data/deals.js"></script>
-  <script type="module" src="js/app.js?v=cats-v3"></script>
+  <script type="module" src="js/app.js?v=mobile-ux1"></script>
   <!-- Live data loads from /api/catalog when server.py is running -->
 </body>
 </html>

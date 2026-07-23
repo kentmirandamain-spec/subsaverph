@@ -304,8 +304,34 @@ function toast(msg) {
 function updateBadge() {
   const n = cartCount();
   const b = $("#cartBadge");
-  b.textContent = n;
-  b.hidden = n === 0;
+  if (b) {
+    b.textContent = n;
+    b.hidden = n === 0;
+  }
+  const mb = $("#mobileCartBadge");
+  if (mb) {
+    mb.textContent = n > 9 ? "9+" : String(n);
+    mb.hidden = n === 0;
+  }
+}
+
+function syncMobileTabbar() {
+  const bar = $("#mobileTabbar");
+  if (!bar) return;
+  const view = state.view || "home";
+  const map = {
+    home: "home",
+    deals: "deals",
+    deal: "deals",
+    search: "search",
+    checkout: "cart",
+    support: "support",
+    contact: "support",
+  };
+  const active = map[view] || "home";
+  bar.querySelectorAll(".mobile-tab").forEach((tab) => {
+    tab.classList.toggle("is-active", tab.getAttribute("data-tab") === active);
+  });
 }
 
 function ratesNote() {
@@ -2577,6 +2603,7 @@ function render() {
     if (!root) return;
     root.innerHTML = html;
     updateBadge();
+    syncMobileTabbar();
     $$("[data-rates]").forEach((el) => {
       el.textContent = ratesNote();
     });
@@ -3560,6 +3587,7 @@ async function init() {
   const closeMobileMenu = () => {
     $("#navLinks")?.classList.remove("open");
     $("#menuBtn")?.setAttribute("aria-expanded", "false");
+    document.body.classList.remove("nav-menu-open");
   };
 
   $("#menuBtn")?.addEventListener("click", (e) => {
@@ -3569,15 +3597,26 @@ async function init() {
     const open = !links.classList.contains("open");
     links.classList.toggle("open", open);
     $("#menuBtn")?.setAttribute("aria-expanded", open ? "true" : "false");
+    document.body.classList.toggle("nav-menu-open", open);
   });
 
   // Close hamburger menu after navigation or outside tap
   $("#navLinks")?.addEventListener("click", (e) => {
-    if (e.target.closest("a")) closeMobileMenu();
+    if (e.target.closest("a")) {
+      closeMobileMenu();
+      document.body.classList.remove("nav-menu-open");
+    }
   });
   document.addEventListener("click", (e) => {
     if (e.target.closest("#menuBtn") || e.target.closest("#navLinks")) return;
     closeMobileMenu();
+    document.body.classList.remove("nav-menu-open");
+  });
+
+  // Mobile bottom tab bar: cart opens drawer
+  $("#mobileTabCart")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    openCart();
   });
 
   window.addEventListener("scroll", () => {
