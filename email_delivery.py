@@ -560,8 +560,8 @@ def _send_via_resend(
     if status and 200 <= status < 300:
         return True, raw[:300]
 
-    # Unverified domain / test mode: only the Resend account email is allowed.
-    # Retry once to that address so support form + invoices still notify the owner.
+    # Unverified domain / test mode: Resend only allows the account owner email.
+    # Notify the owner, but NEVER report success for the customer — they did not get mail.
     low = (raw or "").lower()
     if status == 403 and "only send testing emails" in low:
         allowed = _resend_test_mode_allowed_to(raw)
@@ -569,8 +569,12 @@ def _send_via_resend(
             status2, raw2 = _resend_http_post(api_key, _payload(allowed))
             if status2 and 200 <= status2 < 300:
                 return (
-                    True,
-                    f"ok (Resend test-mode redirect {to_email} → {allowed}) {raw2[:160]}",
+                    False,
+                    f"Resend test mode blocked customer email ({to_email}). "
+                    f"Owner notified at {allowed} instead. "
+                    "Fix: verify your domain at resend.com/domains and set "
+                    "MAIL_FROM=SubSaverPH <orders@yourdomain.com> so customers can receive invoices. "
+                    f"Detail: {raw2[:120]}",
                 )
             return (
                 False,
@@ -580,8 +584,9 @@ def _send_via_resend(
             )
         return (
             False,
-            f"Resend test mode: can only email the account owner. "
-            f"Set SUPPORT_INBOX to that Gmail, or verify your domain on Resend. Detail: {raw[:280]}",
+            f"Resend test mode: can only email the account owner, not customers. "
+            "Verify your domain on Resend and set MAIL_FROM to that domain. "
+            f"Detail: {raw[:280]}",
         )
 
     # Cloudflare Error 1010 (bot blocked) — often returned as HTML or short text
@@ -812,6 +817,120 @@ def send_support_message(
         "provider": provider,
         "detail": detail,
         "to": to_addr,
+    }
+
+
+def send_payment_received_notice(order: dict[str, Any]) -> dict[str, Any]:
+    """
+    Email customer after they submit an e-wallet payment reference
+    (before codes are released). Confirms we received payment details.
+    """
+    to_email = (order.get("email") or "").strip()
+    if not to_email or "@" not in to_email:
+        return {"ok": False, "provider": None, "detail": "No valid customer email"}
+
+    if not mail_configured():
+        return {
+            "ok": False,
+            "provider": None,
+            "detail": "Email not configured (set RESEND_API_KEY or SMTP_*)",
+            "skipped": True,
+        }
+
+    order_id = str(order.get("id") or "—")
+    name = str(order.get("name") or "Customer").strip() or "Customer"
+    ref = str(order.get("paymentReference") or "—")
+    amount = str(
+        order.get("amountFormatted")
+        or (
+            f"₱{float(order.get('amountPhp') or 0):,.2f}"
+            if order.get("amountPhp") is not None
+            else "—"
+        )
+    )
+    method = str(order.get("method") or order.get("paymentMode") or "e-wallet")
+    eta = str(order.get("deliveryEta") or "10–30 minutes")
+    items = order.get("items") or []
+    item_lines = []
+    for it in items:
+        item_lines.append(
+            f"- {it.get('name') or it.get('id') or 'Plan'} × {it.get('qty') or 1}"
+        )
+    if not item_lines:
+        for it in order.get("cart") or []:
+            item_lines.append(f"- {it.get('id') or 'Plan'} × {it.get('qty') or 1}")
+    products = "\n".join(item_lines) if item_lines else "- (see order page)"
+
+    subject = f"SubSaverPH — payment received · {order_id}"
+    text = "\n".join(
+        [
+            "SubSaverPH — Payment reference received",
+            "=" * 44,
+            f"Hi {name},",
+            "",
+            "We received your payment details and are verifying the transfer.",
+            "",
+            f"Order ID:     {order_id}",
+            f"Payment ref:  {ref}",
+            f"Method:       {method}",
+            f"Amount:       {amount}",
+            f"Delivery ETA: usually {eta} after confirmation",
+            "",
+            "Products:",
+            products,
+            "",
+            "You will get another email with login credentials once payment is confirmed.",
+            "You can also open your order status page on the website.",
+            "",
+            "If you did not make this payment, contact support with your Order ID.",
+            "",
+            "Thank you,",
+            "SubSaverPH",
+        ]
+    )
+    html = f"""<!DOCTYPE html><html><body style="margin:0;padding:0;background:#000;color:#fff;font-family:system-ui,sans-serif">
+  <table width="100%" style="background:#000;padding:28px 12px"><tr><td align="center">
+  <table width="100%" style="max-width:520px;background:#0a0a0a;border:1px solid #2a2a2a">
+    <tr><td style="padding:24px">
+      <div style="font-size:12px;letter-spacing:0.16em;text-transform:uppercase;color:#888">SubSaverPH</div>
+      <h1 style="margin:10px 0 0;font-size:20px">Payment reference received</h1>
+      <p style="color:#aaa;font-size:14px;line-height:1.5">Hi {escape(name)}, we received your payment details and are verifying the transfer.</p>
+      <table width="100%" style="font-size:13px;color:#aaa;border:1px solid #333;background:#111;margin-top:14px">
+        <tr><td style="padding:10px 12px;border-bottom:1px solid #222">Order ID</td>
+            <td align="right" style="padding:10px 12px;border-bottom:1px solid #222;color:#fff;font-family:monospace">{escape(order_id)}</td></tr>
+        <tr><td style="padding:10px 12px;border-bottom:1px solid #222">Payment ref</td>
+            <td align="right" style="padding:10px 12px;border-bottom:1px solid #222;color:#fff;font-family:monospace">{escape(ref)}</td></tr>
+        <tr><td style="padding:10px 12px;border-bottom:1px solid #222">Amount</td>
+            <td align="right" style="padding:10px 12px;border-bottom:1px solid #222;color:#fff">{escape(amount)}</td></tr>
+        <tr><td style="padding:10px 12px">Delivery</td>
+            <td align="right" style="padding:10px 12px;color:#fff">usually {escape(eta)} after confirm</td></tr>
+      </table>
+      <p style="color:#888;font-size:12px;line-height:1.5;margin:16px 0 0">
+        You will receive another email with login credentials once payment is confirmed.
+        Save this message and check spam if nothing arrives.
+      </p>
+    </td></tr>
+  </table>
+  </td></tr></table>
+</body></html>"""
+
+    notify = _notify_emails()
+    if (os.environ.get("RESEND_API_KEY") or "").strip():
+        ok, detail = _send_via_resend(to_email, subject, text, html, bcc=notify)
+        return {
+            "ok": ok,
+            "provider": "resend",
+            "detail": detail,
+            "notified": bool(ok and notify),
+            "kind": "payment_received",
+        }
+    ok, detail = _send_via_smtp(to_email, subject, text, html, bcc=notify)
+    return {
+        "ok": ok,
+        "provider": "smtp",
+        "detail": detail,
+        "notified": bool(ok and notify),
+        "kind": "payment_received",
     }
 
 

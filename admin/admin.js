@@ -1908,7 +1908,13 @@ function ordersView() {
           ? Number(o.amountPhp)
           : orderLineTotal(o);
       const codes = (o.items || []).map((i) => `${i.name}: ${(i.codes || []).join(", ")}`).join(" · ");
-      const mail = o.emailSent ? "emailed" : o.emailDetail ? "email fail" : "—";
+      const mail = o.emailSent
+        ? "invoice emailed"
+        : o.ackEmailSent
+          ? "ack emailed"
+          : o.emailDetail || o.ackEmailDetail
+            ? "email fail"
+            : "—";
       const badgeClass = isRefunded
         ? "badge badge-refund"
         : isManualPending
@@ -1919,13 +1925,14 @@ function ordersView() {
         const ref = `Ref: ${escapeHtml(o.paymentReference || "—")}`;
         const wallet = (o.payTo && o.payTo.wallet) || o.method || "e-wallet";
         actions = `
-          <div class="muted" style="margin:4px 0;font-size:0.78rem">${escapeHtml(String(wallet))} · ${ref} · <em>Paid | Preparing</em></div>
+          <div class="muted" style="margin:4px 0;font-size:0.78rem">${escapeHtml(String(wallet))} · ${ref}</div>
           <button type="button" class="btn solid btn-sm" data-confirm-manual="${escapeAttr(o.id)}">Confirm &amp; deliver</button>
-          <button type="button" class="btn ghost btn-sm" data-copy-g2g="${escapeAttr(o.id)}" style="margin-left:4px">Copy G2G</button>
+          <button type="button" class="btn ghost btn-sm" data-resend-email="${escapeAttr(o.id)}" style="margin-left:4px">Resend email</button>
           <button type="button" class="btn ghost btn-sm" data-order-status="cancelled" data-order-id="${escapeAttr(o.id)}" style="margin-left:4px">Cancel</button>`;
       } else if (isPaid) {
         actions = `
-          <button type="button" class="btn solid btn-sm" data-copy-g2g="${escapeAttr(o.id)}">Copy G2G delivery</button>
+          <button type="button" class="btn solid btn-sm" data-resend-email="${escapeAttr(o.id)}">Resend invoice email</button>
+          <button type="button" class="btn ghost btn-sm" data-copy-g2g="${escapeAttr(o.id)}" style="margin-left:4px">Copy delivery</button>
           <button type="button" class="btn ghost btn-sm" data-order-status="refunded" data-order-id="${escapeAttr(o.id)}" style="margin-left:4px">Mark refunded</button>`;
       } else if (isRefunded) {
         actions = `<button type="button" class="btn ghost btn-sm" data-order-status="paid" data-order-id="${escapeAttr(o.id)}">Undo refund</button>`;
@@ -2354,11 +2361,42 @@ function bindShell() {
           body: JSON.stringify({}),
         });
         await loadOrders();
-        toast("Payment confirmed — codes released (use Copy G2G delivery)");
+        toast("Payment confirmed — codes released and invoice emailed");
         render();
       } catch (err) {
         toast(err.message, true);
         btn.disabled = false;
+      }
+    });
+  });
+
+  $$("[data-resend-email]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const id = btn.dataset.resendEmail;
+      if (!id) return;
+      if (!confirm(`Resend order email to the customer for ${id}?`)) return;
+      btn.disabled = true;
+      const prev = btn.textContent;
+      btn.textContent = "Sending…";
+      try {
+        const data = await api(`/api/admin/orders/${encodeURIComponent(id)}/resend-email`, {
+          method: "POST",
+          body: JSON.stringify({}),
+        });
+        await loadOrders();
+        if (data.ok || data.emailResult?.ok) {
+          toast("Email sent to customer");
+        } else {
+          toast(
+            data.emailResult?.detail || data.error || "Email failed — check Resend/SMTP settings",
+            true
+          );
+        }
+        render();
+      } catch (err) {
+        toast(err.message || "Email failed", true);
+        btn.disabled = false;
+        btn.textContent = prev;
       }
     });
   });

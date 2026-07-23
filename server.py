@@ -992,7 +992,6 @@ def admin_support_messages():
     return jsonify({"messages": msgs[:100]})
 
 
-@app.get("/api/health")
 def _safe_support_inbox() -> str:
     try:
         from email_delivery import support_inbox
@@ -1002,12 +1001,16 @@ def _safe_support_inbox() -> str:
         return ""
 
 
+@app.get("/api/health")
 def health():
     try:
-        from email_delivery import mail_configured
+        from email_delivery import mail_configured, _from_header
+
         mail_ok = mail_configured()
+        mail_from = _from_header() if mail_ok else None
     except Exception:
         mail_ok = False
+        mail_from = None
     outbound = get_outbound_ip()
     # Stock snapshot (helps diagnose SOLD OUT vs admin inventory)
     stock_summary = {}
@@ -1024,6 +1027,7 @@ def health():
             "ok": True,
             "service": "SubSaverPH",
             "emailConfigured": mail_ok,
+            "mailFrom": mail_from,
             "stripeConfigured": stripe_configured(),
             "paymongoConfigured": paymongo_configured(),
             "xenditConfigured": xendit_configured(),
@@ -1299,6 +1303,7 @@ def _email_invoice_for_order(order: dict) -> dict:
     order["emailDetail"] = str(result.get("detail") or "")[:500]
     order["emailNotified"] = bool(result.get("notified"))
     order["emailNotifyTo"] = result.get("notifyTo") or []
+    order["emailTo"] = (order.get("email") or "").strip()
     order["emailSentAt"] = (
         __import__("datetime").datetime.utcnow().isoformat() + "Z"
         if result.get("ok")
@@ -1312,12 +1317,51 @@ def _email_invoice_for_order(order: dict) -> dict:
     elif result.get("skipped"):
         order["message"] = (
             "Payment confirmed. Codes delivered on-site "
-            "(email not configured on server)."
+            "(email not configured on server — set RESEND_API_KEY or SMTP on Render)."
         )
     else:
         order["message"] = (
             "Payment confirmed. Codes delivered on-site "
-            f"(email failed: {order.get('emailDetail') or 'unknown'})."
+            f"(email failed: {order.get('emailDetail') or 'unknown'}). "
+            "Check spam, or ask support to resend the invoice."
+        )
+    return result
+
+
+def _email_payment_received_for_order(order: dict) -> dict:
+    """Ack email when e-wallet reference is submitted (no codes yet)."""
+    try:
+        from email_delivery import send_payment_received_notice
+
+        result = send_payment_received_notice(order)
+    except Exception as e:
+        result = {"ok": False, "provider": None, "detail": str(e)}
+
+    order["ackEmailSent"] = bool(result.get("ok"))
+    order["ackEmailDetail"] = str(result.get("detail") or "")[:500]
+    order["ackEmailProvider"] = result.get("provider")
+    order["ackEmailSentAt"] = (
+        __import__("datetime").datetime.utcnow().isoformat() + "Z"
+        if result.get("ok")
+        else order.get("ackEmailSentAt")
+    )
+    if result.get("ok"):
+        order["message"] = (
+            "Payment reference received. We emailed a confirmation to "
+            f"{order.get('email') or 'you'}. Codes arrive after we verify payment "
+            f"(usually {order.get('deliveryEta') or '10–30 minutes'})."
+        )
+    elif result.get("skipped"):
+        order["message"] = (
+            "Payment reference received. We are verifying your transfer. "
+            "Login codes are usually ready within 10–30 minutes after confirmation. "
+            "(Email not configured on server.)"
+        )
+    else:
+        # Keep user-facing message simple; detail stored for admin
+        order["message"] = (
+            "Payment reference received. We are verifying your transfer. "
+            "Login codes are usually ready within 10–30 minutes after confirmation."
         )
     return result
 
@@ -2380,6 +2424,12 @@ def api_manual_proof():
             save_orders(orders[:500])
             checkouts.pop(order_id, None)
             save_ewallet_checkouts(checkouts)
+            # Confirm to customer by email that we received the reference
+            try:
+                _email_payment_received_for_order(order)
+                _persist_order_update(order)
+            except Exception:
+                pass
             return jsonify({"ok": True, "order": order, "promoted": True})
 
     # 2) Already a real order (legacy awaiting_payment or payment_submitted)
@@ -2420,6 +2470,12 @@ def api_manual_proof():
     }
     orders[idx] = found
     save_orders(orders)
+    try:
+        _email_payment_received_for_order(found)
+        orders[idx] = found
+        save_orders(orders)
+    except Exception:
+        pass
     return jsonify({"ok": True, "order": found})
 
 
@@ -4622,6 +4678,55 @@ def admin_confirm_manual_payment(order_id: str):
         return jsonify({"error": f"Could not fulfill order: {e}"}), 500
 
     return jsonify({"ok": True, "order": paid})
+
+
+@app.post("/api/admin/orders/<order_id>/resend-email")
+@require_admin
+def admin_resend_order_email(order_id: str):
+    """
+    Resend customer invoice email for a paid order (or ack email if still pending).
+    Body optional: { "to": "override@email.com" }
+    """
+    oid = str(order_id or "").strip()
+    data = request.get_json(silent=True) or {}
+    override_to = str(data.get("to") or data.get("email") or "").strip()
+
+    orders = load_orders()
+    found = None
+    for o in orders:
+        if str(o.get("id") or "") == oid:
+            found = o
+            break
+    if not found:
+        return jsonify({"error": "Order not found"}), 404
+
+    if override_to and "@" in override_to:
+        found = {**found, "email": override_to}
+
+    st = str(found.get("status") or "").lower()
+    try:
+        if st == "paid" or any(
+            (it.get("codes") or it.get("credentials")) for it in (found.get("items") or [])
+        ):
+            result = _email_invoice_for_order(found)
+        else:
+            result = _email_payment_received_for_order(found)
+        _persist_order_update(found)
+    except Exception as e:
+        return jsonify({"error": f"Email failed: {e}"}), 500
+
+    return jsonify(
+        {
+            "ok": bool(result.get("ok")),
+            "order": found,
+            "emailResult": {
+                "ok": result.get("ok"),
+                "provider": result.get("provider"),
+                "detail": result.get("detail"),
+                "skipped": result.get("skipped"),
+            },
+        }
+    )
 
 
 @app.post("/api/admin/test-invoice")
