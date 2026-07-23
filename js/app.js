@@ -801,18 +801,6 @@ function viewHome() {
 
     <section class="section section-platforms">
       <div class="section-inner">
-        <div class="section-head row">
-          <div>
-            <p class="eyebrow">${escapeHtml(t("eyebrow_platforms") || "02 · Platforms")}</p>
-            ${(() => {
-              const platformsTitle = c("platforms_title", "platformsTitle");
-              return platformsTitle
-                ? `<h2>${escapeHtml(platformsTitle)}</h2>`
-                : `<h2>Popular platforms</h2>`;
-            })()}
-          </div>
-          <a class="link-arrow" href="#view-all-deals">${escapeHtml(t("cta_browse") || "Browse")} →</a>
-        </div>
         <div class="brands brands--orbit">
           ${brands
             .map(
