@@ -414,7 +414,6 @@ function card(d, highlightQ = "") {
   const img = productImage(d);
   const bg = productBrandColor(d);
   const wished = isWished(d.id);
-  const rating = Number(d.rating || 4.9).toFixed(2);
   const typeLabel = (d.category || "Plan").toUpperCase();
   const brandLabel = d.brand === "xAI" ? "SuperGrok" : d.brand || "";
   const fillFrame = /cover-(canva|capcut)/i.test(img) || d.brand === "Canva" || d.brand === "CapCut";
@@ -452,10 +451,6 @@ function card(d, highlightQ = "") {
             ${saveHtml}
             <span class="price-now">${formatDealPrice(d, "price")}</span>
             <small class="price-code">${escapeHtml(getCurrencyCode())}</small>
-          </div>
-          <div class="seller">
-            <span class="seller-avatar">${escapeHtml((d.monogram || "SS").slice(0, 2))}</span>
-            <span class="seller-meta">★ ${rating} <span class="verified-badge">VERIFIED</span></span>
           </div>
         </div>
         <div class="card-actions-row">
