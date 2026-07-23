@@ -13845,3 +13845,186 @@ html[data-theme="light"] .co-method {
     display: none !important;
   }
 }
+
+/* ============================================================
+   Mobile header: logo | search | currency/tools (one row)
+   ============================================================ */
+
+@media (max-width: 900px) {
+  :root {
+    --nav-h: 64px !important;
+  }
+
+  header.nav,
+  body.galaxy > header.nav,
+  .nav {
+    height: auto !important;
+    min-height: calc(var(--nav-h) + env(safe-area-inset-top, 0px)) !important;
+    max-height: none !important;
+    align-items: center !important;
+    padding-top: env(safe-area-inset-top, 0px) !important;
+  }
+
+  .nav-inner {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 8px !important;
+    width: min(100% - 12px, var(--max)) !important;
+    padding: 8px 0 !important;
+    box-sizing: border-box !important;
+    grid-template-columns: none !important;
+    grid-template-areas: none !important;
+  }
+
+  /* 1) Logo */
+  .nav-inner > .logo {
+    order: 1 !important;
+    flex: 0 0 auto !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    gap: 6px !important;
+  }
+  .logo-mark {
+    width: 26px !important;
+    height: 26px !important;
+  }
+  .logo-word {
+    font-size: 0.62rem !important;
+    letter-spacing: 0.1em !important;
+  }
+  .logo-tagline {
+    display: none !important;
+  }
+  /* Hide wordmark text on very tight widths so search has room */
+  @media (max-width: 380px) {
+    .logo-text {
+      display: none !important;
+    }
+  }
+
+  /* 2) Search — between logo and currency */
+  .nav-search,
+  #globalSearch,
+  .nav-inner > .nav-search {
+    order: 2 !important;
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    position: relative !important;
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    width: auto !important;
+    max-width: none !important;
+    height: 40px !important;
+    min-height: 40px !important;
+    margin: 0 !important;
+    padding: 0 10px !important;
+    border-radius: 999px !important;
+    border: 1px solid rgba(56, 189, 248, 0.3) !important;
+    background: rgba(15, 23, 42, 0.9) !important;
+    box-shadow: none !important;
+    z-index: 2012 !important;
+    grid-area: auto !important;
+  }
+  .nav-search:focus-within,
+  #globalSearch:focus-within {
+    border-color: rgba(56, 189, 248, 0.7) !important;
+    box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.14) !important;
+  }
+  .nav-search-icon {
+    color: #7dd3fc !important;
+    font-size: 0.95rem !important;
+    flex-shrink: 0 !important;
+    margin-right: 4px;
+  }
+  .nav-search input,
+  #globalSearchInput {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    font-size: 16px !important; /* prevent iOS zoom */
+    border: none !important;
+    background: transparent !important;
+    color: #f8fafc !important;
+    padding: 0 !important;
+  }
+  .nav-search input::placeholder,
+  #globalSearchInput::placeholder {
+    color: #94a3b8 !important;
+    font-size: 0.78rem !important;
+    opacity: 1 !important;
+  }
+  .nav-search .search-suggest,
+  #searchSuggest {
+    position: absolute !important;
+    top: calc(100% + 8px) !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    min-width: min(100vw - 24px, 320px) !important;
+    max-height: min(50dvh, 320px) !important;
+    z-index: 2300 !important;
+    border-radius: 14px !important;
+  }
+
+  /* 3) Currency + settings + cart */
+  .tools,
+  .nav-inner > .tools {
+    order: 3 !important;
+    flex: 0 0 auto !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 5px !important;
+    margin: 0 !important;
+    grid-area: auto !important;
+  }
+
+  .tools .fx-btn,
+  .fx-btn[data-fx-btn] {
+    min-width: 48px !important;
+    max-width: 64px !important;
+    height: 40px !important;
+    min-height: 40px !important;
+    padding: 0 8px !important;
+    font-size: 0.68rem !important;
+    border-radius: 10px !important;
+  }
+  .tools .icon,
+  .tools .prefs-btn,
+  .tools .cart-icon-btn,
+  #prefsBtn,
+  #cartBtn {
+    width: 40px !important;
+    height: 40px !important;
+    min-width: 40px !important;
+    min-height: 40px !important;
+    max-width: 40px !important;
+  }
+
+  /* Content clearance matches single-row header */
+  .hero--with-slider .hero-orbit-main {
+    padding-top: calc(var(--nav-h) + 0.75rem) !important;
+  }
+  .page {
+    padding-top: calc(var(--nav-h) + 12px) !important;
+  }
+}
+
+@media (max-width: 360px) {
+  .tools .prefs-btn,
+  #prefsBtn {
+    /* keep cart + currency; settings can shrink gap */
+  }
+  .nav-search,
+  #globalSearch {
+    height: 38px !important;
+    min-height: 38px !important;
+    padding: 0 8px !important;
+  }
+}
