@@ -89,7 +89,7 @@ const OFFICIAL_BRAND_LOGO = {
   Spotify: "/assets/products/logos/brand-spotify-fixed.svg?v=reallogo1",
 };
 /**
- * Same real brand logos for card media + hero slides (logo-fit, not photo plates).
+ * Desktop: real brand logos for card media + hero slides (logo-fit).
  */
 const OFFICIAL_BRAND_COVER = {
   xAI: "/assets/products/logos/brand-xai-fixed.svg?v=reallogo1",
@@ -110,6 +110,32 @@ const OFFICIAL_BRAND_SLIDE = {
   Spotify: "/assets/products/logos/brand-spotify-fixed.svg?v=reallogo1",
 };
 
+/**
+ * Mobile-only official brand photos (CapCut, Canva, Grok, Duolingo).
+ * Full-bleed cover plates for cards + slider on small screens.
+ */
+const MOBILE_OFFICIAL_PHOTO = {
+  xAI: "/assets/products/photo-xai.png?v=mphoto1",
+  Canva: "/assets/products/photo-canva.png?v=mphoto1",
+  CapCut: "/assets/products/photo-capcut.png?v=mphoto1",
+  Duolingo: "/assets/products/photo-duolingo.png?v=mphoto1",
+};
+const MOBILE_OFFICIAL_SLIDE = {
+  xAI: "/assets/products/photo-xai-slide.png?v=mphoto1",
+  Canva: "/assets/products/photo-canva-slide.png?v=mphoto1",
+  CapCut: "/assets/products/photo-capcut-slide.png?v=mphoto1",
+  Duolingo: "/assets/products/photo-duolingo-slide.png?v=mphoto1",
+};
+
+/** Match storefront mobile layout (CSS max-width: 900px). */
+function isMobileView() {
+  try {
+    return window.matchMedia("(max-width: 900px)").matches;
+  } catch {
+    return typeof window !== "undefined" && window.innerWidth <= 900;
+  }
+}
+
 /** Official brand logo path (SVG mark). */
 function productLogo(d) {
   if (!d) return "";
@@ -129,16 +155,19 @@ function isProductPhoto(src) {
   return /\.(png|jpe?g|webp|gif)(\?|$)/i.test(s);
 }
 
-/** Full-bleed cover plates disabled — real brand logos use logo-fit. */
+/** Full-bleed official photos on mobile for CapCut / Canva / Grok / Duolingo. */
 function brandUsesCover(brand) {
-  return false;
+  return Boolean(isMobileView() && brand && MOBILE_OFFICIAL_PHOTO[brand]);
 }
 
 /**
- * Card/detail image: real brand logo when available.
+ * Card/detail image: mobile official photos for key brands; logos elsewhere.
  */
 function productImage(d) {
   if (!d) return "";
+  if (isMobileView() && d.brand && MOBILE_OFFICIAL_PHOTO[d.brand]) {
+    return MOBILE_OFFICIAL_PHOTO[d.brand];
+  }
   if (d.brand && OFFICIAL_BRAND_LOGO[d.brand]) return OFFICIAL_BRAND_LOGO[d.brand];
   if (d.brand && OFFICIAL_BRAND_COVER[d.brand]) return OFFICIAL_BRAND_COVER[d.brand];
   if (d.logo) return String(d.logo);
@@ -146,9 +175,15 @@ function productImage(d) {
   return productLogo(d);
 }
 
-/** Homepage slider image: real brand logo. */
+/** Homepage slider image: mobile official photos when available. */
 function productSlideImage(d) {
   if (!d) return "";
+  if (isMobileView() && d.brand && MOBILE_OFFICIAL_SLIDE[d.brand]) {
+    return MOBILE_OFFICIAL_SLIDE[d.brand];
+  }
+  if (isMobileView() && d.brand && MOBILE_OFFICIAL_PHOTO[d.brand]) {
+    return MOBILE_OFFICIAL_PHOTO[d.brand];
+  }
   if (d.brand && OFFICIAL_BRAND_SLIDE[d.brand]) return OFFICIAL_BRAND_SLIDE[d.brand];
   if (d.brand && OFFICIAL_BRAND_LOGO[d.brand]) return OFFICIAL_BRAND_LOGO[d.brand];
   if (d.imageSlide && isProductPhoto(d.imageSlide)) return String(d.imageSlide);
@@ -536,10 +571,10 @@ function card(d, highlightQ = "") {
   const wished = isWished(d.id);
   const typeLabel = (d.category || "Plan").toUpperCase();
   const brandLabel = d.brand === "xAI" ? "SuperGrok" : d.brand || "";
-  /* Real brand logos centered on brand color (no full-bleed photo plates) */
+  /* Mobile: official full-bleed photos for CapCut/Canva/Grok/Duolingo; desktop logos */
   const photo = isProductPhoto(img);
-  const fillFrame = false;
-  const logoFit = true;
+  const fillFrame = brandUsesCover(d.brand) || (photo && /photo-(xai|canva|capcut|duolingo)/i.test(img));
+  const logoFit = !fillFrame;
   const photoFit = photo && !fillFrame;
   const saveHtml =
     !soldOut && d.original > d.price
@@ -994,13 +1029,22 @@ function viewHome() {
           .map((d, i) => {
             const slideSrc = productSlideImage(d) || "";
             const brandLabel = d.brand === "xAI" ? "SuperGrok" : d.brand || "";
-            /* Always real brand logos, centered (logo-fit) */
+            const isCover =
+              brandUsesCover(d.brand) ||
+              /photo-(xai|canva|capcut|duolingo)/i.test(slideSrc);
+            const coverClass = isCover
+              ? d.brand === "Canva"
+                ? " product-slide--cover product-slide--canva"
+                : d.brand === "CapCut"
+                  ? " product-slide--cover product-slide--capcut"
+                  : " product-slide--cover"
+              : " product-slide--logo-fit";
             return `
-            <article class="product-slide${i === 0 ? " is-active" : ""} product-slide--logo-fit" data-slide-index="${i}" data-brand="${escapeAttr(d.brand || "")}" ${i === 0 ? "" : "hidden"} style="--brand-bg:${escapeAttr(productBrandColor(d))}">
+            <article class="product-slide${i === 0 ? " is-active" : ""}${coverClass}" data-slide-index="${i}" data-brand="${escapeAttr(d.brand || "")}" ${i === 0 ? "" : "hidden"} style="--brand-bg:${escapeAttr(productBrandColor(d))}">
               <a class="product-slide-link product-slide-link--logo" href="#/deal/${escapeAttr(d.id)}" tabindex="${i === 0 ? "0" : "-1"}">
                 <div class="product-slide-logo-wrap">
                   <img
-                    class="product-img product-slide-img product-logo-img product-logo-img--fit"
+                    class="product-img product-slide-img${isCover ? " product-cover-img" : " product-logo-img product-logo-img--fit"}${d.brand === "Canva" && isCover ? " product-cover-img--canva" : ""}"
                     src="${escapeAttr(slideSrc)}"
                     alt="${escapeAttr(brandLabel || d.name)}"
                     width="1280"
