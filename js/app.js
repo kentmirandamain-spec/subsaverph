@@ -97,17 +97,19 @@ function productSlideImage(d) {
 }
 
 function productBrandColor(d) {
-  if (d && d.brandColor) return String(d.brandColor);
+  /* Dark plates so official logos stay visible in the hero slider */
   const map = {
     xAI: "#000000",
-    Canva: "#ffffff",
+    Canva: "#00c4cc",
     CapCut: "#000000",
     Netflix: "#000000",
-    YouTube: "#ffffff",
-    Duolingo: "#ffffff",
+    YouTube: "#0f0f0f",
+    Duolingo: "#58cc02",
     Spotify: "#191414",
   };
-  return map[d?.brand] || "#0a0e16";
+  if (d?.brand && map[d.brand]) return map[d.brand];
+  if (d && d.brandColor) return String(d.brandColor);
+  return "#0a0e16";
 }
 
 /** Apply data-i18n labels across static chrome */
@@ -796,38 +798,48 @@ function viewHome() {
     Learning: "Study & languages",
   };
 
-  const slides = all.slice(0, 12);
+  /* One slide per brand so every brand logo appears in the carousel */
+  const brandOrder = ["xAI", "Canva", "CapCut", "Netflix", "YouTube", "Duolingo", "Spotify"];
+  const seenBrands = new Set();
+  const slides = [];
+  for (const brand of brandOrder) {
+    const deal = all.find((d) => d.brand === brand);
+    if (deal) {
+      slides.push(deal);
+      seenBrands.add(brand);
+    }
+  }
+  for (const d of all) {
+    if (d.brand && !seenBrands.has(d.brand)) {
+      slides.push(d);
+      seenBrands.add(d.brand);
+    }
+  }
   const sliderTrack =
     slides.length > 0
       ? slides
-          .map(
-            (d, i) => `
-            <article class="product-slide${i === 0 ? " is-active" : ""}${d.brand === "Canva" ? " product-slide--cover" : ""}${d.brand === "xAI" || d.brand === "CapCut" ? " product-slide--logo-fit" : ""}" data-slide-index="${i}" ${i === 0 ? "" : "hidden"} style="--brand-bg:${escapeAttr(productBrandColor(d))}">
+          .map((d, i) => {
+            const isCover = d.brand === "Canva" || /cover-canva/i.test(productSlideImage(d) || "");
+            const isLogo = !isCover;
+            const brandLabel = d.brand === "xAI" ? "SuperGrok" : d.brand || "";
+            return `
+            <article class="product-slide${i === 0 ? " is-active" : ""}${isCover ? " product-slide--cover" : " product-slide--logo-fit"}" data-slide-index="${i}" data-brand="${escapeAttr(d.brand || "")}" ${i === 0 ? "" : "hidden"} style="--brand-bg:${escapeAttr(productBrandColor(d))}">
               <a class="product-slide-link product-slide-link--logo" href="#/deal/${escapeAttr(d.id)}" tabindex="${i === 0 ? "0" : "-1"}">
                 <div class="product-slide-logo-wrap">
                   <img
-                    class="product-img product-slide-img${d.brand === "Canva" ? " product-cover-img" : " product-logo-img"}${d.brand === "xAI" || d.brand === "CapCut" ? " product-logo-img--fit" : ""}"
+                    class="product-img product-slide-img${isCover ? " product-cover-img" : " product-logo-img product-logo-img--fit"}"
                     src="${escapeAttr(productSlideImage(d))}"
-                    alt="${escapeAttr(d.brand || d.name)}"
+                    alt="${escapeAttr(brandLabel || d.name)}"
                     width="1280"
                     height="800"
                     loading="${i === 0 ? "eager" : "lazy"}"
                   />
                 </div>
                 <div class="product-slide-shade product-slide-shade--logo"></div>
-                <div class="product-slide-content">
-                  <p class="product-slide-brand">${escapeHtml(d.brand)} · ${escapeHtml(d.category)}</p>
-                  <h2 class="product-slide-title">${escapeHtml(d.name)}</h2>
-                  <p class="product-slide-tag">${escapeHtml(d.tagline || "")}</p>
-                  <div class="product-slide-meta">
-                    <strong class="product-slide-price">${formatDealPrice(d, "price")}</strong>
-                    <span class="product-slide-off">−${off(d)}%</span>
-                    <span class="product-slide-cta">View plan →</span>
-                  </div>
-                </div>
+                <div class="product-slide-brand-tag">${escapeHtml(brandLabel)}</div>
               </a>
-            </article>`
-          )
+            </article>`;
+          })
           .join("")
       : "";
 

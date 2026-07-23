@@ -345,7 +345,7 @@ window.DEALS = [
     "imageSlide": "/assets/products/logos/brand-youtube-fixed.svg",
     "logo": "/assets/products/logos/brand-youtube-fixed.svg",
     "imageBg": "/assets/products/plate-youtube.png",
-    "brandColor": "#ffffff"
+    "brandColor": "#0f0f0f"
   },
   {
     "id": "yt-family",
@@ -381,7 +381,7 @@ window.DEALS = [
     "imageSlide": "/assets/products/logos/brand-youtube-fixed.svg",
     "logo": "/assets/products/logos/brand-youtube-fixed.svg",
     "imageBg": "/assets/products/plate-youtube.png",
-    "brandColor": "#ffffff"
+    "brandColor": "#0f0f0f"
   },
   {
     "id": "duolingo-super-1m",
@@ -424,7 +424,7 @@ window.DEALS = [
     "imageSlide": "/assets/products/logos/brand-duolingo-fixed.svg",
     "logo": "/assets/products/logos/brand-duolingo-fixed.svg",
     "imageBg": "/assets/products/plate-duolingo.png",
-    "brandColor": "#ffffff"
+    "brandColor": "#58cc02"
   },
   {
     "id": "spotify-premium-1m",
