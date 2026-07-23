@@ -10606,19 +10606,7 @@ html[data-theme="light"] .hero-cat-box-count strong {
   }
 }
 
-/* Header: hide currency, settings, cart icons (upper right) */
-.nav-tools-hidden,
-#navFxMount.nav-tools-hidden,
-#prefsPicker.nav-tools-hidden,
-#cartBtn.nav-tools-hidden {
-  display: none !important;
-}
-/* Keep hamburger available on mobile only (existing rules) */
-@media (min-width: 901px) {
-  .tools .menu {
-    display: none !important;
-  }
-}
+/* Header tools restored: currency, settings, cart visible again */
 
 /* ============================================================
    Hero title redesign — Premium plans / Lower cost
