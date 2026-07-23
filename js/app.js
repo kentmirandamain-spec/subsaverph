@@ -94,7 +94,7 @@ const OFFICIAL_BRAND_LOGO = {
 const OFFICIAL_BRAND_COVER = {
   xAI: "/assets/products/logos/brand-xai-fixed.svg?v=reallogo1",
   Canva: "/assets/products/logos/brand-canva.png?v=reallogo1",
-  CapCut: "/assets/products/photo-capcut.png?v=capcutorig1",
+  CapCut: "/assets/products/photo-capcut.png?v=capcutorig2",
   YouTube: "/assets/products/logos/youtube-full.svg?v=reallogo1",
   Duolingo: "/assets/products/logos/brand-duolingo-fixed.svg?v=reallogo1",
   Netflix: "/assets/products/logos/brand-netflix-fixed.svg?v=reallogo1",
@@ -103,7 +103,7 @@ const OFFICIAL_BRAND_COVER = {
 const OFFICIAL_BRAND_SLIDE = {
   xAI: "/assets/products/logos/brand-xai-fixed.svg?v=reallogo1",
   Canva: "/assets/products/logos/brand-canva.png?v=reallogo1",
-  CapCut: "/assets/products/photo-capcut-slide.png?v=capcutorig1",
+  CapCut: "/assets/products/photo-capcut-slide.png?v=capcutorig2",
   Netflix: "/assets/products/logos/brand-netflix-fixed.svg?v=reallogo1",
   YouTube: "/assets/products/logos/youtube-full.svg?v=reallogo1",
   Duolingo: "/assets/products/logos/brand-duolingo-fixed.svg?v=reallogo1",
@@ -117,13 +117,13 @@ const OFFICIAL_BRAND_SLIDE = {
 const MOBILE_OFFICIAL_PHOTO = {
   xAI: "/assets/products/photo-xai.png?v=mfix1",
   Canva: "/assets/products/cover-canva.png?v=mfix1",
-  CapCut: "/assets/products/photo-capcut.png?v=capcutorig1",
+  CapCut: "/assets/products/photo-capcut.png?v=capcutorig2",
   Duolingo: "/assets/products/photo-duolingo.png?v=mfix1",
 };
 const MOBILE_OFFICIAL_SLIDE = {
   xAI: "/assets/products/photo-xai-slide.png?v=mfix1",
   Canva: "/assets/products/cover-canva-official-slide.png?v=mfix1",
-  CapCut: "/assets/products/photo-capcut-slide.png?v=capcutorig1",
+  CapCut: "/assets/products/photo-capcut-slide.png?v=capcutorig2",
   Duolingo: "/assets/products/photo-duolingo-slide.png?v=mfix1",
 };
 

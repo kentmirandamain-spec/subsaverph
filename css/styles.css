@@ -14888,15 +14888,18 @@ html[data-theme="light"] .co-method {
     visibility: visible !important;
   }
 
-  /* Grok + Duolingo plates: keep mark fully visible (contain) */
+  /* Grok / Duolingo / CapCut plates: keep mark fully visible (contain) */
   #view-all-deals .product-card[data-brand="xAI"] .product-card-img,
   #view-all-deals .product-card[data-brand="Duolingo"] .product-card-img,
+  #view-all-deals .product-card[data-brand="CapCut"] .product-card-img,
   .deals-grid .product-card[data-brand="xAI"] .product-card-img,
   .deals-grid .product-card[data-brand="Duolingo"] .product-card-img,
+  .deals-grid .product-card[data-brand="CapCut"] .product-card-img,
   .home-deals-inner .product-card[data-brand="xAI"] .product-card-img,
-  .home-deals-inner .product-card[data-brand="Duolingo"] .product-card-img {
+  .home-deals-inner .product-card[data-brand="Duolingo"] .product-card-img,
+  .home-deals-inner .product-card[data-brand="CapCut"] .product-card-img {
     object-fit: contain !important;
-    background: var(--brand-bg, #000) !important;
+    background: #000000 !important;
   }
 }
 
