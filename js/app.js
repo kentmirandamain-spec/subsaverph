@@ -101,7 +101,7 @@ function productBrandColor(d) {
   const map = {
     xAI: "#000000",
     Canva: "#ffffff",
-    CapCut: "#0a0a0c",
+    CapCut: "#000000",
     Netflix: "#000000",
     YouTube: "#ffffff",
     Duolingo: "#ffffff",
@@ -416,7 +416,8 @@ function card(d, highlightQ = "") {
   const wished = isWished(d.id);
   const typeLabel = (d.category || "Plan").toUpperCase();
   const brandLabel = d.brand === "xAI" ? "SuperGrok" : d.brand || "";
-  const fillFrame = /cover-(canva|capcut)/i.test(img) || d.brand === "Canva" || d.brand === "CapCut";
+  /* Full-bleed covers only for brands that use cover art; CapCut uses official logo */
+  const fillFrame = /cover-canva/i.test(img) || d.brand === "Canva";
   const saveHtml =
     !soldOut && d.original > d.price
       ? `<span class="price-compare">${formatDealPrice(d, "original")}</span>`
@@ -793,11 +794,11 @@ function viewHome() {
       ? slides
           .map(
             (d, i) => `
-            <article class="product-slide${i === 0 ? " is-active" : ""}${d.brand === "Canva" || d.brand === "CapCut" ? " product-slide--cover" : ""}" data-slide-index="${i}" ${i === 0 ? "" : "hidden"} style="--brand-bg:${escapeAttr(productBrandColor(d))}">
+            <article class="product-slide${i === 0 ? " is-active" : ""}${d.brand === "Canva" ? " product-slide--cover" : ""}" data-slide-index="${i}" ${i === 0 ? "" : "hidden"} style="--brand-bg:${escapeAttr(productBrandColor(d))}">
               <a class="product-slide-link product-slide-link--logo" href="#/deal/${escapeAttr(d.id)}" tabindex="${i === 0 ? "0" : "-1"}">
                 <div class="product-slide-logo-wrap">
                   <img
-                    class="product-img product-slide-img${d.brand === "Canva" || d.brand === "CapCut" ? " product-cover-img" : " product-logo-img"}"
+                    class="product-img product-slide-img${d.brand === "Canva" ? " product-cover-img" : " product-logo-img"}"
                     src="${escapeAttr(productSlideImage(d))}"
                     alt="${escapeAttr(d.brand || d.name)}"
                     width="1280"
@@ -963,10 +964,7 @@ function viewDeal() {
             ${
               productImage(d)
                 ? (() => {
-                    const cover =
-                      /cover-(canva|capcut)/i.test(productImage(d)) ||
-                      d.brand === "Canva" ||
-                      d.brand === "CapCut";
+                    const cover = /cover-canva/i.test(productImage(d)) || d.brand === "Canva";
                     return `<div class="detail-product-img-wrap${cover ? " detail-product-img-wrap--cover" : " detail-product-img-wrap--logo"}" style="--brand-bg:${escapeAttr(productBrandColor(d))}">
                     <img class="product-img detail-product-img${cover ? " product-cover-img" : " product-logo-img"}" src="${escapeAttr(productImage(d))}" alt="${escapeAttr(d.brand || d.name)}" width="640" height="400" loading="eager" />
                   </div>`;
