@@ -542,8 +542,8 @@ select {
   color: var(--selection-fg);
 }
 
-/* Hide decorative product images; allow brand logo / icons for Google & nav */
-img:not(.logo-mark):not(.brand-logo) {
+/* Hide decorative product images; allow logos + payment QR codes */
+img:not(.logo-mark):not(.brand-logo):not(.pay-qr):not(.qr-preview-img) {
   display: none !important;
 }
 
@@ -557,6 +557,27 @@ img.brand-logo {
   flex-shrink: 0;
   background: var(--bg);
   border: 1px solid var(--line);
+}
+
+/* Payment QR must stay visible (was hidden by global img rule) */
+img.pay-qr,
+.manual-pay-qr img.pay-qr {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  width: min(260px, 78vw) !important;
+  max-width: 280px !important;
+  height: auto !important;
+  margin: 0 auto;
+  object-fit: contain;
+  background: #fff;
+  border-radius: 8px;
+}
+
+img.qr-preview-img {
+  display: block !important;
+  max-width: 160px;
+  height: auto;
 }
 
 .wrap {

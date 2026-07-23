@@ -1662,7 +1662,7 @@ function viewManualEwalletPending(order) {
             qrUrl
               ? `<div class="manual-pay-qr">
               <p class="manual-pay-qr-label">Scan with ${escapeHtml(wallet)}</p>
-              <img src="${escapeAttr(qrUrl)}" alt="${escapeAttr(wallet)} payment QR code" width="240" height="240" loading="lazy" />
+              <img class="pay-qr" src="${escapeAttr(qrUrl)}" alt="${escapeAttr(wallet)} payment QR code" width="260" height="260" decoding="async" />
               ${accountName ? `<p class="manual-pay-qr-name">${escapeHtml(accountName)}</p>` : ""}
             </div>`
               : `<p class="err" style="color:#ff8a8a">QR code missing — contact support with Order ID ${escapeHtml(order.id || "")}.</p>`

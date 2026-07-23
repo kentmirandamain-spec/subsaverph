@@ -700,7 +700,7 @@ function settingsView() {
           </div>
           ${
             s.manualGcashQrUrl || s.manualEwalletQrUrl
-              ? `<div class="qr-preview"><img src="${escapeAttr(s.manualGcashQrUrl || s.manualEwalletQrUrl)}" alt="GCash QR preview" /></div>`
+              ? `<div class="qr-preview"><img class="qr-preview-img" src="${escapeAttr(s.manualGcashQrUrl || s.manualEwalletQrUrl)}" alt="GCash QR preview" /></div>`
               : ""
           }
         </div>
@@ -721,7 +721,7 @@ function settingsView() {
           </div>
           ${
             s.manualMayaQrUrl
-              ? `<div class="qr-preview"><img src="${escapeAttr(s.manualMayaQrUrl)}" alt="Maya QR preview" /></div>`
+              ? `<div class="qr-preview"><img class="qr-preview-img" src="${escapeAttr(s.manualMayaQrUrl)}" alt="Maya QR preview" /></div>`
               : ""
           }
         </div>
