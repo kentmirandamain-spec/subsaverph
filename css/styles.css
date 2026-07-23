@@ -2867,12 +2867,13 @@ html[data-theme="light"] .hero-cat-count {
 .terms-modal {
   position: fixed;
   inset: 0;
-  z-index: 2500;
+  z-index: 6000;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 16px;
   padding-bottom: max(16px, env(safe-area-inset-bottom, 0px));
+  box-sizing: border-box;
 }
 
 .terms-modal[hidden] {
@@ -2890,21 +2891,25 @@ html[data-theme="light"] .hero-cat-count {
   position: relative;
   z-index: 1;
   width: min(560px, 100%);
-  max-height: min(90dvh, 720px);
+  /* Keep Accept & pay visible: panel fits viewport, body scrolls, foot stays */
+  max-height: min(86dvh, 720px);
+  min-height: 0;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
   background: var(--panel-solid, #0a0a0a);
   border: 1px solid var(--line-strong);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   color: var(--text);
+  box-sizing: border-box;
 }
 
 .terms-modal-head {
   position: relative;
   padding: 20px 48px 12px 20px;
   border-bottom: 1px solid var(--line);
-  flex-shrink: 0;
+  flex: 0 0 auto;
 }
 
 .terms-modal-head h2 {
@@ -2926,10 +2931,13 @@ html[data-theme="light"] .hero-cat-count {
 }
 
 .terms-modal-body {
-  overflow: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
   padding: 16px 20px 8px;
-  flex: 1;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 .terms-block {
@@ -2989,10 +2997,28 @@ html[data-theme="light"] .hero-cat-count {
 }
 
 .terms-modal-foot {
-  flex-shrink: 0;
+  flex: 0 0 auto;
+  position: relative;
+  z-index: 2;
   padding: 14px 20px 18px;
   border-top: 1px solid var(--line);
   background: var(--panel-solid, #0a0a0a);
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.28);
+}
+
+/* While terms are open: hide sticky CTA + chat so they cannot block Accept & pay */
+body.terms-modal-open {
+  overflow: hidden !important;
+}
+body.terms-modal-open .co-sticky {
+  display: none !important;
+  pointer-events: none !important;
+}
+body.terms-modal-open #ssphChatRoot,
+body.terms-modal-open .ssph-chat-fab {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
 }
 
 .terms-accept-label {
@@ -13793,6 +13819,44 @@ html[data-theme="light"] .co-method {
   }
   .co-cta-spacer {
     display: none;
+  }
+
+  /* PC terms modal: always keep Accept & pay in view */
+  .terms-modal {
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 24px !important;
+    z-index: 6000 !important;
+  }
+  .terms-modal-panel {
+    width: min(560px, calc(100vw - 48px)) !important;
+    max-height: min(82vh, 680px) !important;
+    max-height: min(82dvh, 680px) !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  .terms-modal-head {
+    flex: 0 0 auto !important;
+  }
+  .terms-modal-body {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+  }
+  .terms-modal-foot {
+    flex: 0 0 auto !important;
+    position: relative !important;
+    z-index: 3 !important;
+    padding: 14px 20px 18px !important;
+    background: var(--panel-solid, #0a0a0a) !important;
+  }
+  .terms-actions {
+    flex-wrap: nowrap !important;
+  }
+  .terms-actions .btn {
+    min-height: 48px !important;
   }
 }
 

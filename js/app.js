@@ -3192,12 +3192,20 @@ function bind() {
       if (termsConfirm) {
         termsConfirm.textContent = totalLabel ? `Accept & pay · ${totalLabel}` : `Accept & ${label}`;
       }
-      // Scroll sheet body to top so rules/actions aren't stuck off-screen
+      // Body scrolls; foot stays pinned — reset scroll to top of rules
       const body = modal.querySelector(".terms-modal-body");
       if (body) body.scrollTop = 0;
-      // Keep accept actions in view on mobile
+      // Ensure foot is in the viewport (PC + mobile)
       requestAnimationFrame(() => {
-        modal.querySelector(".terms-modal-foot")?.scrollIntoView?.({ block: "nearest" });
+        const foot = modal.querySelector(".terms-modal-foot");
+        if (!foot) return;
+        foot.scrollIntoView({ block: "nearest", inline: "nearest" });
+        // Double-check after layout: if foot is still clipped, nudge panel max-height via body scroll only
+        const rect = foot.getBoundingClientRect();
+        const vh = window.innerHeight || document.documentElement.clientHeight;
+        if (rect.bottom > vh - 8 && body) {
+          body.scrollTop = Math.max(0, body.scrollTop - (rect.bottom - vh + 16));
+        }
       });
       termsAccept?.focus({ preventScroll: true });
     };
