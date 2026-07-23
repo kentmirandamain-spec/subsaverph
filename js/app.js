@@ -101,7 +101,7 @@ function productBrandColor(d) {
   const map = {
     xAI: "#000000",
     Canva: "#ffffff",
-    CapCut: "#00C2FF",
+    CapCut: "#0a0a0c",
     Netflix: "#000000",
     YouTube: "#ffffff",
     Duolingo: "#ffffff",
