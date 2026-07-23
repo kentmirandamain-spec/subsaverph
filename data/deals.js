@@ -1,4 +1,3 @@
-/** SubSaverPH catalog — official brand photos */
 window.DEALS = [
   {
     "id": "supergrok-7d",
@@ -117,8 +116,8 @@ window.DEALS = [
     "extraDetails": [],
     "active": true,
     "stockLeft": 2,
-    "image": "/assets/products/cover-canva.png?v=official4",
-    "imageSlide": "/assets/products/cover-canva-official-slide.png?v=official4",
+    "image": "/assets/products/pc-canva.png?v=pcbrand1",
+    "imageSlide": "/assets/products/pc-canva-slide.png?v=pcbrand1",
     "logo": "/assets/products/logos/brand-canva-fixed.svg?v=official4",
     "imageBg": "/assets/products/plate-canva.png",
     "brandColor": "#00c4cc"
@@ -156,8 +155,8 @@ window.DEALS = [
     "extraDetails": [],
     "active": true,
     "stockLeft": 2,
-    "image": "/assets/products/cover-canva.png?v=official4",
-    "imageSlide": "/assets/products/cover-canva-official-slide.png?v=official4",
+    "image": "/assets/products/pc-canva.png?v=pcbrand1",
+    "imageSlide": "/assets/products/pc-canva-slide.png?v=pcbrand1",
     "logo": "/assets/products/logos/brand-canva-fixed.svg?v=official4",
     "imageBg": "/assets/products/plate-canva.png",
     "brandColor": "#00c4cc"
@@ -195,8 +194,8 @@ window.DEALS = [
     "extraDetails": [],
     "active": true,
     "stockLeft": 0,
-    "image": "/assets/products/cover-capcut-official.png?v=official4",
-    "imageSlide": "/assets/products/cover-capcut-official.png?v=official4",
+    "image": "/assets/products/pc-capcut.png?v=pcbrand1",
+    "imageSlide": "/assets/products/pc-capcut-slide.png?v=pcbrand1",
     "logo": "/assets/products/logos/brand-capcut-official.svg?v=official4",
     "imageBg": "/assets/products/plate-capcut.png",
     "brandColor": "#000000"
@@ -233,8 +232,8 @@ window.DEALS = [
     "extraDetails": [],
     "active": true,
     "stockLeft": 0,
-    "image": "/assets/products/cover-capcut-official.png?v=official4",
-    "imageSlide": "/assets/products/cover-capcut-official.png?v=official4",
+    "image": "/assets/products/pc-capcut.png?v=pcbrand1",
+    "imageSlide": "/assets/products/pc-capcut-slide.png?v=pcbrand1",
     "logo": "/assets/products/logos/brand-capcut-official.svg?v=official4",
     "imageBg": "/assets/products/plate-capcut.png",
     "brandColor": "#000000"
@@ -341,8 +340,8 @@ window.DEALS = [
     "howToRedeem": "1. Open the official website or app for this product.\n2. Sign in with the Username and Password from your delivery package.\n3. Do not change the password, email, or billing details.\n4. Use the account only as provided for the full access period.\n5. If login fails, contact support with your Order ID before trying other fixes.",
     "importantNotes": "Do not change the username, email, password, billing address, or subscription plan.\nDo not share, resell, or post the login publicly.\nPersonal use only — follow the official service terms.\nBreaking these rules voids refunds and support.\nRefunds only if the product is defective or not delivered.",
     "stockLeft": 0,
-    "image": "/assets/products/photo-youtube.png?v=official4",
-    "imageSlide": "/assets/products/photo-youtube-slide.png?v=official4",
+    "image": "/assets/products/pc-youtube.png?v=pcbrand1",
+    "imageSlide": "/assets/products/pc-youtube-slide.png?v=pcbrand1",
     "logo": "/assets/products/logos/brand-youtube-fixed.svg?v=official4",
     "imageBg": "/assets/products/plate-youtube.png",
     "brandColor": "#ffffff"
@@ -377,8 +376,8 @@ window.DEALS = [
     "howToRedeem": "1. Open the official website or app for this product.\n2. Sign in with the Username and Password from your delivery package.\n3. Do not change the password, email, or billing details.\n4. Use the account only as provided for the full access period.\n5. If login fails, contact support with your Order ID before trying other fixes.",
     "importantNotes": "Do not change the username, email, password, billing address, or subscription plan.\nDo not share, resell, or post the login publicly.\nPersonal use only — follow the official service terms.\nBreaking these rules voids refunds and support.\nRefunds only if the product is defective or not delivered.",
     "stockLeft": 0,
-    "image": "/assets/products/photo-youtube.png?v=official4",
-    "imageSlide": "/assets/products/photo-youtube-slide.png?v=official4",
+    "image": "/assets/products/pc-youtube.png?v=pcbrand1",
+    "imageSlide": "/assets/products/pc-youtube-slide.png?v=pcbrand1",
     "logo": "/assets/products/logos/brand-youtube-fixed.svg?v=official4",
     "imageBg": "/assets/products/plate-youtube.png",
     "brandColor": "#ffffff"

@@ -92,19 +92,19 @@ const OFFICIAL_BRAND_LOGO = {
  */
 const OFFICIAL_BRAND_COVER = {
   xAI: "/assets/products/photo-xai.png?v=official4",
-  Canva: "/assets/products/cover-canva.png?v=official4",
-  CapCut: "/assets/products/cover-capcut-official.png?v=official4",
-  YouTube: "/assets/products/photo-youtube.png?v=official4",
+  Canva: "/assets/products/pc-canva.png?v=pcbrand1",
+  CapCut: "/assets/products/pc-capcut.png?v=pcbrand1",
+  YouTube: "/assets/products/pc-youtube.png?v=pcbrand1",
   Duolingo: "/assets/products/photo-duolingo.png?v=official4",
   Netflix: "/assets/products/photo-netflix.png?v=official4",
   Spotify: "/assets/products/photo-spotify.png?v=official4",
 };
 const OFFICIAL_BRAND_SLIDE = {
   xAI: "/assets/products/photo-xai-slide.png?v=official4",
-  Canva: "/assets/products/cover-canva-official-slide.png?v=official4",
-  CapCut: "/assets/products/cover-capcut-official.png?v=official4",
+  Canva: "/assets/products/pc-canva-slide.png?v=pcbrand1",
+  CapCut: "/assets/products/pc-capcut-slide.png?v=pcbrand1",
   Netflix: "/assets/products/photo-netflix-slide.png?v=official4",
-  YouTube: "/assets/products/photo-youtube-slide.png?v=official4",
+  YouTube: "/assets/products/pc-youtube-slide.png?v=pcbrand1",
   Duolingo: "/assets/products/photo-duolingo-slide.png?v=official4",
   Spotify: "/assets/products/photo-spotify-slide.png?v=official4",
 };
@@ -545,7 +545,10 @@ function card(d, highlightQ = "") {
   const photo = isProductPhoto(img);
   const fillFrame =
     brandUsesCover(d.brand) ||
-    (photo && (/cover-/i.test(img) || /photo-(xai|youtube|duolingo|canva|capcut)/i.test(img)));
+    (photo &&
+      (/cover-/i.test(img) ||
+        /pc-(canva|capcut|youtube)/i.test(img) ||
+        /photo-(xai|youtube|duolingo|canva|capcut)/i.test(img)));
   const logoFit = !fillFrame;
   const photoFit = photo && !fillFrame;
   const saveHtml =
@@ -1003,6 +1006,7 @@ function viewHome() {
             const isCover =
               brandUsesCover(d.brand) ||
               /cover-/i.test(slideSrc) ||
+              /pc-(canva|capcut|youtube)/i.test(slideSrc) ||
               /photo-(xai|youtube|duolingo|canva|capcut)/i.test(slideSrc);
             const brandLabel = d.brand === "xAI" ? "SuperGrok" : d.brand || "";
             const coverClass =
