@@ -14052,3 +14052,301 @@ html[data-theme="light"] .co-method {
     padding: 0 !important;
   }
 }
+
+/* ============================================================
+   Mobile: Submit payment reference page — text alignment
+   ============================================================ */
+
+.manual-pay-head {
+  text-align: center;
+  margin-bottom: 4px;
+}
+.manual-pay-meta,
+.manual-pay-lead {
+  margin: 0 auto;
+  max-width: 36ch;
+  line-height: 1.5;
+}
+.manual-pay-lead {
+  margin-top: 10px;
+}
+.manual-pay-lead strong {
+  color: var(--text);
+  font-weight: 600;
+}
+.manual-pay-grid {
+  margin-top: 16px;
+}
+.manual-proof-title,
+.manual-pay-summary-title {
+  margin: 0 0 12px;
+  font-family: var(--display);
+  font-size: 0.78rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-align: left;
+}
+.manual-pay-summary-title {
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+}
+.manual-proof-form {
+  margin-top: 20px;
+}
+.manual-proof-err {
+  color: #ff8a8a;
+  font-size: 0.85rem;
+  min-height: 1.2em;
+  margin: 0 0 8px;
+  text-align: left;
+}
+.manual-pay-err {
+  color: #ff8a8a;
+  text-align: left;
+}
+.manual-pay-refresh {
+  margin-top: 16px;
+}
+.manual-pay-support {
+  margin-top: 22px;
+  text-align: center;
+}
+.manual-pay-field {
+  min-width: 0;
+  width: 100%;
+}
+
+@media (max-width: 900px) {
+  .manual-pay-page.success {
+    align-items: flex-start !important;
+    justify-content: flex-start !important;
+    padding: calc(var(--nav-h) + 16px) 12px calc(28px + env(safe-area-inset-bottom, 0px)) !important;
+    text-align: left !important;
+  }
+
+  .manual-pay-page .manual-pay-card.success-card-wide,
+  .manual-pay-page .success-card-wide {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 auto !important;
+    padding: 22px 14px 28px !important;
+    text-align: left !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Header block — centered */
+  .manual-pay-page .manual-pay-head {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    text-align: center !important;
+    width: 100% !important;
+    margin: 0 0 18px !important;
+  }
+  .manual-pay-page .manual-pay-head .ok,
+  .manual-pay-page .manual-pay-head h1 {
+    text-align: center !important;
+    width: 100% !important;
+  }
+  .manual-pay-page .manual-pay-head h1 {
+    font-size: clamp(1.15rem, 5.2vw, 1.35rem) !important;
+    line-height: 1.2 !important;
+    margin: 0 0 10px !important;
+  }
+  .manual-pay-page .manual-pay-meta,
+  .manual-pay-page .manual-pay-lead {
+    text-align: center !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    width: 100% !important;
+    max-width: 34ch !important;
+    font-size: 0.9rem !important;
+    line-height: 1.45 !important;
+    text-transform: none !important;
+    letter-spacing: 0 !important;
+    font-weight: 400 !important;
+  }
+  .manual-pay-page .manual-pay-lead {
+    margin-top: 10px !important;
+  }
+
+  /* Payment box + form + order — left-aligned body */
+  .manual-pay-page .manual-pay-box,
+  .manual-pay-page .manual-proof-form,
+  .manual-pay-page .manual-pay-order-summary {
+    text-align: left !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    padding: 16px 14px !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+
+  .manual-pay-page .manual-pay-title,
+  .manual-pay-page .manual-pay-amount,
+  .manual-pay-page .manual-pay-label,
+  .manual-pay-page .manual-proof-title,
+  .manual-pay-page .manual-pay-summary-title {
+    text-align: left !important;
+    width: 100% !important;
+  }
+
+  .manual-pay-page .manual-pay-amount {
+    font-size: 1.55rem !important;
+    line-height: 1.2 !important;
+    margin: 0 0 14px !important;
+    word-break: break-word !important;
+  }
+
+  .manual-pay-page .manual-pay-qr {
+    text-align: center !important;
+    margin: 4px 0 12px !important;
+    padding: 14px 10px !important;
+  }
+  .manual-pay-page .manual-pay-qr-label,
+  .manual-pay-page .manual-pay-qr-name {
+    text-align: center !important;
+  }
+
+  .manual-pay-page .manual-pay-grid {
+    display: grid !important;
+    gap: 12px !important;
+    margin-top: 14px !important;
+    width: 100% !important;
+  }
+  .manual-pay-page .manual-pay-field {
+    width: 100% !important;
+    text-align: left !important;
+  }
+  .manual-pay-page .manual-pay-value-row {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+    width: 100% !important;
+    flex-wrap: nowrap !important;
+  }
+  .manual-pay-page .manual-pay-value {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    text-align: left !important;
+    font-size: 0.88rem !important;
+    padding: 10px 12px !important;
+    word-break: break-all !important;
+  }
+  .manual-pay-page .manual-pay-value-row .cred-copy,
+  .manual-pay-page .manual-pay-value-row .btn {
+    flex-shrink: 0 !important;
+    align-self: center !important;
+  }
+
+  .manual-pay-page .manual-pay-steps {
+    text-align: left !important;
+    margin: 14px 0 0 !important;
+    padding: 0 0 0 1.2rem !important;
+    list-style-position: outside !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  .manual-pay-page .manual-pay-steps li {
+    text-align: left !important;
+    margin-bottom: 8px !important;
+    padding-left: 2px !important;
+    line-height: 1.5 !important;
+  }
+
+  /* Form labels + inputs — left stack, full width */
+  .manual-pay-page .manual-proof-form {
+    margin-top: 16px !important;
+  }
+  .manual-pay-page .manual-proof-form .manual-proof-title,
+  .manual-pay-page .manual-proof-form h3 {
+    text-align: left !important;
+    margin: 0 0 12px !important;
+  }
+  .manual-pay-page .manual-proof-form label,
+  .manual-pay-page .manual-proof-label {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    text-align: left !important;
+    width: 100% !important;
+    margin-bottom: 14px !important;
+    gap: 6px !important;
+    font-size: 0.68rem !important;
+    letter-spacing: 0.08em !important;
+    text-transform: uppercase !important;
+    color: var(--mute) !important;
+    font-weight: 600 !important;
+  }
+  .manual-pay-page .manual-proof-form input,
+  .manual-pay-page .manual-proof-label input {
+    text-align: left !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    font-size: 16px !important;
+    letter-spacing: 0.01em !important;
+    text-transform: none !important;
+    padding: 12px 0 !important;
+  }
+  .manual-pay-page .manual-proof-form input::placeholder {
+    text-align: left !important;
+  }
+  .manual-pay-page .manual-proof-err {
+    text-align: left !important;
+    width: 100% !important;
+  }
+  .manual-pay-page .manual-proof-form .btn.full,
+  .manual-pay-page .manual-pay-box .btn.full,
+  .manual-pay-page .manual-pay-refresh {
+    width: 100% !important;
+    text-align: center !important;
+    margin-top: 4px !important;
+  }
+
+  .manual-pay-page .manual-pay-order-summary {
+    margin-top: 16px !important;
+  }
+  .manual-pay-page .manual-pay-order-summary .line {
+    text-align: left !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: flex-start !important;
+    gap: 10px !important;
+    width: 100% !important;
+  }
+  .manual-pay-page .manual-pay-order-summary .line strong {
+    text-align: left !important;
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+  }
+
+  .manual-pay-page .manual-pay-support {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+    width: 100% !important;
+    margin-top: 18px !important;
+    text-align: center !important;
+  }
+  .manual-pay-page .manual-pay-support .btn {
+    width: 100% !important;
+    text-align: center !important;
+  }
+
+  .manual-pay-page .cta {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+    width: 100% !important;
+    margin-top: 14px !important;
+    justify-content: stretch !important;
+  }
+  .manual-pay-page .cta .btn {
+    width: 100% !important;
+    text-align: center !important;
+    box-sizing: border-box !important;
+  }
+}

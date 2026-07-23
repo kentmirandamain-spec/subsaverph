@@ -2071,19 +2071,21 @@ function viewManualEwalletPending(order) {
     .join("");
 
   return `
-    <div class="success">
-      <div class="success-card success-card-wide">
-        <div class="ok">${submitted ? "✓" : "₱"}</div>
-        <h1>${submitted ? "Payment submitted" : "Pay with " + escapeHtml(wallet)}</h1>
-        <p class="muted">Order <strong class="success-order-id">${escapeHtml(order.id || "")}</strong>
-          ${order.email ? ` · ${escapeHtml(order.email)}` : ""}</p>
-        <p class="muted" style="margin-top:10px">
-          ${
-            submitted
-              ? "We received your reference. Codes are usually ready within <strong style=\"color:var(--text)\">10–30 minutes</strong>."
-              : "Scan the QR, pay the exact amount, then submit your reference below."
-          }
-        </p>
+    <div class="success manual-pay-page">
+      <div class="success-card success-card-wide manual-pay-card">
+        <div class="manual-pay-head">
+          <div class="ok">${submitted ? "✓" : "₱"}</div>
+          <h1>${submitted ? "Payment submitted" : "Pay with " + escapeHtml(wallet)}</h1>
+          <p class="muted manual-pay-meta">Order <strong class="success-order-id">${escapeHtml(order.id || "")}</strong>
+            ${order.email ? ` · ${escapeHtml(order.email)}` : ""}</p>
+          <p class="muted manual-pay-lead">
+            ${
+              submitted
+                ? "We received your reference. Codes are usually ready within <strong>10–30 minutes</strong>."
+                : "Scan the QR, pay the exact amount, then submit your reference below."
+            }
+          </p>
+        </div>
 
         ${
           !submitted
@@ -2097,10 +2099,10 @@ function viewManualEwalletPending(order) {
               <img class="pay-qr" src="${escapeAttr(qrUrl)}" alt="${escapeAttr(wallet)} payment QR" width="260" height="260" decoding="async" />
               ${accountName ? `<p class="manual-pay-qr-name">${escapeHtml(accountName)}</p>` : ""}
             </div>`
-              : `<p class="err" style="color:#ff8a8a">QR missing — contact support with Order ID ${escapeHtml(order.id || "")}.</p>`
+              : `<p class="err manual-pay-err">QR missing — contact support with Order ID ${escapeHtml(order.id || "")}.</p>`
           }
-          <div class="manual-pay-grid" style="margin-top:16px">
-            <div>
+          <div class="manual-pay-grid">
+            <div class="manual-pay-field">
               <span class="manual-pay-label">Order ID</span>
               <div class="manual-pay-value-row">
                 <code class="manual-pay-value" data-copy-text>${escapeHtml(order.id || "")}</code>
@@ -2115,39 +2117,39 @@ function viewManualEwalletPending(order) {
           </ol>
         </div>
 
-        <form id="manualProofForm" class="form manual-proof-form" style="margin-top:20px">
-          <h3 style="margin:0 0 10px">I already paid</h3>
-          <label>Payment reference number
-            <input required name="paymentReference" placeholder="e.g. 1234 567 890123" autocomplete="off" />
+        <form id="manualProofForm" class="form manual-proof-form">
+          <h3 class="manual-proof-title">I already paid</h3>
+          <label class="manual-proof-label">Payment reference number
+            <input required name="paymentReference" placeholder="e.g. 1234 567 890123" autocomplete="off" inputmode="text" />
           </label>
-          <label>Optional note
+          <label class="manual-proof-label">Optional note
             <input name="note" placeholder="Sender name…" autocomplete="off" />
           </label>
-          <p class="err" id="manualProofErr" style="color:#ff8a8a;font-size:0.85rem;min-height:1.2em"></p>
+          <p class="err manual-proof-err" id="manualProofErr"></p>
           <button class="btn solid full" type="submit" id="manualProofBtn">Submit payment reference</button>
         </form>`
-            : `<div class="manual-pay-box" role="region" aria-label="Payment received">
+            : `<div class="manual-pay-box manual-pay-box--submitted" role="region" aria-label="Payment received">
           <div class="manual-pay-grid">
-            <div>
+            <div class="manual-pay-field">
               <span class="manual-pay-label">Method</span>
               <div class="manual-pay-value-row">
                 <code class="manual-pay-value">${escapeHtml(wallet)} QR</code>
               </div>
             </div>
-            <div>
+            <div class="manual-pay-field">
               <span class="manual-pay-label">Amount</span>
               <div class="manual-pay-value-row">
                 <code class="manual-pay-value">${escapeHtml(amount)}</code>
               </div>
             </div>
-            <div>
+            <div class="manual-pay-field">
               <span class="manual-pay-label">Reference</span>
               <div class="manual-pay-value-row">
                 <code class="manual-pay-value">${escapeHtml(order.paymentReference || "—")}</code>
                 <button type="button" class="btn sm cred-copy" data-copy="${escapeAttr(order.paymentReference || "")}">Copy</button>
               </div>
             </div>
-            <div>
+            <div class="manual-pay-field">
               <span class="manual-pay-label">Order ID</span>
               <div class="manual-pay-value-row">
                 <code class="manual-pay-value">${escapeHtml(order.id || "")}</code>
@@ -2155,17 +2157,17 @@ function viewManualEwalletPending(order) {
               </div>
             </div>
           </div>
-          <button type="button" class="btn solid full" id="manualRefreshBtn" style="margin-top:16px">Check if codes are ready</button>
-          <p class="err" id="manualProofErr" style="color:#ff8a8a;font-size:0.85rem;min-height:1.2em;margin-top:8px"></p>
+          <button type="button" class="btn solid full manual-pay-refresh" id="manualRefreshBtn">Check if codes are ready</button>
+          <p class="err manual-proof-err" id="manualProofErr"></p>
         </div>`
         }
 
         <div class="manual-pay-order-summary">
-          <h3 style="margin:0 0 8px;font-size:0.85rem;text-transform:uppercase;letter-spacing:.08em">Your order</h3>
+          <h3 class="manual-pay-summary-title">Your order</h3>
           ${itemsHtml || "<p class='muted'>—</p>"}
         </div>
 
-        <div class="support-inline" style="margin-top:22px">
+        <div class="support-inline manual-pay-support">
           <button type="button" class="btn ghost" data-go-support-order="${escapeAttr(order.id || "")}">Contact support</button>
         </div>
         <div class="cta" style="justify-content:center;margin-top:18px">
