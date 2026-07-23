@@ -672,21 +672,48 @@ def support_inbox() -> str:
     """
     Where customer support form messages are delivered (your real Outlook/Gmail).
     Skips brand addresses like support@subsaverph.com (they bounce: Address not found).
+
+    Priority:
+      1. SUPPORT_INBOX env
+      2. settings.json ownerInbox / supportInbox / notifyEmail
+      3. ORDER_NOTIFY_EMAIL / MAIL_NOTIFY_TO / MAIL_REPLY_TO env
     """
+    candidates: list[str] = []
+
+    env_first = (os.environ.get("SUPPORT_INBOX") or "").strip()
+    if env_first:
+        candidates.append(env_first)
+
+    # Admin → Brand & contact → Owner inbox (persisted on the server)
+    try:
+        from pathlib import Path
+        import json
+
+        settings_path = Path(__file__).resolve().parent / "data" / "store" / "settings.json"
+        if settings_path.is_file():
+            raw = json.loads(settings_path.read_text(encoding="utf-8-sig") or "{}")
+            if isinstance(raw, dict):
+                for key in ("ownerInbox", "supportInbox", "notifyEmail"):
+                    v = (raw.get(key) or "").strip()
+                    if v:
+                        candidates.append(v)
+    except Exception:
+        pass
+
     for key in (
-        "SUPPORT_INBOX",
         "ORDER_NOTIFY_EMAIL",
         "MAIL_NOTIFY_TO",
         "MAIL_REPLY_TO",
     ):
         v = (os.environ.get(key) or "").strip()
-        if not v or "@" not in v:
-            continue
+        if v:
+            candidates.append(v)
+
+    for v in candidates:
         # first address if comma-separated
         first = v.replace(";", ",").split(",")[0].strip()
-        if first and not _is_public_brand_address(first):
+        if first and "@" in first and not _is_public_brand_address(first):
             return first
-        # If only brand address, keep looking for a real inbox
     return ""
 
 

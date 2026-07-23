@@ -1,19 +1,57 @@
-# Support email: support@subsaverph.com
+# Support email setup
 
-Your store already shows this address to customers:
+## Two different addresses (important)
 
-```text
-support@subsaverph.com
-```
+| Address | Role |
+|---------|------|
+| **support@subsaverph.com** | Public address shown to customers (needs Cloudflare Email Routing to forward) |
+| **subsaver@outlook.com** | **Your real inbox** — website contact form + order BCC should arrive here |
+
+The website form does **not** send to `support@subsaverph.com` by default (that address has no mailbox until routing is set and would bounce).  
+It sends to **Owner inbox** / `SUPPORT_INBOX` → **subsaver@outlook.com**.
 
 | Where | Link |
 |--------|------|
 | Support page | https://subsaverph.com/#/support |
 | Footer | “Contact support” + email |
+| Admin → Support inbox | Saved form tickets even if email fails |
 | After purchase | “Email support” with Order ID filled in |
-| Checkout rules | Mentions support email |
 
-**Creating the mailbox** is done in Cloudflare (or another host) — the website cannot invent a real inbox by itself.
+---
+
+## Fix: form messages → Outlook (required)
+
+### A) Admin (easiest)
+
+1. Open **https://subsaverph.com/admin**  
+2. **Site content → 11 · Brand & contact**  
+3. **Owner inbox** = `subsaver@outlook.com`  
+4. **Save all site content**
+
+### B) Render Environment (recommended, survives settings resets)
+
+Render → service **subsaverph** → **Environment** → add:
+
+| Key | Value |
+|-----|--------|
+| `SUPPORT_INBOX` | `subsaver@outlook.com` |
+| `ORDER_NOTIFY_EMAIL` | `subsaver@outlook.com` |
+| `MAIL_REPLY_TO` | `subsaver@outlook.com` |
+
+Keep your existing `RESEND_API_KEY` (or SMTP_*) so email can send.
+
+### C) Test
+
+1. Open https://subsaverph.com/#/support  
+2. Submit the form with a **different** email as the customer  
+3. Check **subsaver@outlook.com** (Inbox + **Junk**) within a minute  
+4. Also check Admin → **Support inbox** (messages are saved even if mail fails)
+
+### Outlook tips
+
+- Check **Junk / Other**  
+- Add `onboarding@resend.dev` or your `MAIL_FROM` domain to safe senders  
+- Subject looks like: `[SubSaverPH Support] …`
 
 ---
 

@@ -993,6 +993,15 @@ def admin_support_messages():
 
 
 @app.get("/api/health")
+def _safe_support_inbox() -> str:
+    try:
+        from email_delivery import support_inbox
+
+        return (support_inbox() or "").strip()
+    except Exception:
+        return ""
+
+
 def health():
     try:
         from email_delivery import mail_configured
@@ -1025,6 +1034,7 @@ def health():
             "ewalletProvider": ewallet_provider(),
             "stockByProduct": stock_summary,
             "inventoryFile": str(INVENTORY_FILE),
+            "supportInboxConfigured": bool(_safe_support_inbox()),
             # Add this IP in NOWPayments → Settings → Payments → IP addresses
             "outboundIp": outbound,
             "outboundIpHint": (
