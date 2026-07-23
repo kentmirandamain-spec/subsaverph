@@ -8230,8 +8230,8 @@ html[data-theme="light"] .hero--orbit .hero-cat-chip:hover {
   opacity: 0.78;
 }
 .product-card.sold-out .price-now {
-  text-decoration: line-through;
-  opacity: 0.7;
+  text-decoration: none !important;
+  opacity: 1;
 }
 
 @media (max-width: 640px) {
@@ -8335,8 +8335,12 @@ html[data-theme="light"] .hero--orbit .hero-cat-chip:hover {
 .product-card.sold-out .price-now,
 .card.sold-out .price strong {
   color: #f87171 !important;
-  text-decoration: line-through;
-  opacity: 0.95;
+  text-decoration: none !important;
+  opacity: 1;
+}
+/* Sold out: do not show struck-through retail either */
+.product-card.sold-out .price-compare {
+  display: none !important;
 }
 .btn.sold-out-btn,
 .sold-out-btn,
