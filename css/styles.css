@@ -12876,3 +12876,288 @@ html[data-theme="light"] .hero-cat-box:hover {
     display: none !important;
   }
 }
+
+/* ============================================================
+   Mobile checkout text alignment fix
+   Center the page column; left-align readable body text
+   ============================================================ */
+
+@media (max-width: 900px) {
+  .page-checkout,
+  .page-inner--checkout {
+    text-align: left !important;
+  }
+
+  .page-inner--checkout {
+    width: min(100% - 20px, 520px) !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+
+  /* Title block only — centered */
+  .checkout-page-head {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    text-align: center !important;
+    width: 100% !important;
+    margin: 0 0 16px !important;
+  }
+  .checkout-page-head .eyebrow,
+  .checkout-page-head .page-title,
+  .checkout-page-head .checkout-lead,
+  .checkout-lead {
+    text-align: center !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    width: 100% !important;
+    max-width: 36ch !important;
+  }
+  .checkout-page-head .page-title {
+    font-size: clamp(1.45rem, 6vw, 1.85rem) !important;
+    line-height: 1.15 !important;
+  }
+  .checkout-lead {
+    font-size: 0.9rem !important;
+    line-height: 1.45 !important;
+    text-transform: none !important;
+    letter-spacing: 0 !important;
+    font-weight: 400 !important;
+  }
+  .checkout-banner-err {
+    text-align: center !important;
+  }
+
+  /* Cards: left-aligned content */
+  .page-checkout .summary,
+  .page-checkout .form {
+    text-align: left !important;
+    padding: 16px 16px !important;
+    border-radius: 16px !important;
+  }
+
+  .checkout-section-title,
+  .page-checkout .form h3,
+  .page-checkout .summary h3,
+  .page-checkout .form h3.checkout-section-title {
+    text-align: left !important;
+    margin: 18px 0 10px !important;
+    width: 100% !important;
+    font-size: 0.72rem !important;
+    letter-spacing: 0.1em !important;
+  }
+  .page-checkout .summary .checkout-section-title:first-child,
+  .page-checkout .form .checkout-section-title:first-child,
+  .page-checkout .form h3:first-child {
+    margin-top: 0 !important;
+  }
+
+  /* Contact fields — left label + left input */
+  .page-checkout .form label {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    text-align: left !important;
+    width: 100% !important;
+    margin-bottom: 14px !important;
+    font-size: 0.68rem !important;
+    letter-spacing: 0.08em !important;
+    text-transform: uppercase !important;
+    color: var(--mute) !important;
+    font-weight: 600 !important;
+    gap: 6px !important;
+  }
+  .page-checkout .form input:not([type="checkbox"]):not([type="radio"]) {
+    text-align: left !important;
+    width: 100% !important;
+    font-size: 16px !important;
+    letter-spacing: 0.01em !important;
+    text-transform: none !important;
+    padding: 12px 0 !important;
+  }
+  .page-checkout .form input::placeholder {
+    text-align: left !important;
+  }
+
+  .checkout-fx-mount,
+  .page-checkout #pageFxMount {
+    display: flex !important;
+    justify-content: flex-start !important;
+    width: 100% !important;
+    margin-bottom: 4px !important;
+  }
+
+  /* Order lines */
+  .page-checkout .line {
+    display: grid !important;
+    grid-template-columns: 40px minmax(0, 1fr) auto !important;
+    align-items: center !important;
+    gap: 10px !important;
+    width: 100% !important;
+    text-align: left !important;
+    padding: 12px 0 !important;
+  }
+  .page-checkout .line-copy {
+    text-align: left !important;
+    min-width: 0 !important;
+  }
+  .page-checkout .line-copy strong {
+    display: block !important;
+    text-align: left !important;
+    font-size: 0.82rem !important;
+    line-height: 1.25 !important;
+    word-break: break-word !important;
+  }
+  .page-checkout .line-copy em {
+    display: block !important;
+    text-align: left !important;
+    font-size: 0.78rem !important;
+    margin-top: 2px !important;
+  }
+  .page-checkout .line-price {
+    text-align: right !important;
+    white-space: nowrap !important;
+    font-weight: 600 !important;
+    font-size: 0.85rem !important;
+  }
+
+  .page-checkout .totals {
+    width: 100% !important;
+    margin-top: 12px !important;
+  }
+  .page-checkout .totals > div {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: baseline !important;
+    width: 100% !important;
+    text-align: left !important;
+    gap: 12px !important;
+    margin: 8px 0 !important;
+    font-size: 0.9rem !important;
+  }
+  .page-checkout .totals > div > span:first-child {
+    text-align: left !important;
+  }
+  .page-checkout .totals > div > span:last-child {
+    text-align: right !important;
+    font-variant-numeric: tabular-nums !important;
+  }
+  .page-checkout .totals .grand {
+    font-size: 1.05rem !important;
+    margin-top: 10px !important;
+    padding-top: 10px !important;
+    border-top: 1px solid var(--line) !important;
+  }
+
+  /* Payment methods — radio left, text left */
+  .page-checkout .pay-group-label {
+    text-align: left !important;
+    width: 100% !important;
+    margin: 12px 0 6px !important;
+    font-size: 0.68rem !important;
+  }
+  .page-checkout .pay-methods {
+    width: 100% !important;
+    gap: 8px !important;
+  }
+  .page-checkout .pay-method {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    width: 100% !important;
+    gap: 12px !important;
+    text-align: left !important;
+  }
+  .page-checkout .pay-method input {
+    margin: 0 !important;
+    flex-shrink: 0 !important;
+    width: 18px !important;
+    height: 18px !important;
+  }
+  .page-checkout .pay-method-box {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    text-align: left !important;
+    align-items: flex-start !important;
+    border-radius: 12px !important;
+    padding: 12px 14px !important;
+  }
+  .page-checkout .pay-method-box strong {
+    display: block !important;
+    text-align: left !important;
+    font-size: 0.88rem !important;
+    letter-spacing: 0.04em !important;
+    line-height: 1.2 !important;
+  }
+  .page-checkout .pay-method-box em {
+    display: block !important;
+    text-align: left !important;
+    font-size: 0.78rem !important;
+    margin-top: 4px !important;
+    line-height: 1.3 !important;
+    font-style: normal !important;
+  }
+
+  .page-checkout #checkoutErr {
+    text-align: left !important;
+    min-height: 1.2em !important;
+  }
+  .page-checkout #payBtn,
+  .page-checkout .btn.full {
+    width: 100% !important;
+    min-height: 50px !important;
+    text-align: center !important;
+    justify-content: center !important;
+    margin-top: 8px !important;
+  }
+
+  /* Terms modal text */
+  .terms-modal-head {
+    text-align: center !important;
+  }
+  .terms-modal-body {
+    text-align: left !important;
+  }
+  .terms-block {
+    text-align: left !important;
+  }
+  .terms-block h3 {
+    justify-content: flex-start !important;
+    text-align: left !important;
+  }
+  .terms-order-list li {
+    text-align: left !important;
+    align-items: flex-start !important;
+  }
+  .terms-order-list strong,
+  .terms-order-list span {
+    text-align: left !important;
+  }
+  .terms-total {
+    justify-content: space-between !important;
+  }
+  .terms-rules-list > li,
+  .terms-what-list > li {
+    text-align: left !important;
+  }
+  .terms-support-text {
+    text-align: left !important;
+    max-width: none !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+  .terms-support-links {
+    align-items: stretch !important;
+  }
+  .terms-accept-label {
+    justify-content: flex-start !important;
+    text-align: left !important;
+  }
+  .terms-accept-label span {
+    text-align: left !important;
+  }
+  #termsErr {
+    text-align: left !important;
+  }
+}
