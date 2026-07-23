@@ -3669,10 +3669,18 @@ async function init() {
     document.body.classList.remove("nav-menu-open");
   });
 
-  // Mobile bottom tab bar: cart opens drawer
+  // Mobile bottom tab bar: cart opens drawer; other tabs close menus
   $("#mobileTabCart")?.addEventListener("click", (e) => {
     e.preventDefault();
+    closeMobileMenu();
     openCart();
+  });
+  $("#mobileTabbar")?.addEventListener("click", (e) => {
+    const tab = e.target.closest("a.mobile-tab");
+    if (tab) {
+      closeMobileMenu();
+      closeCart();
+    }
   });
 
   window.addEventListener("scroll", () => {
