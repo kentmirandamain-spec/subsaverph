@@ -1317,7 +1317,9 @@ html[data-theme="light"] .badge {
   padding: calc(var(--nav-h) + 48px) 0 72px;
   border-bottom: 1px solid var(--line);
   background: transparent;
-  overflow: hidden;
+  /* clip glow decorations, not text — use clip-x only on small screens */
+  overflow-x: clip;
+  overflow-y: visible;
 }
 
 .hero-glow {
@@ -1363,6 +1365,9 @@ html[data-theme="light"] .badge {
   font-size: 1.05rem;
   max-width: 44ch;
   margin: 0 0 28px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+  word-wrap: break-word;
 }
 
 .cta {
@@ -2234,6 +2239,112 @@ html[data-theme="light"] .badge {
   font-size: 0.85rem !important;
   line-height: 1.4;
   margin: 16px 0 20px !important;
+}
+
+/* Manual e-wallet pay instructions */
+.manual-pay-box {
+  margin: 20px 0 16px;
+  padding: 20px;
+  border: 1px solid var(--line-strong);
+  background: var(--soft-fill);
+  border-radius: var(--radius-sm);
+  text-align: left;
+}
+.manual-pay-title {
+  margin: 0 0 8px;
+  font-family: var(--display);
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.manual-pay-amount {
+  font-family: var(--display);
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin: 0 0 16px;
+  letter-spacing: 0.04em;
+}
+.manual-pay-grid {
+  display: grid;
+  gap: 14px;
+}
+.manual-pay-label {
+  display: block;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--mute);
+  margin-bottom: 6px;
+}
+.manual-pay-value-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.manual-pay-value {
+  font-size: 1rem;
+  padding: 8px 12px;
+  background: var(--input-bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  word-break: break-all;
+}
+.manual-pay-steps {
+  margin: 16px 0 0;
+  padding-left: 1.25rem;
+  color: var(--mute);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+.manual-pay-steps li {
+  margin-bottom: 6px;
+}
+.manual-pay-qr {
+  margin: 8px 0 4px;
+  text-align: center;
+  padding: 16px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: #ffffff;
+}
+.manual-pay-qr-label {
+  margin: 0 0 12px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #111;
+}
+.manual-pay-qr img {
+  display: block;
+  margin: 0 auto;
+  width: min(240px, 70vw);
+  max-width: 260px;
+  height: auto;
+  border-radius: 8px;
+  background: #fff;
+}
+.manual-pay-qr-name {
+  margin: 12px 0 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #111;
+}
+.manual-pay-order-summary {
+  margin-top: 18px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  text-align: left;
+}
+.manual-proof-form,
+.manual-pay-submitted {
+  text-align: left;
+  padding: 16px;
+  border: 1px solid var(--line-strong);
+  background: var(--panel);
+  border-radius: var(--radius-sm);
 }
 
 /* Stripe test card help */
@@ -3203,10 +3314,22 @@ html[data-theme="light"] .cred-value {
   .steps {
     grid-template-columns: 1fr 1fr;
   }
-  .detail,
-  .layout,
+
+  /* These use CSS grid — flex-direction does nothing; stack columns */
+  .layout {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
   .checkout {
-    flex-direction: column;
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .detail {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-3);
   }
 
   .footer-cols {
@@ -3231,22 +3354,40 @@ html[data-theme="light"] .cred-value {
     text-align: right;
   }
 
+  /* Horizontal filter chips under search (was sticky 180px sidebar) */
   .filters {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px 16px;
-    padding-bottom: 8px;
+    gap: 8px 14px;
+    padding: 12px 0 14px;
     border-bottom: 1px solid var(--line);
-    margin-bottom: 8px;
+    margin-bottom: 12px;
+    max-width: 100%;
   }
 
   .filters h3 {
     width: 100%;
-    margin-bottom: 4px;
+    margin: 8px 0 2px;
+  }
+
+  .filters h3:first-child {
+    margin-top: 0;
   }
 
   .filters .radio {
     margin: 0;
+    padding: 8px 12px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-pill);
+    font-size: 0.82rem;
+    background: var(--soft-fill);
+    min-height: 40px;
+  }
+
+  .filters .radio:has(input:checked) {
+    border-color: var(--text);
+    background: var(--hover-fill);
+    color: var(--text);
   }
 
   .detail-panel {
@@ -3257,14 +3398,26 @@ html[data-theme="light"] .cred-value {
     order: 1;
   }
 
-  .detail {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-3);
-  }
-
   .checkout .summary {
     order: -1;
+  }
+
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .toolbar .field-select,
+  .toolbar #pageFxMount,
+  .toolbar .currency-picker {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .toolbar .fx-btn {
+    width: 100%;
+    justify-content: space-between;
   }
 }
 
@@ -3279,33 +3432,57 @@ html[data-theme="light"] .cred-value {
   .nav {
     height: auto;
     min-height: var(--nav-h);
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
   }
 
   .nav-inner {
-    width: min(var(--max), calc(100% - 24px));
-    grid-template-columns: auto 1fr;
+    width: min(var(--max), calc(100% - 20px));
+    max-width: 100%;
+    grid-template-columns: minmax(0, auto) minmax(0, 1fr);
     grid-template-areas:
       "logo tools"
       "search search";
-    gap: 10px 12px;
+    gap: 10px 8px;
     padding: 10px 0 12px;
     align-items: center;
   }
 
   .logo {
     grid-area: logo;
+    min-width: 0;
+    flex-shrink: 0;
+  }
+
+  .logo-mark {
+    width: 32px;
+    height: 32px;
   }
 
   .nav-search {
     grid-area: search;
     height: 42px;
+    width: 100%;
+    max-width: 100%;
   }
 
   .tools {
     grid-area: tools;
     justify-self: end;
-    gap: 6px;
+    justify-content: flex-end;
+    gap: 4px;
     flex-wrap: nowrap;
+    min-width: 0;
+    max-width: 100%;
+    /* Never clip cart / hamburger off the right edge */
+    overflow: visible;
+  }
+
+  /* Prefer shrinking currency label over hiding cart/menu */
+  #navFxMount,
+  .currency-picker {
+    min-width: 0;
+    flex-shrink: 1;
   }
 
   /* Desktop inline links off; mobile drawer menu on */
@@ -3336,7 +3513,8 @@ html[data-theme="light"] .cred-value {
   }
 
   .links.open a {
-    display: block;
+    display: flex;
+    align-items: center;
     padding: 14px 8px;
     font-size: 0.85rem;
     letter-spacing: 0.12em;
@@ -3353,31 +3531,44 @@ html[data-theme="light"] .cred-value {
   .menu {
     display: grid !important;
     place-items: center;
-    min-width: 44px;
-    min-height: 44px;
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    min-height: 40px;
+    flex-shrink: 0;
   }
 
   .tools .icon {
-    min-width: 44px;
-    min-height: 44px;
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    min-height: 40px;
+    flex-shrink: 0;
   }
 
-  /* Compact currency on tablet/phone */
+  /* Compact currency on tablet/phone — keep all tools on one row */
   .fx-caption {
     display: none;
   }
 
   .fx-btn {
-    padding: 8px 10px;
+    padding: 6px 8px;
     min-height: 40px;
-    gap: 4px;
+    gap: 2px;
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
+    flex-shrink: 0;
+  }
+
+  .fx-chevron {
+    font-size: 0.65rem;
   }
 
   .fx-panel,
   .prefs-panel {
     position: fixed;
     top: calc(var(--nav-h) + 4px);
-    right: 12px;
+    right: max(12px, env(safe-area-inset-right, 0px));
     left: auto;
     width: min(320px, calc(100vw - 24px));
     max-height: min(70dvh, 420px);
@@ -3386,37 +3577,63 @@ html[data-theme="light"] .cred-value {
   }
 
   .prefs-panel {
-    right: 12px;
+    right: max(12px, env(safe-area-inset-right, 0px));
   }
 
   .wrap,
   .page-inner,
   .hero-inner,
   .mission-inner,
-  .section-inner {
-    width: min(var(--max), calc(100% - 28px));
+  .section-inner,
+  .home-deals-inner {
+    width: min(var(--max), calc(100% - 24px));
+    max-width: 100%;
   }
 
   .page {
-    padding: calc(var(--nav-h) + 24px) 0 var(--space-5);
+    padding: calc(var(--nav-h) + 20px) 0 var(--space-5);
+    overflow-x: clip;
   }
 
   .hero {
-    padding: calc(var(--nav-h) + 32px) 0 48px;
+    padding: calc(var(--nav-h) + 28px) 0 40px;
     min-height: auto;
+    overflow-x: clip;
   }
 
   .display {
-    font-size: clamp(1.85rem, 8.5vw, 3.2rem);
+    font-size: clamp(1.75rem, 9vw, 3rem);
+    line-height: 1.05;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    max-width: 100%;
   }
 
   .lead {
-    font-size: 0.98rem;
+    font-size: 0.95rem;
+    line-height: 1.55;
+    max-width: 100%;
+  }
+
+  .cta {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
   }
 
   .cta .btn {
     flex: 1 1 auto;
-    min-width: min(100%, 160px);
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .search-tags {
+    max-width: 100%;
+  }
+
+  .search-tag {
+    max-width: 100%;
   }
 
   .price-hero {
@@ -3436,16 +3653,80 @@ html[data-theme="light"] .cred-value {
     width: 100%;
     max-width: 100%;
     height: 100dvh;
+    height: 100svh;
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 
   .form,
   .summary {
     padding: var(--space-3) var(--space-2);
+    max-width: 100%;
+    min-width: 0;
   }
 
   .pay-methods {
     grid-template-columns: 1fr;
+  }
+
+  .pay-method-box {
+    min-width: 0;
+  }
+
+  .row2 {
+    grid-template-columns: 1fr;
+  }
+
+  .terms-modal-panel {
+    width: min(100%, calc(100vw - 16px));
+    max-height: min(92dvh, 920px);
+    margin: 8px;
+  }
+
+  .terms-modal-body {
+    max-height: min(50dvh, 360px);
+  }
+
+  .success {
+    padding: calc(var(--nav-h) + 24px) 14px calc(40px + env(safe-area-inset-bottom, 0px));
+    align-items: flex-start;
+  }
+
+  .success-card,
+  .success-card-wide {
+    max-width: 100%;
+    padding: 28px 16px;
+  }
+
+  .cred-value-row {
+    flex-wrap: wrap;
+  }
+
+  .cred-copy {
+    min-width: 64px;
+  }
+
+  .manual-pay-amount {
+    font-size: 1.45rem;
+    word-break: break-word;
+  }
+
+  .manual-pay-value-row {
+    flex-wrap: wrap;
+  }
+
+  .meta {
+    gap: 12px;
+  }
+
+  .meta > div {
+    min-width: 0;
+    flex: 1 1 40%;
+    border-right: none;
+    padding-right: 0;
+  }
+
+  .strip {
+    width: min(var(--max), calc(100% - 24px));
   }
 
   .toast {
@@ -3459,6 +3740,31 @@ html[data-theme="light"] .cred-value {
 
   .toast.show {
     transform: translateY(0);
+  }
+
+  /* Product cards never overflow viewport */
+  .grid {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .card {
+    min-width: 0;
+    max-width: 100%;
+    padding: 22px 16px;
+    overflow: hidden;
+  }
+
+  .card h3 {
+    min-height: 0;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .layout > * {
+    min-width: 0;
+    max-width: 100%;
   }
 }
 
@@ -3474,8 +3780,11 @@ html[data-theme="light"] .cred-value {
   .brands,
   .strip,
   .steps,
-  .compare {
+  .compare,
+  .grid.search-grid.grid-single,
+  .grid.grid-single {
     grid-template-columns: 1fr;
+    max-width: 100%;
   }
 
   .strip div {
@@ -3484,11 +3793,12 @@ html[data-theme="light"] .cred-value {
   }
 
   .section-inner {
-    padding: 48px 0;
+    padding: 40px 0;
   }
 
   .meta {
-    gap: 16px;
+    gap: 12px;
+    padding: 14px;
   }
 
   .actions {
@@ -3503,20 +3813,29 @@ html[data-theme="light"] .cred-value {
     width: 100%;
   }
 
+  /* Keep catalog search on one row; allow button to shrink label */
   .deals-search .product-search.large {
     flex-wrap: nowrap;
+    gap: 8px;
+    padding: 10px 12px;
   }
 
   .deals-search .product-search .search-go {
     width: auto;
+    flex-shrink: 0;
+    padding: 10px 14px;
+    min-height: 42px;
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
   }
 
-  .deals-search .product-search {
-    padding: 12px 14px;
+  .deals-search .product-search input {
+    min-width: 0;
   }
 
   .card {
     min-height: 0;
+    padding: 20px 14px;
   }
 
   .card .actions,
@@ -3524,8 +3843,18 @@ html[data-theme="light"] .cred-value {
     flex-wrap: wrap;
   }
 
+  .price {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  .price strong {
+    font-size: 0.98rem;
+    overflow-wrap: anywhere;
+  }
+
   .btn {
-    padding: 14px 20px;
+    padding: 14px 18px;
     min-height: 48px;
   }
 
@@ -3534,16 +3863,21 @@ html[data-theme="light"] .cred-value {
     padding: 10px 14px;
   }
 
-  .detail-desc {
+  .detail-desc,
+  .detail-extra {
     max-width: none;
   }
 
   .detail-info h1 {
-    font-size: clamp(1.35rem, 7vw, 1.85rem);
+    font-size: clamp(1.3rem, 7vw, 1.75rem);
+  }
+
+  .detail-panel {
+    padding: var(--space-3) var(--space-2);
   }
 
   .save-big {
-    font-size: 2.2rem;
+    font-size: 2rem;
   }
 
   .cart-line {
@@ -3557,10 +3891,33 @@ html[data-theme="light"] .cred-value {
 
   .search-suggest {
     max-height: min(50dvh, 280px);
+    left: 0;
+    right: 0;
+  }
+
+  .page-title {
+    font-size: clamp(1.4rem, 7vw, 1.85rem);
+    overflow-wrap: anywhere;
+  }
+
+  .field-select {
+    max-width: 100%;
+    width: 100%;
   }
 
   .footer {
     padding-bottom: calc(32px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .footer-bottom {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .footer-bar {
+    margin-left: 0;
+    text-align: left;
   }
 
   /* Avoid horizontal overflow from wide content */
@@ -3568,12 +3925,52 @@ html[data-theme="light"] .cred-value {
   .hero,
   .section,
   .mission,
-  main {
+  main,
+  #app {
     overflow-x: clip;
+    max-width: 100%;
   }
 
+  html,
   body {
     overflow-x: hidden;
+    max-width: 100%;
+  }
+
+  /* Chat FAB clear of home indicator */
+  #ssphChatRoot {
+    right: max(12px, env(safe-area-inset-right, 0px));
+    bottom: max(12px, env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* Very small phones */
+@media (max-width: 380px) {
+  .tools {
+    gap: 2px;
+  }
+
+  .tools .icon,
+  .menu {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    min-height: 36px;
+  }
+
+  .fx-btn {
+    padding: 6px 6px;
+    min-height: 36px;
+    font-size: 0.62rem;
+  }
+
+  .nav-inner {
+    width: calc(100% - 16px);
+    gap: 8px 4px;
+  }
+
+  .display {
+    font-size: clamp(1.55rem, 10vw, 2.2rem);
   }
 }
 

@@ -521,6 +521,7 @@ function settingsView() {
       <a href="#sc-about">2 · About</a>
       <a href="#sc-support">3 · Support</a>
       <a href="#sc-checkout">4 · Checkout rules</a>
+      <a href="#sc-manual-pay">4b · Manual GCash / Maya</a>
       <a href="#sc-success">5 · After payment</a>
       <a href="#sc-footer">6 · Footer</a>
       <a href="#sc-terms">7 · Terms</a>
@@ -663,6 +664,70 @@ function settingsView() {
         </label>
         <label>Confirm button text
           <input name="checkoutConfirmLabel" value="${escapeAttr(s.checkoutConfirmLabel || "Accept & pay")}" />
+        </label>
+      </section>
+
+      <!-- ========== 4b. MANUAL E-WALLET (QR) ========== -->
+      <section class="settings-block" id="sc-manual-pay">
+        <h3 class="settings-h">4b · Manual GCash / Maya (QR pay)</h3>
+        <p class="muted settings-lead">
+          Customers <strong>scan your QR</strong>, pay the exact amount, submit a reference, then you
+          <strong>Confirm payment</strong> in Orders to release codes. No PayMongo required.
+          Upload a QR image or paste an image URL. Leave a wallet empty to hide it at checkout.
+        </p>
+        <label class="check-row" style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+          <input type="checkbox" name="manualEwalletEnabled" value="1" ${
+            s.manualEwalletEnabled === false || s.manualEwalletEnabled === "0" || s.manualEwalletEnabled === "false"
+              ? ""
+              : "checked"
+          } />
+          <span>Enable QR e-wallet at checkout (when a QR image is set)</span>
+        </label>
+
+        <div class="settings-sub">
+          <h4 class="settings-sub-h">GCash QR</h4>
+          <label>GCash account name (optional, shown under QR)
+            <input name="manualGcashName" value="${escapeAttr(s.manualGcashName || "")}" placeholder="Juan Dela Cruz" />
+          </label>
+          <label>GCash QR image URL
+            <input name="manualGcashQrUrl" id="manualGcashQrUrl" value="${escapeAttr(s.manualGcashQrUrl || s.manualEwalletQrUrl || "")}" placeholder="/assets/qr/gcash-qr.png or https://…" />
+          </label>
+          <div class="qr-upload-row">
+            <label class="qr-upload-label">Or upload GCash QR
+              <input type="file" id="uploadGcashQr" accept="image/png,image/jpeg,image/webp,image/gif" />
+            </label>
+            <button type="button" class="btn ghost btn-sm" id="btnUploadGcashQr">Upload GCash QR</button>
+          </div>
+          ${
+            s.manualGcashQrUrl || s.manualEwalletQrUrl
+              ? `<div class="qr-preview"><img src="${escapeAttr(s.manualGcashQrUrl || s.manualEwalletQrUrl)}" alt="GCash QR preview" /></div>`
+              : ""
+          }
+        </div>
+
+        <div class="settings-sub">
+          <h4 class="settings-sub-h">Maya QR</h4>
+          <label>Maya account name (optional)
+            <input name="manualMayaName" value="${escapeAttr(s.manualMayaName || "")}" placeholder="Juan Dela Cruz" />
+          </label>
+          <label>Maya QR image URL
+            <input name="manualMayaQrUrl" id="manualMayaQrUrl" value="${escapeAttr(s.manualMayaQrUrl || "")}" placeholder="/assets/qr/maya-qr.png or https://…" />
+          </label>
+          <div class="qr-upload-row">
+            <label class="qr-upload-label">Or upload Maya QR
+              <input type="file" id="uploadMayaQr" accept="image/png,image/jpeg,image/webp,image/gif" />
+            </label>
+            <button type="button" class="btn ghost btn-sm" id="btnUploadMayaQr">Upload Maya QR</button>
+          </div>
+          ${
+            s.manualMayaQrUrl
+              ? `<div class="qr-preview"><img src="${escapeAttr(s.manualMayaQrUrl)}" alt="Maya QR preview" /></div>`
+              : ""
+          }
+        </div>
+
+        <label>Customer note (shown on pay page)
+          <textarea name="manualEwalletNote" rows="2" placeholder="Scan the QR, pay exact amount, put Order ID in the message.">${escapeHtml(s.manualEwalletNote || "")}</textarea>
         </label>
       </section>
 
@@ -1619,25 +1684,49 @@ function ordersView() {
       const st = orderStatusKey(o);
       const isRefunded = st === "refunded" || st === "refund" || st === "reversed" || st === "chargeback";
       const isPaid = ["paid", "completed", "succeeded", "complete", "success"].includes(st);
-      const lineTotal = orderLineTotal(o);
+      const isManualPending =
+        o.paymentMode === "manual_ewallet" &&
+        (st === "awaiting_payment" || st === "payment_submitted");
+      const lineTotal =
+        o.amountPhp != null && o.paymentMode === "manual_ewallet"
+          ? Number(o.amountPhp)
+          : orderLineTotal(o);
       const codes = (o.items || []).map((i) => `${i.name}: ${(i.codes || []).join(", ")}`).join(" · ");
       const mail = o.emailSent ? "emailed" : o.emailDetail ? "email fail" : "—";
-      const badgeClass = isRefunded ? "badge badge-refund" : "badge";
+      const badgeClass = isRefunded
+        ? "badge badge-refund"
+        : isManualPending
+          ? "badge badge-pending"
+          : "badge";
       let actions = "";
-      if (isPaid) {
+      if (isManualPending) {
+        const ref = o.paymentReference
+          ? `Ref: ${escapeHtml(o.paymentReference)}`
+          : "No ref yet";
+        const wallet = (o.payTo && o.payTo.wallet) || o.method || "e-wallet";
+        actions = `
+          <div class="muted" style="margin:4px 0;font-size:0.78rem">${escapeHtml(String(wallet))} · ${ref}</div>
+          <button type="button" class="btn solid btn-sm" data-confirm-manual="${escapeAttr(o.id)}">Confirm payment</button>
+          <button type="button" class="btn ghost btn-sm" data-order-status="cancelled" data-order-id="${escapeAttr(o.id)}" style="margin-left:4px">Cancel</button>`;
+      } else if (isPaid) {
         actions = `<button type="button" class="btn ghost btn-sm" data-order-status="refunded" data-order-id="${escapeAttr(o.id)}">Mark refunded</button>`;
       } else if (isRefunded) {
         actions = `<button type="button" class="btn ghost btn-sm" data-order-status="paid" data-order-id="${escapeAttr(o.id)}">Undo refund</button>`;
       }
       return `
-      <tr class="${isRefunded ? "row-refunded" : ""}">
-        <td><strong>${escapeHtml(o.id)}</strong><div class="muted">${escapeHtml(o.createdAt || "")}</div></td>
+      <tr class="${isRefunded ? "row-refunded" : isManualPending ? "row-pending" : ""}">
+        <td><strong>${escapeHtml(o.id)}</strong><div class="muted">${escapeHtml(o.createdAt || "")}</div>
+          ${o.paymentMode === "manual_ewallet" ? `<div class="muted">manual e-wallet</div>` : ""}</td>
         <td>${escapeHtml(o.email)}<div class="muted">${escapeHtml(o.name || "")}</div></td>
         <td><span class="${badgeClass}">${escapeHtml(o.status || "")}</span>
           <div class="muted">${escapeHtml(mail)}</div>
           ${actions ? `<div style="margin-top:6px">${actions}</div>` : ""}</td>
-        <td><strong class="${isRefunded ? "sales-loss" : ""}">${isRefunded ? "− " : ""}${escapeHtml(money(lineTotal))}</strong>
-          <div class="muted" style="max-width:280px;word-break:break-all">${escapeHtml(codes)}</div></td>
+        <td><strong class="${isRefunded ? "sales-loss" : ""}">${isRefunded ? "− " : ""}${
+          o.amountFormatted && o.paymentMode === "manual_ewallet"
+            ? escapeHtml(o.amountFormatted)
+            : escapeHtml(money(lineTotal))
+        }</strong>
+          <div class="muted" style="max-width:280px;word-break:break-all">${escapeHtml(codes || (isManualPending ? "codes after confirm" : ""))}</div></td>
       </tr>`;
     })
     .join("");
@@ -1970,7 +2059,12 @@ function bindShell() {
       const id = btn.dataset.orderId;
       const status = btn.dataset.orderStatus;
       if (!id || !status) return;
-      const label = status === "refunded" ? "Mark this order as refunded? It will be deducted from P&L." : "Restore this order to paid?";
+      const label =
+        status === "refunded"
+          ? "Mark this order as refunded? It will be deducted from P&L."
+          : status === "cancelled"
+            ? "Cancel this pending manual payment order?"
+            : "Restore this order to paid?";
       if (!confirm(label)) return;
       btn.disabled = true;
       try {
@@ -1979,7 +2073,40 @@ function bindShell() {
           body: JSON.stringify({ status }),
         });
         await loadOrders();
-        toast(status === "refunded" ? "Order refunded — deducted from P&L" : "Order restored to paid");
+        toast(
+          status === "refunded"
+            ? "Order refunded — deducted from P&L"
+            : status === "cancelled"
+              ? "Order cancelled"
+              : "Order restored to paid"
+        );
+        render();
+      } catch (err) {
+        toast(err.message, true);
+        btn.disabled = false;
+      }
+    });
+  });
+
+  $$("[data-confirm-manual]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const id = btn.dataset.confirmManual;
+      if (!id) return;
+      if (
+        !confirm(
+          "Confirm this e-wallet transfer? Login codes will be reserved from stock and emailed to the customer."
+        )
+      ) {
+        return;
+      }
+      btn.disabled = true;
+      try {
+        await api(`/api/admin/orders/${encodeURIComponent(id)}/confirm-payment`, {
+          method: "POST",
+          body: JSON.stringify({}),
+        });
+        await loadOrders();
+        toast("Payment confirmed — codes released");
         render();
       } catch (err) {
         toast(err.message, true);
@@ -2196,10 +2323,14 @@ function bindShell() {
     for (const [k, v] of fd.entries()) {
       if (k.startsWith("ui__")) {
         uiStrings[k.slice(4)] = String(v);
+      } else if (k === "file" || k.startsWith("upload")) {
+        /* skip file inputs */
       } else {
         payload[k] = v;
       }
     }
+    // Unchecked checkbox is omitted from FormData
+    payload.manualEwalletEnabled = fd.get("manualEwalletEnabled") === "1";
     payload.uiStrings = uiStrings;
     try {
       const data = await api("/api/admin/settings", {
@@ -2211,6 +2342,57 @@ function bindShell() {
     } catch (err) {
       toast(err.message, true);
     }
+  });
+
+  async function uploadQrWallet(wallet, fileInputId, btn) {
+    const input = $(fileInputId);
+    const file = input?.files?.[0];
+    if (!file) {
+      toast("Choose a QR image first", true);
+      return;
+    }
+    if (btn) btn.disabled = true;
+    try {
+      const body = new FormData();
+      body.append("wallet", wallet);
+      body.append("file", file);
+      const res = await fetch("/api/admin/upload-qr", {
+        method: "POST",
+        credentials: "same-origin",
+        body,
+      });
+      const raw = await res.text();
+      let data = {};
+      try {
+        data = raw ? JSON.parse(raw) : {};
+      } catch {
+        data = {};
+      }
+      if (!res.ok) throw new Error(data.error || `Upload failed (${res.status})`);
+      state.settings = data.settings || state.settings;
+      if (wallet === "gcash") {
+        const el = $("#manualGcashQrUrl");
+        if (el) el.value = data.url || "";
+      } else {
+        const el = $("#manualMayaQrUrl");
+        if (el) el.value = data.url || "";
+      }
+      toast(`${wallet === "gcash" ? "GCash" : "Maya"} QR uploaded`);
+      render();
+    } catch (err) {
+      toast(err.message || "Upload failed", true);
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  $("#btnUploadGcashQr")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    uploadQrWallet("gcash", "#uploadGcashQr", e.currentTarget);
+  });
+  $("#btnUploadMayaQr")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    uploadQrWallet("maya", "#uploadMayaQr", e.currentTarget);
   });
 
   $("#passwordForm")?.addEventListener("submit", async (e) => {

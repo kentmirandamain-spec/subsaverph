@@ -77,29 +77,57 @@ def normalize_api_trailing_slash():
     return None
 
 
+# Canonical public site — never use the free Render hostname in search results
+CANONICAL_SITE_URL = "https://subsaverph.com"
+
+
+def request_host() -> str:
+    return (request.host or "").split(":")[0].lower()
+
+
+def is_onrender_host(host: str | None = None) -> bool:
+    h = (host if host is not None else request_host()).lower()
+    return h.endswith(".onrender.com") or h == "onrender.com"
+
+
+def preferred_site_url() -> str:
+    """
+    Prefer PUBLIC_URL when it is a real public custom domain.
+    Never prefer *.onrender.com or localhost — fall back to CANONICAL_SITE_URL.
+    """
+    public = (os.environ.get("PUBLIC_URL") or "").strip().rstrip("/")
+    if public.startswith("http") and "onrender.com" not in public.lower():
+        low = public.lower()
+        # Local/dev URLs are fine for emails on a dev machine, but never as the
+        # permanent redirect target away from the Render hostname.
+        if not any(x in low for x in ("127.0.0.1", "localhost", "0.0.0.0")):
+            return public.rstrip("/")
+    return CANONICAL_SITE_URL.rstrip("/")
+
+
 @app.before_request
 def redirect_onrender_hostname_to_custom_domain():
     """
-    Permanent redirect from *.onrender.com → PUBLIC_URL (subsaverph.com).
-    Helps Google replace the old Render URL with the custom domain.
+    Permanent redirect from *.onrender.com → custom domain (subsaverph.com).
+    Always runs for the Render hostname so Google stops showing onrender URLs.
+    Health checks stay on Render for uptime monitors.
     """
-    public = (os.environ.get("PUBLIC_URL") or "").strip().rstrip("/")
-    if not public.startswith("http"):
-        return None
-    host = (request.host or "").split(":")[0].lower()
-    if not host.endswith(".onrender.com"):
-        return None
-    # Don't redirect if PUBLIC_URL itself is still onrender
-    if "onrender.com" in public.lower():
+    if not is_onrender_host():
         return None
     # Keep health/ping usable on the Render hostname (monitors / keep-alive)
     if request.path in ("/api/health", "/api/health/"):
         return None
-    target = public + request.path
+    # robots/sitemap also redirect so crawlers only see the canonical host
+    base = preferred_site_url()
+    target = base + (request.path or "/")
     qs = request.query_string.decode("utf-8", errors="ignore") if request.query_string else ""
     if qs:
         target = f"{target}?{qs}"
-    return redirect(target, code=301)
+    # 301 + cache so CDNs/Google cache the permanent move
+    resp = redirect(target, code=301)
+    resp.headers["X-Robots-Tag"] = "noindex, nofollow"
+    resp.headers["Cache-Control"] = "public, max-age=86400"
+    return resp
 
 
 @app.after_request
@@ -108,8 +136,16 @@ def seo_friendly_headers(resp):
 
     Flask's send_from_directory adds Content-Disposition: inline; filename=...
     which can trigger live-test indexing failures. Strip it for HTML and mark
-    public pages as indexable.
+    public pages as indexable — except on the temporary Render hostname.
     """
+    # Never let Google keep indexing the free Render URL
+    if is_onrender_host():
+        resp.headers["X-Robots-Tag"] = "noindex, nofollow"
+        if "text/html" in (resp.headers.get("Content-Type") or "").lower():
+            if "Content-Disposition" in resp.headers:
+                del resp.headers["Content-Disposition"]
+        return resp
+
     ctype = (resp.headers.get("Content-Type") or "").lower()
     if "text/html" in ctype:
         # Do not present homepage as a downloadable file
@@ -1013,6 +1049,7 @@ def api_catalog():
             "paypalEnabled": paypal_configured(),
             "cryptoEnabled": crypto_configured(),
             "liqpayEnabled": liqpay_configured(),
+            "manualEwalletEnabled": manual_ewallet_configured(),
             "ewalletProvider": ewallet_provider(),
             "paymentMethods": available_payment_methods(),
         }
@@ -1049,6 +1086,7 @@ def any_live_payment_provider() -> bool:
         or paypal_configured()
         or crypto_configured()
         or liqpay_configured()
+        or manual_ewallet_configured()
     )
 
 
@@ -1279,7 +1317,23 @@ def fulfill_order(
 
 
 def public_base_url() -> str:
-    return (os.environ.get("PUBLIC_URL") or request.host_url).rstrip("/")
+    """
+    Absolute site origin for payment return URLs, emails, etc.
+    Allows localhost for local dev. Never returns *.onrender.com.
+    """
+    public = (os.environ.get("PUBLIC_URL") or "").strip().rstrip("/")
+    if public.startswith("http") and "onrender.com" not in public.lower():
+        return public
+    host = request_host()
+    if host and not is_onrender_host(host):
+        if host in ("127.0.0.1", "localhost") or host.startswith("127."):
+            return (request.host_url or "http://127.0.0.1:8790").rstrip("/")
+        scheme = "https" if (
+            request.is_secure or os.environ.get("FORCE_HTTPS")
+            or host.endswith(".com")
+        ) else (request.scheme or "https")
+        return f"{scheme}://{host}".rstrip("/")
+    return preferred_site_url().rstrip("/")
 
 
 def cart_total_php(normalized: list) -> float:
@@ -1315,6 +1369,107 @@ def cart_total_usd(normalized: list) -> float:
         }
         total += price * rates_to_usd.get(base, 1.0) * qty
     return round(total, 2)
+
+
+def _truthy_env(name: str, default: str = "") -> bool | None:
+    """Return True/False if env is set, else None."""
+    raw = (os.environ.get(name) or default or "").strip().lower()
+    if not raw:
+        return None
+    if raw in ("1", "true", "yes", "on"):
+        return True
+    if raw in ("0", "false", "no", "off"):
+        return False
+    return None
+
+
+def _normalize_qr_url(url: str) -> str:
+    """Allow https URLs or site-relative paths like /uploads/qr-gcash.png."""
+    u = (url or "").strip()
+    if not u:
+        return ""
+    if u.startswith("//"):
+        return "https:" + u
+    if u.startswith("http://") or u.startswith("https://") or u.startswith("/"):
+        return u
+    if u.startswith("data:image/"):
+        return u
+    # treat bare paths as site-root relative
+    return "/" + u.lstrip("./")
+
+
+def manual_ewallet_config() -> dict:
+    """
+    Manual GCash / Maya payment via QR codes (scan to pay).
+    Priority: env vars override settings.json.
+    Enabled when at least one wallet QR image URL is set.
+    """
+    s = load_settings() or {}
+    env_enabled = _truthy_env("MANUAL_EWALLET_ENABLED")
+    settings_enabled = s.get("manualEwalletEnabled")
+    if isinstance(settings_enabled, str):
+        settings_enabled = settings_enabled.strip().lower() in ("1", "true", "yes", "on")
+    elif settings_enabled is None:
+        settings_enabled = True  # auto-on when a QR is set
+    else:
+        settings_enabled = bool(settings_enabled)
+
+    gcash_name = (
+        (os.environ.get("MANUAL_GCASH_NAME") or "").strip()
+        or str(s.get("manualGcashName") or "").strip()
+    )
+    maya_name = (
+        (os.environ.get("MANUAL_MAYA_NAME") or "").strip()
+        or str(s.get("manualMayaName") or "").strip()
+    )
+    # Per-wallet QR (preferred). Legacy single manualEwalletQrUrl still works as fallback.
+    legacy_qr = _normalize_qr_url(
+        (os.environ.get("MANUAL_EWALLET_QR_URL") or "").strip()
+        or str(s.get("manualEwalletQrUrl") or "").strip()
+    )
+    gcash_qr = _normalize_qr_url(
+        (os.environ.get("MANUAL_GCASH_QR_URL") or "").strip()
+        or str(s.get("manualGcashQrUrl") or "").strip()
+        or legacy_qr
+    )
+    maya_qr = _normalize_qr_url(
+        (os.environ.get("MANUAL_MAYA_QR_URL") or "").strip()
+        or str(s.get("manualMayaQrUrl") or "").strip()
+        or (legacy_qr if not gcash_qr else "")
+    )
+    # Optional legacy numbers (not shown as primary; kept for older settings)
+    gcash_number = (
+        (os.environ.get("MANUAL_GCASH_NUMBER") or "").strip()
+        or str(s.get("manualGcashNumber") or "").strip()
+    )
+    maya_number = (
+        (os.environ.get("MANUAL_MAYA_NUMBER") or "").strip()
+        or str(s.get("manualMayaNumber") or "").strip()
+    )
+    note = (
+        (os.environ.get("MANUAL_EWALLET_NOTE") or "").strip()
+        or str(s.get("manualEwalletNote") or "").strip()
+        or "Scan the QR with your e-wallet app. Pay the exact amount and put your Order ID in the message."
+    )
+
+    enabled = env_enabled if env_enabled is not None else settings_enabled
+    has_any = bool(gcash_qr or maya_qr)
+    return {
+        "enabled": bool(enabled and has_any),
+        "gcashQrUrl": gcash_qr,
+        "mayaQrUrl": maya_qr,
+        "gcashName": gcash_name,
+        "mayaName": maya_name,
+        "gcashNumber": gcash_number,
+        "mayaNumber": maya_number,
+        "note": note,
+        # Back-compat alias
+        "qrUrl": gcash_qr or maya_qr or legacy_qr,
+    }
+
+
+def manual_ewallet_configured() -> bool:
+    return bool(manual_ewallet_config().get("enabled"))
 
 
 def paymongo_configured() -> bool:
@@ -1628,6 +1783,30 @@ def available_payment_methods() -> list:
             }
         )
 
+    # Manual e-wallet — customer scans your GCash/Maya QR; admin confirms
+    manual_cfg = manual_ewallet_config()
+    if manual_cfg.get("enabled"):
+        if manual_cfg.get("gcashQrUrl"):
+            methods.append(
+                {
+                    "id": "manual_gcash",
+                    "label": "GCash (QR)",
+                    "provider": "manual",
+                    "desc": "Scan our GCash QR — codes after we confirm",
+                    "group": "ewallet",
+                }
+            )
+        if manual_cfg.get("mayaQrUrl"):
+            methods.append(
+                {
+                    "id": "manual_maya",
+                    "label": "Maya (QR)",
+                    "provider": "manual",
+                    "desc": "Scan our Maya QR — codes after we confirm",
+                    "group": "ewallet",
+                }
+            )
+
     # PayPal — live only (no free demo PayPal when keys missing)
     if has_paypal:
         methods.append(
@@ -1770,8 +1949,9 @@ def payments_config():
 def api_checkout_start():
     """
     Unified checkout start.
-    method: card | gcash | paymaya | grab_pay | shopeepay | xendit | paypal | crypto | liqpay | demo
-    Returns { url } for redirect providers, or { order } for demo.
+    method: card | gcash | paymaya | grab_pay | shopeepay | xendit | paypal | crypto | liqpay
+            | manual_gcash | manual_maya | demo
+    Returns { url } for redirect providers, { order } for demo / manual pending.
     """
     data = request.get_json(silent=True) or {}
     email = (data.get("email") or "").strip()
@@ -1786,6 +1966,10 @@ def api_checkout_start():
         method = "grab_pay"
     if method in ("shopee_pay", "shopee-pay"):
         method = "shopeepay"
+    if method in ("gcash_manual", "manual-gcash"):
+        method = "manual_gcash"
+    if method in ("maya_manual", "manual-maya", "manual_paymaya"):
+        method = "manual_maya"
 
     if not email or "@" not in email:
         return jsonify({"error": "Valid email is required for delivery"}), 400
@@ -1830,6 +2014,10 @@ def api_checkout_start():
             return jsonify({"error": str(e)}), 409
         return jsonify({"ok": True, "provider": "demo", "order": order})
 
+    # ---- Manual GCash / Maya (customer send + admin confirm) ----
+    if provider == "manual" and method in ("manual_gcash", "manual_maya"):
+        return _manual_ewallet_checkout(email, name, method, normalized, cart_meta)
+
     # ---- CARD via Stripe ----
     if method == "card" and provider == "stripe":
         return _stripe_session(email, name, currency, items, normalized, base)
@@ -1855,6 +2043,261 @@ def api_checkout_start():
         return _liqpay_checkout(email, name, currency, normalized, cart_meta, base)
 
     return jsonify({"error": "Payment method not configured on server"}), 503
+
+
+def _manual_ewallet_checkout(email, name, method, normalized, cart_meta):
+    """Create awaiting_payment order with GCash/Maya QR pay instructions (no codes yet)."""
+    cfg = manual_ewallet_config()
+    if not cfg.get("enabled"):
+        return jsonify(
+            {
+                "error": "Manual e-wallet is not enabled. Add a GCash/Maya QR image in Admin → Site content.",
+            }
+        ), 503
+
+    wallet = "GCash" if method == "manual_gcash" else "Maya"
+    qr_url = cfg.get("gcashQrUrl") if method == "manual_gcash" else cfg.get("mayaQrUrl")
+    account_name = cfg.get("gcashName") if method == "manual_gcash" else cfg.get("mayaName")
+    if not qr_url:
+        return jsonify({"error": f"{wallet} QR code is not configured for manual payment."}), 503
+
+    amount_php = cart_total_php(normalized)
+    if amount_php < 1:
+        return jsonify({"error": "Order total too low for e-wallet payment."}), 400
+
+    # Line items for display (no codes until admin confirms)
+    line_results = []
+    for row in normalized:
+        deal = row["deal"]
+        qty = row["qty"]
+        includes = deal.get("includes") or []
+        if isinstance(includes, str):
+            includes = [x.strip() for x in includes.split("\n") if x.strip()]
+        elif not isinstance(includes, list):
+            includes = []
+        line_results.append(
+            {
+                "id": row["id"],
+                "name": deal.get("name"),
+                "monogram": deal.get("monogram"),
+                "brand": deal.get("brand"),
+                "category": deal.get("category"),
+                "qty": qty,
+                "price": deal.get("price"),
+                "priceBase": deal.get("priceBase", "USD"),
+                "duration": deal.get("duration"),
+                "delivery": deal.get("delivery"),
+                "codes": [],
+                "credentials": [],
+            }
+        )
+
+    order_id = "PH" + uuid.uuid4().hex[:10].upper()
+    name_bit = f" ({account_name})" if account_name else ""
+    order = {
+        "id": order_id,
+        "email": email,
+        "name": name,
+        "currency": "PHP",
+        "items": line_results,
+        "cart": cart_meta,
+        "status": "awaiting_payment",
+        "paymentMode": "manual_ewallet",
+        "method": method,
+        "providerRef": f"manual-{order_id}",
+        "amountPhp": amount_php,
+        "amountFormatted": f"₱{amount_php:,.2f}",
+        "payTo": {
+            "wallet": wallet,
+            "name": account_name or "",
+            "qrUrl": qr_url,
+        },
+        "paymentInstructions": {
+            "steps": [
+                f"Open your {wallet} app.",
+                f"Scan the QR code below (or use Scan QR in {wallet}).",
+                f"Pay exactly ₱{amount_php:,.2f}{name_bit}.",
+                f"Put Order ID {order_id} in the message / notes field if asked.",
+                "After paying, paste your payment reference below and submit.",
+                "We verify the transfer and release your login codes.",
+            ],
+            "note": cfg.get("note") or "",
+            "qrUrl": qr_url,
+        },
+        "paymentReference": "",
+        "paymentProofNote": "",
+        "createdAt": __import__("datetime").datetime.utcnow().isoformat() + "Z",
+        "delivery": "after_confirm",
+        "message": (
+            f"Scan the {wallet} QR and pay ₱{amount_php:,.2f}. "
+            f"Use Order ID {order_id} as reference. Codes unlock after we confirm payment."
+        ),
+        "emailSent": False,
+    }
+    orders = load_orders()
+    orders.insert(0, order)
+    save_orders(orders[:500])
+    return jsonify(
+        {
+            "ok": True,
+            "provider": "manual",
+            "pending": True,
+            "order": order,
+        }
+    )
+
+
+@app.post("/api/checkout/manual/proof")
+def api_manual_proof():
+    """Customer submits e-wallet reference after sending payment."""
+    data = request.get_json(silent=True) or {}
+    order_id = str(data.get("orderId") or data.get("id") or "").strip()
+    ref = str(data.get("paymentReference") or data.get("reference") or "").strip()
+    note = str(data.get("note") or data.get("paymentProofNote") or "").strip()[:500]
+    email = str(data.get("email") or "").strip().lower()
+
+    if not order_id:
+        return jsonify({"error": "Order ID is required"}), 400
+    if not ref or len(ref) < 4:
+        return jsonify({"error": "Enter your GCash/Maya reference number (at least 4 characters)"}), 400
+
+    orders = load_orders()
+    found = None
+    idx = None
+    for i, o in enumerate(orders):
+        if str(o.get("id") or "") == order_id:
+            found = o
+            idx = i
+            break
+    if not found:
+        return jsonify({"error": "Order not found"}), 404
+    if found.get("paymentMode") != "manual_ewallet":
+        return jsonify({"error": "This order is not a manual e-wallet payment"}), 400
+    st = str(found.get("status") or "").lower()
+    if st == "paid":
+        return jsonify({"ok": True, "order": found, "alreadyPaid": True})
+    if st == "cancelled":
+        return jsonify({"error": "This order was cancelled"}), 400
+    # Soft email check if provided
+    if email and str(found.get("email") or "").strip().lower() != email:
+        return jsonify({"error": "Email does not match this order"}), 403
+
+    found = {
+        **found,
+        "status": "payment_submitted",
+        "paymentReference": ref[:120],
+        "paymentProofNote": note,
+        "paymentSubmittedAt": __import__("datetime").datetime.utcnow().isoformat() + "Z",
+        "message": (
+            "Payment reference received. We are verifying your transfer. "
+            "Codes will unlock once payment is confirmed."
+        ),
+    }
+    orders[idx] = found
+    save_orders(orders)
+    return jsonify({"ok": True, "order": found})
+
+
+@app.get("/api/checkout/manual/<order_id>")
+def api_manual_order_status(order_id: str):
+    """Public status poll for manual e-wallet orders (no codes until paid)."""
+    oid = str(order_id or "").strip()
+    email = (request.args.get("email") or "").strip().lower()
+    for o in load_orders():
+        if str(o.get("id") or "") != oid:
+            continue
+        if o.get("paymentMode") != "manual_ewallet":
+            return jsonify({"error": "Not a manual e-wallet order"}), 400
+        if email and str(o.get("email") or "").strip().lower() != email:
+            return jsonify({"error": "Email does not match this order"}), 403
+        # Never leak codes until paid
+        public = dict(o)
+        if str(o.get("status") or "").lower() != "paid":
+            safe_items = []
+            for it in public.get("items") or []:
+                safe_items.append(
+                    {
+                        **it,
+                        "codes": [],
+                        "credentials": [],
+                    }
+                )
+            public["items"] = safe_items
+        return jsonify({"ok": True, "order": public})
+    return jsonify({"error": "Order not found"}), 404
+
+
+def _fulfill_manual_order_inplace(order: dict) -> dict:
+    """Reserve codes on a pending manual order and mark paid. Idempotent if already paid."""
+    if str(order.get("status") or "").lower() == "paid" and any(
+        (it.get("codes") or it.get("credentials")) for it in (order.get("items") or [])
+    ):
+        if not order.get("emailSent"):
+            _email_invoice_for_order(order)
+            _persist_order_update(order)
+        return order
+
+    cart = order.get("cart") or [
+        {"id": it.get("id"), "qty": it.get("qty") or 1} for it in (order.get("items") or [])
+    ]
+    try:
+        normalized, _ = validate_cart_items(cart)
+    except ValueError as e:
+        raise ValueError(str(e)) from e
+
+    line_results = []
+    for row in normalized:
+        deal = row["deal"]
+        qty = row["qty"]
+        pid = row["id"]
+        creds = reserve_codes(pid, qty)
+        code_strings = []
+        for cr in creds:
+            if cr.get("username") or cr.get("password"):
+                code_strings.append(
+                    f"Username: {cr.get('username') or '—'}  Password: {cr.get('password') or '—'}"
+                )
+            else:
+                code_strings.append(cr.get("raw") or cr.get("code") or "")
+        includes = deal.get("includes") or []
+        if isinstance(includes, str):
+            includes = [x.strip() for x in includes.split("\n") if x.strip()]
+        elif not isinstance(includes, list):
+            includes = []
+        includes = [str(x).strip() for x in includes if str(x).strip()]
+        line_results.append(
+            {
+                "id": pid,
+                "name": deal.get("name"),
+                "monogram": deal.get("monogram"),
+                "brand": deal.get("brand"),
+                "category": deal.get("category"),
+                "qty": qty,
+                "price": deal.get("price"),
+                "priceBase": deal.get("priceBase", "USD"),
+                "duration": deal.get("duration"),
+                "delivery": deal.get("delivery"),
+                "description": deal.get("description"),
+                "includes": includes,
+                "accountType": deal.get("accountType"),
+                "validity": deal.get("validity"),
+                "howToRedeem": deal.get("howToRedeem") or "",
+                "importantNotes": deal.get("importantNotes") or "",
+                "finePrint": deal.get("finePrint") or "",
+                "codes": code_strings,
+                "credentials": creds,
+            }
+        )
+
+    order["items"] = line_results
+    order["status"] = "paid"
+    order["paidAt"] = __import__("datetime").datetime.utcnow().isoformat() + "Z"
+    order["delivery"] = "instant"
+    order["message"] = "Payment confirmed. Codes delivered instantly."
+    order["confirmedBy"] = "admin"
+    _email_invoice_for_order(order)
+    _persist_order_update(order)
+    return order
 
 
 def _liqpay_checkout(email, name, currency, normalized, cart_meta, base):
@@ -3575,8 +4018,76 @@ def admin_update_settings():
             }
         else:
             current[k] = v
+    # Normalize QR URL fields if present
+    for key in ("manualGcashQrUrl", "manualMayaQrUrl", "manualEwalletQrUrl"):
+        if key in current:
+            current[key] = _normalize_qr_url(str(current.get(key) or ""))
     save_settings(current)
     return jsonify({"ok": True, "settings": current})
+
+
+@app.post("/api/admin/upload-qr")
+@require_admin
+def admin_upload_qr():
+    """
+    Upload a GCash or Maya payment QR image.
+    multipart: file + wallet=gcash|maya
+    Saves under assets/qr/ and updates the matching settings URL.
+    """
+    wallet = (request.form.get("wallet") or request.args.get("wallet") or "").strip().lower()
+    if wallet in ("paymaya", "maya_wallet"):
+        wallet = "maya"
+    if wallet not in ("gcash", "maya"):
+        return jsonify({"error": "wallet must be gcash or maya"}), 400
+
+    f = request.files.get("file") or request.files.get("qr") or request.files.get("image")
+    if not f or not getattr(f, "filename", None):
+        return jsonify({"error": "No image file uploaded"}), 400
+
+    filename = str(f.filename or "")
+    ext = Path(filename).suffix.lower()
+    if ext not in (".png", ".jpg", ".jpeg", ".webp", ".gif"):
+        # sniff content-type
+        ctype = (f.mimetype or "").lower()
+        if "png" in ctype:
+            ext = ".png"
+        elif "jpeg" in ctype or "jpg" in ctype:
+            ext = ".jpg"
+        elif "webp" in ctype:
+            ext = ".webp"
+        else:
+            return jsonify({"error": "Upload a PNG, JPG, or WEBP QR image"}), 400
+
+    qr_dir = ROOT / "assets" / "qr"
+    qr_dir.mkdir(parents=True, exist_ok=True)
+    # Fixed names so re-upload replaces cleanly
+    out_name = f"{wallet}-qr{ext}"
+    out_path = qr_dir / out_name
+    # Remove previous variants for this wallet
+    for old in qr_dir.glob(f"{wallet}-qr.*"):
+        try:
+            old.unlink()
+        except Exception:
+            pass
+    f.save(str(out_path))
+
+    # Cache-bust so shoppers see the new QR immediately
+    url = f"/assets/qr/{out_name}?v={uuid.uuid4().hex[:8]}"
+    settings = load_settings()
+    if wallet == "gcash":
+        settings["manualGcashQrUrl"] = url
+    else:
+        settings["manualMayaQrUrl"] = url
+    settings["manualEwalletEnabled"] = True
+    save_settings(settings)
+    return jsonify(
+        {
+            "ok": True,
+            "wallet": wallet,
+            "url": url,
+            "settings": settings,
+        }
+    )
 
 
 @app.get("/api/admin/settings")
@@ -3721,17 +4232,34 @@ def admin_order_set_status(order_id: str):
     Mark an order paid or refunded for P&L.
     Body: { "status": "paid" | "refunded" }
     Refunded sales are deducted from Orders/Sales profit.
+    Note: for manual e-wallet pending orders use /confirm-payment (releases codes).
     """
     data = request.get_json(silent=True) or {}
     new_status = str(data.get("status") or "").strip().lower()
-    if new_status not in ("paid", "refunded"):
-        return jsonify({"error": "status must be paid or refunded"}), 400
+    if new_status not in ("paid", "refunded", "cancelled"):
+        return jsonify({"error": "status must be paid, refunded, or cancelled"}), 400
 
     oid = str(order_id or "").strip()
     orders = load_orders()
     found = None
     for i, o in enumerate(orders):
         if str(o.get("id") or "") == oid:
+            # Manual pending → paid without codes is wrong; require confirm-payment
+            if (
+                new_status == "paid"
+                and o.get("paymentMode") == "manual_ewallet"
+                and str(o.get("status") or "").lower()
+                in ("awaiting_payment", "payment_submitted")
+            ):
+                return (
+                    jsonify(
+                        {
+                            "error": "Use Confirm payment to release codes for manual e-wallet orders.",
+                            "hint": f"POST /api/admin/orders/{oid}/confirm-payment",
+                        }
+                    ),
+                    400,
+                )
             orders[i] = {**o, "status": new_status}
             if new_status == "refunded":
                 orders[i]["refundedAt"] = __import__("datetime").datetime.utcnow().strftime(
@@ -3739,12 +4267,57 @@ def admin_order_set_status(order_id: str):
                 )
             elif "refundedAt" in orders[i]:
                 orders[i].pop("refundedAt", None)
+            if new_status == "cancelled":
+                orders[i]["cancelledAt"] = __import__("datetime").datetime.utcnow().isoformat() + "Z"
+                orders[i]["message"] = "Order cancelled."
             found = orders[i]
             break
     if not found:
         return jsonify({"error": "Order not found"}), 404
     save_orders(orders)
     return jsonify({"ok": True, "order": found})
+
+
+@app.post("/api/admin/orders/<order_id>/confirm-payment")
+@require_admin
+def admin_confirm_manual_payment(order_id: str):
+    """
+    Confirm a manual e-wallet transfer and release login codes.
+    Body optional: { "note": "seen in GCash" }
+    """
+    data = request.get_json(silent=True) or {}
+    note = str(data.get("note") or "").strip()[:500]
+    oid = str(order_id or "").strip()
+
+    orders = load_orders()
+    found = None
+    for o in orders:
+        if str(o.get("id") or "") == oid:
+            found = o
+            break
+    if not found:
+        return jsonify({"error": "Order not found"}), 404
+    if found.get("paymentMode") != "manual_ewallet":
+        return jsonify({"error": "Not a manual e-wallet order"}), 400
+
+    st = str(found.get("status") or "").lower()
+    if st == "cancelled":
+        return jsonify({"error": "Order is cancelled"}), 400
+    if st == "refunded":
+        return jsonify({"error": "Order is refunded"}), 400
+
+    if note:
+        found["adminConfirmNote"] = note
+
+    try:
+        with _STORE_LOCK:
+            paid = _fulfill_manual_order_inplace(found)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 409
+    except Exception as e:
+        return jsonify({"error": f"Could not fulfill order: {e}"}), 500
+
+    return jsonify({"ok": True, "order": paid})
 
 
 @app.post("/api/admin/test-invoice")
@@ -4010,8 +4583,21 @@ def admin_static(path: str):
 
 @app.get("/robots.txt")
 def robots_txt():
-    """Always advertise sitemap on the preferred public domain."""
-    base = public_base_url()
+    """Canonical host: allow crawl. Render host: block everything (if redirect ever skipped)."""
+    if is_onrender_host():
+        body = (
+            "# Temporary Render hostname — do not index\n"
+            "User-agent: *\n"
+            "Disallow: /\n"
+            f"Sitemap: {preferred_site_url()}/sitemap.xml\n"
+        )
+        resp = make_response(body)
+        resp.headers["Content-Type"] = "text/plain; charset=utf-8"
+        resp.headers["X-Robots-Tag"] = "noindex, nofollow"
+        resp.headers["Cache-Control"] = "public, max-age=300"
+        return resp
+
+    base = preferred_site_url()
     body = (ROOT / "robots.txt").read_text(encoding="utf-8")
     # Force correct sitemap URL (file may still have an old host)
     if re.search(r"(?im)^Sitemap:\s*", body):
@@ -4019,7 +4605,7 @@ def robots_txt():
     else:
         body = body.rstrip() + f"\n\nSitemap: {base}/sitemap.xml\n"
     # Drop any leftover onrender references
-    body = body.replace("https://subsaverph.onrender.com", base)
+    body = re.sub(r"https?://[^\s]*onrender\.com", base, body, flags=re.I)
     resp = make_response(body)
     resp.headers["Content-Type"] = "text/plain; charset=utf-8"
     resp.headers["Cache-Control"] = "public, max-age=300"
@@ -4032,7 +4618,20 @@ def sitemap_xml():
     from html import escape as _esc
     from datetime import date
 
-    base = public_base_url().rstrip("/")
+    # Never list the Render hostname — only the permanent domain
+    if is_onrender_host():
+        empty = (
+            '<?xml version="1.0" encoding="UTF-8"?>\n'
+            '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+            "</urlset>\n"
+        )
+        resp = make_response(empty)
+        resp.headers["Content-Type"] = "application/xml; charset=utf-8"
+        resp.headers["X-Robots-Tag"] = "noindex, nofollow"
+        resp.headers["Cache-Control"] = "public, max-age=300"
+        return resp
+
+    base = preferred_site_url().rstrip("/")
     today = date.today().isoformat()
     urls: list[tuple[str, str, str]] = [
         (f"{base}/", "1.0", "daily"),
@@ -4055,6 +4654,9 @@ def sitemap_xml():
         '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
     ]
     for loc, pri, freq in urls:
+        # Safety: never emit onrender URLs
+        if "onrender.com" in loc.lower():
+            continue
         parts.append("  <url>")
         parts.append(f"    <loc>{loc}</loc>")
         parts.append(f"    <lastmod>{today}</lastmod>")

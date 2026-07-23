@@ -17,6 +17,7 @@ services:
         value: "1"
       - key: PAYMENT_MODE
         value: "live"
+      # Must be the custom domain — never *.onrender.com (that host 301s + noindex)
       - key: PUBLIC_URL
         value: "https://subsaverph.com"
       - key: ALLOW_DEMO_CHECKOUT

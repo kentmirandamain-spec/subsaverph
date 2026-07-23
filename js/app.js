@@ -66,6 +66,7 @@ const state = {
   paypalEnabled: false,
   cryptoEnabled: false,
   liqpayEnabled: false,
+  manualEwalletEnabled: false,
   ewalletProvider: "demo",
   paymentMethods: [],
 };
@@ -1248,9 +1249,20 @@ function paymentMethodsList() {
   return list;
 }
 
-const PH_EWALLETS = new Set(["gcash", "paymaya", "grab_pay", "shopeepay", "xendit"]);
+const PH_EWALLETS = new Set([
+  "gcash",
+  "paymaya",
+  "grab_pay",
+  "shopeepay",
+  "xendit",
+  "manual_gcash",
+  "manual_maya",
+]);
+const MANUAL_EWALLETS = new Set(["manual_gcash", "manual_maya"]);
 
 function payButtonLabel(method) {
+  if (method === "manual_gcash") return "Continue — scan GCash QR";
+  if (method === "manual_maya") return "Continue — scan Maya QR";
   if (method === "gcash") return "Continue to GCash";
   if (method === "paymaya") return "Continue to Maya";
   if (method === "grab_pay") return "Continue to GrabPay";
@@ -1283,6 +1295,8 @@ function viewCheckout() {
   const paypalOn = !!state.paypalEnabled || methods.some((m) => m.id === "paypal");
   const cryptoOn = !!state.cryptoEnabled || methods.some((m) => m.id === "crypto");
   const liqpayOn = !!state.liqpayEnabled || methods.some((m) => m.id === "liqpay");
+  const manualOn =
+    !!state.manualEwalletEnabled || methods.some((m) => MANUAL_EWALLETS.has(m.id));
   const ewalletBackend = state.ewalletProvider || (paymongoOn ? "paymongo" : xenditOn ? "xendit" : "demo");
   const isTestKey = String(state.stripePublishableKey || "").startsWith("pk_test_");
   const hasEwallet = methods.some((m) => PH_EWALLETS.has(m.id));
@@ -1330,15 +1344,25 @@ function viewCheckout() {
               xenditOn ||
               state.paypalEnabled ||
               state.cryptoEnabled ||
-              state.liqpayEnabled
-                ? "Pick a method below. You’ll be redirected to a secure payment page. Codes unlock after payment succeeds."
-                : "Demo mode — no real money. Add payment keys for live PayPal / Crypto / LiqPay."
+              state.liqpayEnabled ||
+              manualOn
+                ? "Pick a method below. Gateway methods redirect to a secure page. Manual GCash/Maya show our number so you can send payment — codes unlock after we confirm."
+                : "Demo mode — no real money. Add payment keys or set up manual GCash/Maya in Admin."
             }
           </p>
           ${
-            hasEwallet
+            manualOn
               ? `<p class="muted" style="margin:8px 0 0;font-size:0.8rem;text-transform:none;letter-spacing:0;font-weight:400">
-            <strong style="color:var(--text)">PH e-wallets</strong> (GCash, Maya, GrabPay, ShopeePay) bill in
+            <strong style="color:var(--text)">GCash / Maya QR</strong> —
+            scan our QR code, pay the exact amount, then submit your reference number.
+            Login codes are released after we verify payment (not instant).
+          </p>`
+              : ""
+          }
+          ${
+            hasEwallet && (paymongoOn || xenditOn || (!manualOn && ewalletBackend === "demo"))
+              ? `<p class="muted" style="margin:8px 0 0;font-size:0.8rem;text-transform:none;letter-spacing:0;font-weight:400">
+            <strong style="color:var(--text)">PH e-wallets (gateway)</strong> bill in
             <strong style="color:var(--text)">PHP</strong> via
             <strong style="color:var(--text)">${escapeHtml(ewalletBackend === "xendit" ? "Xendit" : ewalletBackend === "paymongo" ? "PayMongo" : "demo")}</strong>.
             ${
@@ -1563,6 +1587,117 @@ function checkoutTermsModalHtml(cart, totals) {
       </div>`;
 }
 
+function viewManualEwalletPending(order) {
+  const payTo = order.payTo || {};
+  const wallet = payTo.wallet || (order.method === "manual_maya" ? "Maya" : "GCash");
+  const accountName = payTo.name || "";
+  const amount =
+    order.amountFormatted ||
+    (order.amountPhp != null ? `₱${Number(order.amountPhp).toLocaleString("en-PH", { minimumFractionDigits: 2 })}` : "—");
+  const qrUrl =
+    (order.paymentInstructions && order.paymentInstructions.qrUrl) ||
+    payTo.qrUrl ||
+    "";
+  const steps = (order.paymentInstructions && order.paymentInstructions.steps) || [
+    `Open your ${wallet} app.`,
+    "Scan the QR code below.",
+    `Pay exactly ${amount}.`,
+    `Put Order ID ${order.id} in the message / reference if asked.`,
+    "Paste your payment reference below after paying.",
+    "We verify payment and release your codes.",
+  ];
+  const note = (order.paymentInstructions && order.paymentInstructions.note) || "";
+  const st = String(order.status || "").toLowerCase();
+  const submitted = st === "payment_submitted";
+  const itemsHtml = (order.items || [])
+    .map(
+      (i) =>
+        `<div class="line" style="margin-bottom:8px"><strong>${escapeHtml(i.name || i.id)}</strong> × ${escapeHtml(String(i.qty || 1))}</div>`
+    )
+    .join("");
+
+  return `
+    <div class="success">
+      <div class="success-card success-card-wide">
+        <div class="ok">${submitted ? "…" : "₱"}</div>
+        <h1>${submitted ? "Payment under review" : "Scan to pay with " + escapeHtml(wallet)}</h1>
+        <p class="muted">Order <strong class="success-order-id">${escapeHtml(order.id || "")}</strong>
+          · ${escapeHtml(order.email || "")}</p>
+        <p style="margin-top:10px;font-weight:600">${escapeHtml(
+          order.message ||
+            (submitted
+              ? "We received your reference. Codes unlock after we confirm payment."
+              : "Scan the QR, pay the exact amount, then submit your reference.")
+        )}</p>
+
+        <div class="manual-pay-box" role="region" aria-label="Payment QR instructions">
+          <h2 class="manual-pay-title">Pay exactly this amount</h2>
+          <div class="manual-pay-amount">${escapeHtml(amount)}</div>
+          ${
+            qrUrl
+              ? `<div class="manual-pay-qr">
+              <p class="manual-pay-qr-label">Scan with ${escapeHtml(wallet)}</p>
+              <img src="${escapeAttr(qrUrl)}" alt="${escapeAttr(wallet)} payment QR code" width="240" height="240" loading="lazy" />
+              ${accountName ? `<p class="manual-pay-qr-name">${escapeHtml(accountName)}</p>` : ""}
+            </div>`
+              : `<p class="err" style="color:#ff8a8a">QR code missing — contact support with Order ID ${escapeHtml(order.id || "")}.</p>`
+          }
+          <div class="manual-pay-grid" style="margin-top:16px">
+            <div>
+              <span class="manual-pay-label">Order ID (use as message / reference)</span>
+              <div class="manual-pay-value-row">
+                <code class="manual-pay-value" data-copy-text>${escapeHtml(order.id || "")}</code>
+                <button type="button" class="btn sm cred-copy" data-copy="${escapeAttr(order.id || "")}">Copy</button>
+              </div>
+            </div>
+          </div>
+          <ol class="manual-pay-steps">
+            ${steps.map((s) => `<li>${escapeHtml(s)}</li>`).join("")}
+          </ol>
+          ${note ? `<p class="muted" style="margin:12px 0 0;font-size:0.85rem">${escapeHtml(note)}</p>` : ""}
+        </div>
+
+        <div class="manual-pay-order-summary">
+          <h3 style="margin:0 0 8px;font-size:0.85rem;text-transform:uppercase;letter-spacing:.08em">Your order</h3>
+          ${itemsHtml || "<p class='muted'>—</p>"}
+        </div>
+
+        ${
+          submitted
+            ? `<div class="manual-pay-submitted">
+            <p><strong>Reference submitted:</strong> <code>${escapeHtml(order.paymentReference || "—")}</code></p>
+            <p class="muted" style="margin-top:8px">Status: <strong style="color:var(--text)">${escapeHtml(order.status)}</strong>.
+              Keep this page — refresh after we confirm to see your login codes.
+              Or email support with Order ID <strong style="color:var(--text)">${escapeHtml(order.id || "")}</strong>.</p>
+            <button type="button" class="btn solid" id="manualRefreshBtn" style="margin-top:14px">Check payment status</button>
+            <p class="err" id="manualProofErr" style="color:#ff8a8a;font-size:0.85rem;min-height:1.2em;margin-top:8px"></p>
+          </div>`
+            : `<form id="manualProofForm" class="form manual-proof-form" style="margin-top:20px">
+            <h3 style="margin:0 0 10px">I already sent payment</h3>
+            <label>GCash / Maya reference number
+              <input required name="paymentReference" placeholder="e.g. 1234 567 890123" autocomplete="off" />
+            </label>
+            <label>Optional note
+              <input name="note" placeholder="Time sent, sender name…" autocomplete="off" />
+            </label>
+            <p class="err" id="manualProofErr" style="color:#ff8a8a;font-size:0.85rem;min-height:1.2em"></p>
+            <button class="btn solid full" type="submit" id="manualProofBtn">Submit payment reference</button>
+          </form>`
+        }
+
+        <div class="support-inline" style="margin-top:22px">
+          <p class="muted" style="margin:0;font-size:0.9rem">Need help?</p>
+          <button type="button" class="btn ghost" data-go-support-order="${escapeAttr(order.id || "")}">Contact support</button>
+          <a class="btn ghost js-go-support" href="#/support">Support page</a>
+        </div>
+        <div class="cta" style="justify-content:center;margin-top:18px">
+          <a class="btn" href="#/deals">More deals</a>
+          <a class="btn" href="#/home">Home</a>
+        </div>
+      </div>
+    </div>`;
+}
+
 function viewSuccess() {
   let order = null;
   try {
@@ -1640,6 +1775,16 @@ function viewSuccess() {
 
   if (!order) {
     return `<div class="success"><div class="empty"><h2>No order</h2><a class="btn solid" href="#/deals">Shop</a></div></div>`;
+  }
+
+  // Manual e-wallet: show pay instructions until status is paid
+  const orderStatus = String(order.status || "").toLowerCase();
+  if (
+    order.paymentMode === "manual_ewallet" &&
+    orderStatus !== "paid" &&
+    orderStatus !== "refunded"
+  ) {
+    return viewManualEwalletPending(order);
   }
 
   /** Build full delivery packet: credentials + features + instructions + rules */
@@ -2239,6 +2384,105 @@ function bind() {
     });
   });
 
+  // Manual e-wallet: submit reference / refresh status
+  const manualProofForm = $("#manualProofForm");
+  if (manualProofForm) {
+    manualProofForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const errEl = $("#manualProofErr");
+      const btn = $("#manualProofBtn");
+      const fd = new FormData(manualProofForm);
+      let order = null;
+      try {
+        order = JSON.parse(sessionStorage.getItem("subsaverph_last") || "null");
+      } catch {
+        order = null;
+      }
+      if (!order?.id) {
+        if (errEl) errEl.textContent = "Order missing — start checkout again.";
+        return;
+      }
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = "Submitting…";
+      }
+      if (errEl) errEl.textContent = "";
+      try {
+        const res = await fetch("/api/checkout/manual/proof", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({
+            orderId: order.id,
+            email: order.email || "",
+            paymentReference: fd.get("paymentReference"),
+            note: fd.get("note") || "",
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || "Could not submit reference");
+        sessionStorage.setItem("subsaverph_last", JSON.stringify(data.order));
+        try {
+          saveOrder(data.order);
+        } catch {
+          /* optional */
+        }
+        toast("Reference submitted — waiting for confirmation");
+        render();
+      } catch (err) {
+        if (errEl) errEl.textContent = err.message || "Submit failed";
+        toast(err.message || "Submit failed", true);
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = "Submit payment reference";
+        }
+      }
+    });
+  }
+  const manualRefreshBtn = $("#manualRefreshBtn");
+  if (manualRefreshBtn) {
+    manualRefreshBtn.addEventListener("click", async () => {
+      const errEl = $("#manualProofErr");
+      let order = null;
+      try {
+        order = JSON.parse(sessionStorage.getItem("subsaverph_last") || "null");
+      } catch {
+        order = null;
+      }
+      if (!order?.id) return;
+      manualRefreshBtn.disabled = true;
+      manualRefreshBtn.textContent = "Checking…";
+      try {
+        const q = order.email
+          ? `?email=${encodeURIComponent(order.email)}`
+          : "";
+        const res = await fetch(
+          `/api/checkout/manual/${encodeURIComponent(order.id)}${q}`,
+          { credentials: "same-origin" }
+        );
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || "Could not load status");
+        sessionStorage.setItem("subsaverph_last", JSON.stringify(data.order));
+        try {
+          saveOrder(data.order);
+        } catch {
+          /* optional */
+        }
+        if (String(data.order?.status || "").toLowerCase() === "paid") {
+          toast("Payment confirmed — codes unlocked");
+        } else {
+          toast(`Status: ${data.order?.status || "pending"}`);
+        }
+        render();
+      } catch (err) {
+        if (errEl) errEl.textContent = err.message || "Refresh failed";
+        toast(err.message || "Refresh failed", true);
+        manualRefreshBtn.disabled = false;
+        manualRefreshBtn.textContent = "Check payment status";
+      }
+    });
+  }
+
   $$("[data-add]").forEach((btn) => {
     btn.addEventListener("click", () => {
       const deal = getDeal(btn.dataset.add);
@@ -2432,9 +2676,11 @@ function bind() {
           return;
         }
 
-        // Demo / instant order
+        // Manual e-wallet — pending payment instructions
         const order = data.order;
-        order.totalFormatted = formatMoney(cartTotals().total);
+        if (!order) throw new Error("Checkout failed — no order returned");
+        order.totalFormatted =
+          order.amountFormatted || formatMoney(cartTotals().total);
         sessionStorage.setItem("subsaverph_last", JSON.stringify(order));
         try {
           saveOrder(order);
@@ -2444,7 +2690,11 @@ function bind() {
         clearCart();
         updateBadge();
         closeTermsModal();
-        location.hash = "#/success";
+        if (data.provider === "manual" || data.pending || order.status === "awaiting_payment") {
+          location.hash = `#/success?manual=1&order=${encodeURIComponent(order.id || "")}`;
+        } else {
+          location.hash = "#/success";
+        }
       } catch (err) {
         const msg = err.message || "Checkout failed";
         if (termsErr) termsErr.textContent = msg;
@@ -2545,6 +2795,7 @@ async function loadLiveCatalog() {
     state.paypalEnabled = !!data.paypalEnabled;
     state.cryptoEnabled = !!data.cryptoEnabled;
     state.liqpayEnabled = !!data.liqpayEnabled;
+    state.manualEwalletEnabled = !!data.manualEwalletEnabled;
     state.ewalletProvider = data.ewalletProvider || "demo";
     state.paymentMethods = Array.isArray(data.paymentMethods)
       ? data.paymentMethods
