@@ -118,7 +118,7 @@ window.DEALS = [
     "active": true,
     "stockLeft": 2,
     "image": "/assets/products/cover-canva.png",
-    "imageSlide": "/assets/products/cover-canva-slide.png?v=slide3",
+    "imageSlide": "/assets/products/cover-canva-official-slide.png?v=official2",
     "logo": "/assets/products/cover-canva.png",
     "imageBg": "/assets/products/plate-canva.png",
     "brandColor": "#00c4cc"
@@ -157,7 +157,7 @@ window.DEALS = [
     "active": true,
     "stockLeft": 2,
     "image": "/assets/products/cover-canva.png",
-    "imageSlide": "/assets/products/cover-canva-slide.png?v=slide3",
+    "imageSlide": "/assets/products/cover-canva-official-slide.png?v=official2",
     "logo": "/assets/products/cover-canva.png",
     "imageBg": "/assets/products/plate-canva.png",
     "brandColor": "#00c4cc"

@@ -11362,3 +11362,20 @@ html[data-theme="light"] .hero-cat-box:hover {
     font-size: 0.62rem !important;
   }
 }
+
+/* Canva official slide art — full frame, no shrink */
+.product-slider--hero .product-slide--canva .product-cover-img,
+.product-slider--hero .product-slide--canva .product-cover-img--canva {
+  transform: none !important;
+  object-fit: cover !important;
+  object-position: center center !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  max-height: none !important;
+  position: absolute !important;
+  inset: 0 !important;
+}
+.product-slider--hero .product-slide--canva {
+  background: #00c4cc !important;
+}
