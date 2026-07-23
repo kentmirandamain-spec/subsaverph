@@ -10978,3 +10978,263 @@ html[data-theme="light"] .hero-cat-box {
 html[data-theme="light"] .hero-cat-box:hover {
   background: rgba(255, 255, 255, 0.62) !important;
 }
+
+/* ============================================================
+   Mobile only: center-align everything
+   ============================================================ */
+
+@media (max-width: 900px) {
+  .hero--with-slider .hero-content,
+  .hero--orbit .hero-content,
+  .hero-content {
+    text-align: center !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    align-items: center !important;
+  }
+
+  .hero--with-slider .hero-badge,
+  .hero-badge {
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+
+  .hero--with-slider .hero-title,
+  .hero-title,
+  .hero-title-stack {
+    text-align: center !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    align-items: center !important;
+  }
+
+  .hero--with-slider .hero-sub,
+  .hero--with-slider .lead,
+  .lead {
+    text-align: center !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+
+  .hero-search-wrap,
+  .hero--with-slider .hero-search-wrap {
+    margin-left: auto !important;
+    margin-right: auto !important;
+    width: 100% !important;
+  }
+
+  .hero--with-slider .search-tags,
+  .search-tags {
+    justify-content: center !important;
+    text-align: center !important;
+  }
+
+  .hero--with-slider .hero-cta,
+  .hero-cta,
+  .cta {
+    justify-content: center !important;
+    align-items: center !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+
+  .hero--with-slider .hero-stats,
+  .hero--with-slider .meta,
+  .meta {
+    justify-content: center !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    text-align: center !important;
+  }
+  .meta > div {
+    text-align: center !important;
+  }
+
+  /* Categories centered */
+  .hero-cats-block--v4,
+  .hero-cats-block {
+    text-align: center !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+  .hero-cats-head--v4,
+  .hero-cats-head {
+    justify-content: center !important;
+    text-align: center !important;
+  }
+  .hero-cats-kicker,
+  .hero-cats-lead {
+    text-align: center !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+  .hero-cat-board {
+    justify-items: center !important;
+  }
+  .hero-cat-box {
+    text-align: center !important;
+    align-items: center !important;
+  }
+  .hero-cat-box-copy {
+    align-items: center !important;
+    text-align: center !important;
+    width: 100% !important;
+  }
+  .hero-cat-box-name,
+  .hero-cat-box-desc {
+    text-align: center !important;
+  }
+  .hero-cat-box-foot {
+    justify-content: center !important;
+    gap: 0.45rem !important;
+  }
+  .hero-cat-box-num {
+    left: 50% !important;
+    right: auto !important;
+    transform: translateX(-50%);
+    top: 0.35rem !important;
+  }
+  .hero-cat-box--all {
+    justify-content: center !important;
+  }
+  .hero-cat-box--all .hero-cat-box-copy {
+    text-align: center !important;
+  }
+  .hero-cat-box--all .hero-cat-box-foot {
+    margin-left: 0 !important;
+  }
+
+  /* Pages / sections */
+  .page,
+  .page-inner,
+  .section-inner,
+  .home-deals-inner {
+    text-align: center !important;
+  }
+  .page-title,
+  .eyebrow,
+  .muted,
+  .section-head,
+  .section-head h2 {
+    text-align: center !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+  .section-head.row,
+  .section-head {
+    justify-content: center !important;
+    flex-direction: column !important;
+    align-items: center !important;
+  }
+
+  /* Product cards */
+  .product-card,
+  .card,
+  .product-card-body,
+  .card-body {
+    text-align: center !important;
+  }
+  .product-card-meta {
+    justify-content: center !important;
+  }
+  .product-card-title,
+  .listing-game,
+  .listing-price,
+  .listing-footer {
+    text-align: center !important;
+    justify-content: center !important;
+  }
+  .listing-footer {
+    flex-direction: column !important;
+    align-items: center !important;
+  }
+  .card-actions-row {
+    justify-content: center !important;
+  }
+  .product-card-media,
+  .card-media--logo {
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  /* Deals filters */
+  .deals-filters,
+  .filters.deals-filters {
+    align-items: center !important;
+    text-align: center !important;
+  }
+  .deals-filters .filter-group {
+    align-items: center !important;
+  }
+  .deals-filters .filter-group-title {
+    text-align: center !important;
+    width: 100%;
+  }
+  .deals-filters .filter-group-options {
+    justify-content: center !important;
+  }
+
+  /* Toolbar / search on pages */
+  .toolbar {
+    justify-content: center !important;
+    align-items: center !important;
+  }
+  .product-search,
+  .deals-search {
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+
+  /* Footer */
+  .footer,
+  .footer-shell,
+  .footer-top,
+  .footer-bottom,
+  .footer-links,
+  .footer-bar,
+  .footer-cols {
+    text-align: center !important;
+    justify-content: center !important;
+    align-items: center !important;
+  }
+  .footer-col,
+  .footer-col-left,
+  .footer-col-right {
+    text-align: center !important;
+  }
+  .footer-logo {
+    margin-left: auto !important;
+    margin-right: auto !important;
+    justify-content: center !important;
+  }
+
+  /* Detail / checkout */
+  .detail,
+  .detail-info,
+  .detail-panel,
+  .checkout,
+  .price-hero {
+    text-align: center !important;
+    justify-content: center !important;
+    align-items: center !important;
+  }
+  .detail .link {
+    display: inline-block;
+  }
+
+  /* Empty / search pages */
+  .empty,
+  .search-meta,
+  .search-empty-hero {
+    text-align: center !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .hero--with-slider .hero-cta .btn {
+    width: 100%;
+    max-width: 20rem;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
