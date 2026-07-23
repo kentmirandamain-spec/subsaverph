@@ -949,21 +949,66 @@ function viewHome() {
       </div>
     </section>
 
-    <section class="ops-rail" aria-label="Store status">
-      <div class="ops-rail-inner">
-        <div class="ops-rail-live">
-          <span class="launch-board-pulse" aria-hidden="true"></span>
-          <span class="ops-live-label">Live</span>
-          <strong class="ops-live-title">Ops feed</strong>
-          <span class="ops-live-items">
-            <span>${escapeHtml(c("strip1", "strip1"))}</span>
-            <span>${escapeHtml(c("strip2", "strip2"))}</span>
-          </span>
+    <section class="ops-rail ops-rail--v2" aria-label="Store status">
+      <div class="ops-rail-shell">
+        <div class="ops-rail-head">
+          <div class="ops-rail-status">
+            <span class="ops-pulse" aria-hidden="true"></span>
+            <div class="ops-rail-status-text">
+              <span class="ops-rail-kicker">Live ops</span>
+              <strong class="ops-rail-heading">Mission board</strong>
+            </div>
+          </div>
+          <div class="ops-rail-metrics" aria-label="Store metrics">
+            <div class="ops-metric">
+              <span class="ops-metric-val">${all.length}</span>
+              <span class="ops-metric-label">${escapeHtml(t("meta_plans") || "Plans")}</span>
+            </div>
+            <div class="ops-metric">
+              <span class="ops-metric-val">${brands.length}</span>
+              <span class="ops-metric-label">${escapeHtml(t("meta_platforms") || "Brands")}</span>
+            </div>
+            <div class="ops-metric">
+              <span class="ops-metric-val">${categories.length}</span>
+              <span class="ops-metric-label">${escapeHtml(t("categories_title") || "Categories")}</span>
+            </div>
+            <div class="ops-metric ops-metric--live">
+              <span class="ops-metric-val">24/7</span>
+              <span class="ops-metric-label">Online</span>
+            </div>
+          </div>
         </div>
-        <div class="ops-rail-promos">
-          <span class="ops-rail-promo-label">Signals</span>
-          <span class="ops-promo-chip">${escapeHtml(c("strip3", "strip3"))}</span>
-          <span class="ops-promo-chip">${escapeHtml(c("strip4", "strip4"))}</span>
+        <div class="ops-rail-body">
+          <div class="ops-feed" aria-label="Ops feed">
+            <span class="ops-feed-label">Feed</span>
+            <div class="ops-feed-track">
+              <div class="ops-feed-item">
+                <span class="ops-feed-dot" aria-hidden="true"></span>
+                <span class="ops-feed-text">${escapeHtml(c("strip1", "strip1") || "Instant digital delivery")}</span>
+              </div>
+              <div class="ops-feed-item">
+                <span class="ops-feed-dot" aria-hidden="true"></span>
+                <span class="ops-feed-text">${escapeHtml(c("strip2", "strip2") || "PHP-first pricing")}</span>
+              </div>
+              <div class="ops-feed-item">
+                <span class="ops-feed-dot" aria-hidden="true"></span>
+                <span class="ops-feed-text">${escapeHtml(c("strip3", "strip3") || "Secure checkout")}</span>
+              </div>
+              <div class="ops-feed-item">
+                <span class="ops-feed-dot" aria-hidden="true"></span>
+                <span class="ops-feed-text">${escapeHtml(c("strip4", "strip4") || "Multi-currency support")}</span>
+              </div>
+            </div>
+          </div>
+          <div class="ops-signals" aria-label="Signals">
+            <span class="ops-signals-label">Signals</span>
+            <div class="ops-signal-list">
+              <span class="ops-signal"><span class="ops-signal-ico" aria-hidden="true">⚡</span> Instant</span>
+              <span class="ops-signal"><span class="ops-signal-ico" aria-hidden="true">◎</span> Digital</span>
+              <span class="ops-signal"><span class="ops-signal-ico" aria-hidden="true">₱</span> PHP-ready</span>
+              <span class="ops-signal ops-signal--accent"><span class="ops-signal-ico" aria-hidden="true">✓</span> Verified store</span>
+            </div>
+          </div>
         </div>
       </div>
     </section>
