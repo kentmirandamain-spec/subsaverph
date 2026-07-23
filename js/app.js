@@ -75,38 +75,39 @@ function dealsList() {
   return Array.isArray(window.DEALS) ? window.DEALS : [];
 }
 
-/** Official brand photo (PNG) per brand — used on product cards. */
-/** Official brand logos (SVG marks) — fallback / small icons. */
+/**
+ * Real official brand logos (SVG marks / official wordmarks).
+ * Used on product cards, services, and homepage slider.
+ */
 const OFFICIAL_BRAND_LOGO = {
-  xAI: "/assets/products/logos/brand-xai-fixed.svg?v=official4",
-  Canva: "/assets/products/logos/brand-canva-fixed.svg?v=official4",
-  CapCut: "/assets/products/logos/brand-capcut-official.svg?v=official4",
-  Netflix: "/assets/products/logos/brand-netflix-fixed.svg?v=official4",
-  YouTube: "/assets/products/logos/brand-youtube-fixed.svg?v=official4",
-  Duolingo: "/assets/products/logos/brand-duolingo-fixed.svg?v=official4",
-  Spotify: "/assets/products/logos/brand-spotify-fixed.svg?v=official4",
+  xAI: "/assets/products/logos/brand-xai-fixed.svg?v=reallogo1",
+  Canva: "/assets/products/logos/brand-canva.png?v=reallogo1",
+  CapCut: "/assets/products/logos/brand-capcut-official.svg?v=reallogo1",
+  Netflix: "/assets/products/logos/brand-netflix-fixed.svg?v=reallogo1",
+  YouTube: "/assets/products/logos/youtube-full.svg?v=reallogo1",
+  Duolingo: "/assets/products/logos/brand-duolingo-fixed.svg?v=reallogo1",
+  Spotify: "/assets/products/logos/brand-spotify-fixed.svg?v=reallogo1",
 };
 /**
- * Official product photos used on cards / services (mobile + desktop).
- * Grok, CapCut, Duolingo, YouTube, Canva use full official art plates.
+ * Same real brand logos for card media + hero slides (logo-fit, not photo plates).
  */
 const OFFICIAL_BRAND_COVER = {
-  xAI: "/assets/products/photo-xai.png?v=official4",
-  Canva: "/assets/products/pc-canva.png?v=pcbrand1",
-  CapCut: "/assets/products/pc-capcut.png?v=pcbrand1",
-  YouTube: "/assets/products/pc-youtube.png?v=pcbrand1",
-  Duolingo: "/assets/products/photo-duolingo.png?v=official4",
-  Netflix: "/assets/products/photo-netflix.png?v=official4",
-  Spotify: "/assets/products/photo-spotify.png?v=official4",
+  xAI: "/assets/products/logos/brand-xai-fixed.svg?v=reallogo1",
+  Canva: "/assets/products/logos/brand-canva.png?v=reallogo1",
+  CapCut: "/assets/products/logos/brand-capcut-official.svg?v=reallogo1",
+  YouTube: "/assets/products/logos/youtube-full.svg?v=reallogo1",
+  Duolingo: "/assets/products/logos/brand-duolingo-fixed.svg?v=reallogo1",
+  Netflix: "/assets/products/logos/brand-netflix-fixed.svg?v=reallogo1",
+  Spotify: "/assets/products/logos/brand-spotify-fixed.svg?v=reallogo1",
 };
 const OFFICIAL_BRAND_SLIDE = {
-  xAI: "/assets/products/photo-xai-slide.png?v=official4",
-  Canva: "/assets/products/pc-canva-slide.png?v=pcbrand1",
-  CapCut: "/assets/products/pc-capcut-slide.png?v=pcbrand1",
-  Netflix: "/assets/products/photo-netflix-slide.png?v=official4",
-  YouTube: "/assets/products/pc-youtube-slide.png?v=pcbrand1",
-  Duolingo: "/assets/products/photo-duolingo-slide.png?v=official4",
-  Spotify: "/assets/products/photo-spotify-slide.png?v=official4",
+  xAI: "/assets/products/logos/brand-xai-fixed.svg?v=reallogo1",
+  Canva: "/assets/products/logos/brand-canva.png?v=reallogo1",
+  CapCut: "/assets/products/logos/brand-capcut-official.svg?v=reallogo1",
+  Netflix: "/assets/products/logos/brand-netflix-fixed.svg?v=reallogo1",
+  YouTube: "/assets/products/logos/youtube-full.svg?v=reallogo1",
+  Duolingo: "/assets/products/logos/brand-duolingo-fixed.svg?v=reallogo1",
+  Spotify: "/assets/products/logos/brand-spotify-fixed.svg?v=reallogo1",
 };
 
 /** Official brand logo path (SVG mark). */
@@ -128,47 +129,41 @@ function isProductPhoto(src) {
   return /\.(png|jpe?g|webp|gif)(\?|$)/i.test(s);
 }
 
-/** Brands that use full-frame official photo plates on cards/services. */
+/** Full-bleed cover plates disabled — real brand logos use logo-fit. */
 function brandUsesCover(brand) {
-  return (
-    brand === "Canva" ||
-    brand === "CapCut" ||
-    brand === "YouTube" ||
-    brand === "xAI" ||
-    brand === "Duolingo"
-  );
+  return false;
 }
 
 /**
- * Card/detail image: official brand photo for services when available.
+ * Card/detail image: real brand logo when available.
  */
 function productImage(d) {
   if (!d) return "";
-  // Official photos first (Grok, Canva, CapCut, YouTube, Duolingo, …)
-  if (d.brand && OFFICIAL_BRAND_COVER[d.brand]) return OFFICIAL_BRAND_COVER[d.brand];
   if (d.brand && OFFICIAL_BRAND_LOGO[d.brand]) return OFFICIAL_BRAND_LOGO[d.brand];
+  if (d.brand && OFFICIAL_BRAND_COVER[d.brand]) return OFFICIAL_BRAND_COVER[d.brand];
   if (d.logo) return String(d.logo);
   if (d.image) return String(d.image);
   return productLogo(d);
 }
 
-/** Homepage slider image. */
+/** Homepage slider image: real brand logo. */
 function productSlideImage(d) {
   if (!d) return "";
   if (d.brand && OFFICIAL_BRAND_SLIDE[d.brand]) return OFFICIAL_BRAND_SLIDE[d.brand];
+  if (d.brand && OFFICIAL_BRAND_LOGO[d.brand]) return OFFICIAL_BRAND_LOGO[d.brand];
   if (d.imageSlide && isProductPhoto(d.imageSlide)) return String(d.imageSlide);
   return productImage(d) || productLogo(d);
 }
 
 function productBrandColor(d) {
-  /* Dark plates so official logos stay visible in the hero slider */
+  /* Brand-colored plates so real logos stay visible in cards / slider */
   const map = {
     xAI: "#000000",
     Canva: "#00c4cc",
     CapCut: "#000000",
     Netflix: "#000000",
     YouTube: "#ffffff",
-    Duolingo: "#ffffff",
+    Duolingo: "#58cc02",
     Spotify: "#191414",
   };
   if (d?.brand && map[d.brand]) return map[d.brand];
@@ -541,15 +536,10 @@ function card(d, highlightQ = "") {
   const wished = isWished(d.id);
   const typeLabel = (d.category || "Plan").toUpperCase();
   const brandLabel = d.brand === "xAI" ? "SuperGrok" : d.brand || "";
-  /* Official photos full-bleed for key brands; others centered logo */
+  /* Real brand logos centered on brand color (no full-bleed photo plates) */
   const photo = isProductPhoto(img);
-  const fillFrame =
-    brandUsesCover(d.brand) ||
-    (photo &&
-      (/cover-/i.test(img) ||
-        /pc-(canva|capcut|youtube)/i.test(img) ||
-        /photo-(xai|youtube|duolingo|canva|capcut)/i.test(img)));
-  const logoFit = !fillFrame;
+  const fillFrame = false;
+  const logoFit = true;
   const photoFit = photo && !fillFrame;
   const saveHtml =
     !soldOut && d.original > d.price
@@ -1003,26 +993,14 @@ function viewHome() {
       ? slides
           .map((d, i) => {
             const slideSrc = productSlideImage(d) || "";
-            const isCover =
-              brandUsesCover(d.brand) ||
-              /cover-/i.test(slideSrc) ||
-              /pc-(canva|capcut|youtube)/i.test(slideSrc) ||
-              /photo-(xai|youtube|duolingo|canva|capcut)/i.test(slideSrc);
             const brandLabel = d.brand === "xAI" ? "SuperGrok" : d.brand || "";
-            const coverClass =
-              d.brand === "Canva"
-                ? " product-slide--cover product-slide--canva"
-                : d.brand === "CapCut"
-                  ? " product-slide--cover product-slide--capcut"
-                  : isCover
-                    ? " product-slide--cover"
-                    : " product-slide--logo-fit";
+            /* Always real brand logos, centered (logo-fit) */
             return `
-            <article class="product-slide${i === 0 ? " is-active" : ""}${coverClass}" data-slide-index="${i}" data-brand="${escapeAttr(d.brand || "")}" ${i === 0 ? "" : "hidden"} style="--brand-bg:${escapeAttr(productBrandColor(d))}">
+            <article class="product-slide${i === 0 ? " is-active" : ""} product-slide--logo-fit" data-slide-index="${i}" data-brand="${escapeAttr(d.brand || "")}" ${i === 0 ? "" : "hidden"} style="--brand-bg:${escapeAttr(productBrandColor(d))}">
               <a class="product-slide-link product-slide-link--logo" href="#/deal/${escapeAttr(d.id)}" tabindex="${i === 0 ? "0" : "-1"}">
                 <div class="product-slide-logo-wrap">
                   <img
-                    class="product-img product-slide-img${isCover ? " product-cover-img" : " product-logo-img product-logo-img--fit"}${d.brand === "Canva" ? " product-cover-img--canva" : ""}"
+                    class="product-img product-slide-img product-logo-img product-logo-img--fit"
                     src="${escapeAttr(slideSrc)}"
                     alt="${escapeAttr(brandLabel || d.name)}"
                     width="1280"
