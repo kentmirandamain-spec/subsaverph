@@ -13760,11 +13760,13 @@ html[data-theme="light"] .hero-cat-box:hover {
   height: 32px;
   display: grid;
   place-items: center;
+  align-self: center;
   border-radius: 8px;
   background: #ffffff;
   border: 1px solid rgba(15, 23, 42, 0.08);
   overflow: hidden;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+  order: 0;
 }
 .co-method-logo--wide {
   width: 72px;
@@ -13777,7 +13779,9 @@ html[data-theme="light"] .hero-cat-box:hover {
   max-width: 100% !important;
   max-height: 100% !important;
   object-fit: contain !important;
+  object-position: center center !important;
   padding: 4px !important;
+  margin: 0 !important;
   background: transparent !important;
 }
 .co-method--has-logo .co-method-body {
@@ -13789,17 +13793,134 @@ html[data-theme="light"] .co-method-logo {
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
 }
 
+/* Mobile: payment method row — radio | logo | text, all vertically centered */
 @media (max-width: 900px) {
-  .co-method-logo {
-    width: 40px;
-    height: 30px;
+  .page-checkout .co-methods,
+  .page-checkout--v2 .co-methods,
+  .co-methods {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    width: 100% !important;
   }
-  .co-method-logo--wide {
-    width: 64px;
-    height: 30px;
+
+  .page-checkout .co-method,
+  .page-checkout--v2 .co-method,
+  .co-method.co-method--has-logo,
+  label.co-method {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 10px !important;
+    width: 100% !important;
+    margin: 0 !important;
+    margin-bottom: 0 !important;
+    padding: 11px 12px !important;
+    text-align: left !important;
+    text-transform: none !important;
+    letter-spacing: 0 !important;
+    font-size: inherit !important;
+    font-weight: 400 !important;
+    color: var(--text) !important;
+    box-sizing: border-box !important;
   }
-  .co-method-logo-img {
-    padding: 3px !important;
+
+  .page-checkout .co-method-check,
+  .co-method .co-method-check {
+    flex: 0 0 20px !important;
+    width: 20px !important;
+    height: 20px !important;
+    margin: 0 !important;
+    align-self: center !important;
+    order: 1 !important;
+  }
+
+  .page-checkout .co-method-logo,
+  .co-method .co-method-logo {
+    flex: 0 0 auto !important;
+    width: 48px !important;
+    height: 34px !important;
+    min-width: 48px !important;
+    max-width: 48px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    align-self: center !important;
+    order: 2 !important;
+    display: grid !important;
+    place-items: center !important;
+    border-radius: 8px !important;
+    background: #ffffff !important;
+    overflow: hidden !important;
+  }
+
+  .page-checkout .co-method-logo--wide,
+  .co-method .co-method-logo--wide {
+    width: 68px !important;
+    min-width: 68px !important;
+    max-width: 68px !important;
+    height: 34px !important;
+  }
+
+  .page-checkout .co-method-logo-img,
+  .co-method .co-method-logo-img {
+    display: block !important;
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
+    object-fit: contain !important;
+    object-position: center center !important;
+    padding: 5px !important;
+    margin: 0 auto !important;
+    transform: none !important;
+  }
+
+  .page-checkout .co-method-body,
+  .co-method .co-method-body {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    order: 3 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    justify-content: center !important;
+    gap: 2px !important;
+    text-align: left !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .page-checkout .co-method-name,
+  .co-method .co-method-name {
+    display: block !important;
+    width: 100% !important;
+    text-align: left !important;
+    text-transform: none !important;
+    letter-spacing: 0.01em !important;
+    font-size: 0.92rem !important;
+    font-weight: 700 !important;
+    color: var(--text) !important;
+    line-height: 1.2 !important;
+  }
+
+  .page-checkout .co-method-meta,
+  .co-method .co-method-meta {
+    display: block !important;
+    width: 100% !important;
+    text-align: left !important;
+    text-transform: none !important;
+    letter-spacing: 0 !important;
+    font-size: 0.74rem !important;
+    font-weight: 400 !important;
+    color: var(--mute) !important;
+    line-height: 1.25 !important;
+  }
+
+  .page-checkout .co-group-label {
+    text-align: left !important;
+    margin: 12px 0 6px !important;
   }
 }
 .co-method--instant.is-checked .co-method-meta,
