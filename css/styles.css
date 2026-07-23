@@ -11381,44 +11381,11 @@ html[data-theme="light"] .hero-cat-box:hover {
 }
 
 /* ============================================================
-   Mobile: easier nav, 2-col categories, less noise
+   Mobile: easier nav + less noise
+   (shop-by-category 2-col simplification removed — restore 3-col)
    ============================================================ */
 
 @media (max-width: 900px) {
-  /* ---- Categories: always 2 columns ---- */
-  .hero-cat-board,
-  .hero-cats-block--v4 .hero-cat-board {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-    gap: 0.5rem !important;
-  }
-  .hero-cat-box,
-  .hero-cats-block--v4 .hero-cat-box {
-    min-height: 0 !important;
-    padding: 0.65rem 0.55rem 0.55rem !important;
-    gap: 0.35rem !important;
-    border-radius: 14px !important;
-  }
-  .hero-cat-box--all {
-    grid-column: 1 / -1 !important;
-  }
-  .hero-cat-box-num {
-    display: none !important; /* less noise */
-  }
-  .hero-cat-box-desc,
-  .hero-cats-lead {
-    display: none !important; /* less noise */
-  }
-  .hero-cat-box-mesh {
-    opacity: 0.2 !important;
-  }
-  .hero-cat-box-icon {
-    width: 2rem !important;
-    height: 2rem !important;
-  }
-  .hero-cat-box-name {
-    font-size: 0.8rem !important;
-  }
-
   /* ---- Less hero noise ---- */
   .hero--with-slider .hero-badge {
     font-size: 0.62rem !important;
@@ -11541,97 +11508,9 @@ html[data-theme="light"] .hero-cat-box:hover {
 }
 
 @media (max-width: 640px) {
-  .hero-cat-board {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-  }
   /* Single primary CTA full width */
   .hero--with-slider .hero-cta .btn.solid {
     width: 100% !important;
     max-width: 100% !important;
-  }
-}
-
-/* ============================================================
-   Undo mobile "shop by category" simplification (f84e129)
-   Restore prior mobile category board layout
-   ============================================================ */
-
-@media (max-width: 900px) {
-  .hero-cat-board,
-  .hero-cats-block--v4 .hero-cat-board {
-    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-    gap: 0.4rem !important;
-  }
-  .hero-cat-box,
-  .hero-cats-block--v4 .hero-cat-box {
-    min-height: 0 !important;
-    padding: 0.5rem 0.45rem 0.45rem !important;
-    gap: 0.28rem !important;
-    border-radius: 12px !important;
-  }
-  .hero-cat-box-num {
-    display: block !important;
-    top: 0.4rem !important;
-    right: 0.4rem !important;
-    left: auto !important;
-    transform: none !important;
-    font-size: 0.52rem !important;
-  }
-  .hero-cat-box-desc {
-    display: none !important; /* keep compact like pre-simple1 mobile */
-  }
-  .hero-cats-lead {
-    display: block !important;
-    font-size: 0.72rem !important;
-  }
-  .hero-cat-box-mesh {
-    opacity: 0.35 !important;
-  }
-  .hero-cat-box-icon {
-    width: 1.85rem !important;
-    height: 1.85rem !important;
-    border-radius: 9px !important;
-  }
-  .hero-cat-box-icon .hero-cat-svg {
-    width: 15px !important;
-    height: 15px !important;
-  }
-  .hero-cat-box-name {
-    font-size: 0.75rem !important;
-  }
-  .hero-cat-box-count {
-    font-size: 0.58rem !important;
-  }
-  .hero-cat-box-count strong {
-    font-size: 0.72rem !important;
-  }
-  .hero-cat-box-go {
-    width: 1.35rem !important;
-    height: 1.35rem !important;
-  }
-  .hero-cat-box--all {
-    grid-column: 1 / -1 !important;
-    flex-direction: row !important;
-    flex-wrap: nowrap !important;
-    align-items: center !important;
-    gap: 0.5rem !important;
-    padding: 0.5rem 0.65rem !important;
-  }
-  .hero-cat-box--all .hero-cat-box-copy {
-    flex: 1;
-    min-width: 0;
-  }
-  .hero-cat-box--all .hero-cat-box-foot {
-    width: auto;
-    margin-top: 0;
-    padding-top: 0;
-    border-top: none;
-    margin-left: auto;
-  }
-}
-
-@media (max-width: 640px) {
-  .hero-cat-board {
-    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
   }
 }
