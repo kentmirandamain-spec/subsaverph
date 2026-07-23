@@ -14028,3 +14028,50 @@ html[data-theme="light"] .co-method {
     padding: 0 8px !important;
   }
 }
+
+/* Official brand photos on service/product cards */
+.product-card[data-brand="xAI"] .product-card-media--cover,
+.product-card[data-brand="Canva"] .product-card-media--cover,
+.product-card[data-brand="CapCut"] .product-card-media--cover,
+.product-card[data-brand="YouTube"] .product-card-media--cover,
+.product-card[data-brand="Duolingo"] .product-card-media--cover {
+  background: var(--brand-bg, #0a0e16) !important;
+}
+.product-card[data-brand="xAI"] .product-cover-img,
+.product-card[data-brand="YouTube"] .product-cover-img,
+.product-card[data-brand="Duolingo"] .product-cover-img {
+  object-fit: contain !important;
+  object-position: center center !important;
+  padding: 12% !important;
+  box-sizing: border-box !important;
+}
+.product-card[data-brand="Canva"] .product-cover-img,
+.product-card[data-brand="CapCut"] .product-cover-img {
+  object-fit: cover !important;
+  object-position: center center !important;
+  padding: 0 !important;
+}
+
+@media (max-width: 900px) {
+  .deals-grid .product-card[data-brand="xAI"] .product-cover-img,
+  .deals-grid .product-card[data-brand="YouTube"] .product-cover-img,
+  .deals-grid .product-card[data-brand="Duolingo"] .product-cover-img,
+  .home-deals-inner .product-card[data-brand="xAI"] .product-cover-img,
+  .home-deals-inner .product-card[data-brand="YouTube"] .product-cover-img,
+  .home-deals-inner .product-card[data-brand="Duolingo"] .product-cover-img,
+  #view-all-deals .product-card[data-brand="xAI"] .product-cover-img,
+  #view-all-deals .product-card[data-brand="YouTube"] .product-cover-img,
+  #view-all-deals .product-card[data-brand="Duolingo"] .product-cover-img {
+    object-fit: contain !important;
+    padding: 14% !important;
+  }
+  .deals-grid .product-card[data-brand="Canva"] .product-cover-img,
+  .deals-grid .product-card[data-brand="CapCut"] .product-cover-img,
+  .home-deals-inner .product-card[data-brand="Canva"] .product-cover-img,
+  .home-deals-inner .product-card[data-brand="CapCut"] .product-cover-img,
+  #view-all-deals .product-card[data-brand="Canva"] .product-cover-img,
+  #view-all-deals .product-card[data-brand="CapCut"] .product-cover-img {
+    object-fit: cover !important;
+    padding: 0 !important;
+  }
+}

@@ -76,30 +76,37 @@ function dealsList() {
 }
 
 /** Official brand photo (PNG) per brand — used on product cards. */
-/** Official brand logos (SVG marks) + full-bleed brand covers where we have them. */
+/** Official brand logos (SVG marks) — fallback / small icons. */
 const OFFICIAL_BRAND_LOGO = {
-  xAI: "/assets/products/logos/brand-xai-fixed.svg?v=official3",
-  Canva: "/assets/products/logos/brand-canva-fixed.svg?v=official3",
-  CapCut: "/assets/products/logos/brand-capcut-official.svg?v=official3",
-  Netflix: "/assets/products/logos/brand-netflix-fixed.svg?v=official3",
-  YouTube: "/assets/products/logos/brand-youtube-fixed.svg?v=official3",
-  Duolingo: "/assets/products/logos/brand-duolingo-fixed.svg?v=official3",
-  Spotify: "/assets/products/logos/brand-spotify-fixed.svg?v=official3",
+  xAI: "/assets/products/logos/brand-xai-fixed.svg?v=official4",
+  Canva: "/assets/products/logos/brand-canva-fixed.svg?v=official4",
+  CapCut: "/assets/products/logos/brand-capcut-official.svg?v=official4",
+  Netflix: "/assets/products/logos/brand-netflix-fixed.svg?v=official4",
+  YouTube: "/assets/products/logos/brand-youtube-fixed.svg?v=official4",
+  Duolingo: "/assets/products/logos/brand-duolingo-fixed.svg?v=official4",
+  Spotify: "/assets/products/logos/brand-spotify-fixed.svg?v=official4",
 };
-/** Full-bleed official brand art for cards/slider (wordmark covers). */
+/**
+ * Official product photos used on cards / services (mobile + desktop).
+ * Grok, CapCut, Duolingo, YouTube, Canva use full official art plates.
+ */
 const OFFICIAL_BRAND_COVER = {
-  Canva: "/assets/products/cover-canva.png?v=official3",
-  CapCut: "/assets/products/cover-capcut-official.png?v=official3",
-  YouTube: "/assets/products/photo-youtube.png?v=official3",
+  xAI: "/assets/products/photo-xai.png?v=official4",
+  Canva: "/assets/products/cover-canva.png?v=official4",
+  CapCut: "/assets/products/cover-capcut-official.png?v=official4",
+  YouTube: "/assets/products/photo-youtube.png?v=official4",
+  Duolingo: "/assets/products/photo-duolingo.png?v=official4",
+  Netflix: "/assets/products/photo-netflix.png?v=official4",
+  Spotify: "/assets/products/photo-spotify.png?v=official4",
 };
 const OFFICIAL_BRAND_SLIDE = {
-  xAI: "/assets/products/logos/brand-xai-fixed.svg?v=official3",
-  Canva: "/assets/products/cover-canva-official-slide.png?v=official3",
-  CapCut: "/assets/products/cover-capcut-official.png?v=official3",
-  Netflix: "/assets/products/logos/brand-netflix-fixed.svg?v=official3",
-  YouTube: "/assets/products/photo-youtube-slide.png?v=official3",
-  Duolingo: "/assets/products/logos/brand-duolingo-fixed.svg?v=official3",
-  Spotify: "/assets/products/logos/brand-spotify-fixed.svg?v=official3",
+  xAI: "/assets/products/photo-xai-slide.png?v=official4",
+  Canva: "/assets/products/cover-canva-official-slide.png?v=official4",
+  CapCut: "/assets/products/cover-capcut-official.png?v=official4",
+  Netflix: "/assets/products/photo-netflix-slide.png?v=official4",
+  YouTube: "/assets/products/photo-youtube-slide.png?v=official4",
+  Duolingo: "/assets/products/photo-duolingo-slide.png?v=official4",
+  Spotify: "/assets/products/photo-spotify-slide.png?v=official4",
 };
 
 /** Official brand logo path (SVG mark). */
@@ -121,19 +128,24 @@ function isProductPhoto(src) {
   return /\.(png|jpe?g|webp|gif)(\?|$)/i.test(s);
 }
 
-/** True when brand uses full-bleed cover art on cards. */
+/** Brands that use full-frame official photo plates on cards/services. */
 function brandUsesCover(brand) {
-  return brand === "Canva" || brand === "CapCut";
+  return (
+    brand === "Canva" ||
+    brand === "CapCut" ||
+    brand === "YouTube" ||
+    brand === "xAI" ||
+    brand === "Duolingo"
+  );
 }
 
 /**
- * Card/detail image: official cover art when available, else official logo SVG.
+ * Card/detail image: official brand photo for services when available.
  */
 function productImage(d) {
   if (!d) return "";
-  // Full-bleed official brand art (Canva / CapCut / YouTube)
+  // Official photos first (Grok, Canva, CapCut, YouTube, Duolingo, …)
   if (d.brand && OFFICIAL_BRAND_COVER[d.brand]) return OFFICIAL_BRAND_COVER[d.brand];
-  // Official logo mark (Grok, Netflix, Duolingo, Spotify, …)
   if (d.brand && OFFICIAL_BRAND_LOGO[d.brand]) return OFFICIAL_BRAND_LOGO[d.brand];
   if (d.logo) return String(d.logo);
   if (d.image) return String(d.image);
@@ -529,13 +541,13 @@ function card(d, highlightQ = "") {
   const wished = isWished(d.id);
   const typeLabel = (d.category || "Plan").toUpperCase();
   const brandLabel = d.brand === "xAI" ? "SuperGrok" : d.brand || "";
-  /* Official logos centered on brand color; Canva/CapCut/YouTube use full-bleed art */
+  /* Official photos full-bleed for key brands; others centered logo */
   const photo = isProductPhoto(img);
   const fillFrame =
     brandUsesCover(d.brand) ||
-    (photo && (/cover-/i.test(img) || /photo-youtube/i.test(img) || d.brand === "YouTube"));
-  const logoFit = !fillFrame; /* official SVG / logo plate */
-  const photoFit = false; /* prefer logo-fit for official marks */
+    (photo && (/cover-/i.test(img) || /photo-(xai|youtube|duolingo|canva|capcut)/i.test(img)));
+  const logoFit = !fillFrame;
+  const photoFit = photo && !fillFrame;
   const saveHtml =
     !soldOut && d.original > d.price
       ? `<span class="price-compare">${formatDealPrice(d, "original")}</span>`
@@ -989,11 +1001,9 @@ function viewHome() {
           .map((d, i) => {
             const slideSrc = productSlideImage(d) || "";
             const isCover =
-              d.brand === "Canva" ||
-              d.brand === "CapCut" ||
-              d.brand === "YouTube" ||
+              brandUsesCover(d.brand) ||
               /cover-/i.test(slideSrc) ||
-              /photo-youtube/i.test(slideSrc);
+              /photo-(xai|youtube|duolingo|canva|capcut)/i.test(slideSrc);
             const brandLabel = d.brand === "xAI" ? "SuperGrok" : d.brand || "";
             const coverClass =
               d.brand === "Canva"
