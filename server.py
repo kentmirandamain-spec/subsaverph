@@ -1003,12 +1003,44 @@ def nowpayments_ip_info():
     )
 
 
+def _json_no_cache(payload, status: int = 200):
+    """JSON responses that must never be stale (stock, catalog)."""
+    resp = jsonify(payload)
+    resp.status_code = status
+    resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    resp.headers["Pragma"] = "no-cache"
+    resp.headers["Expires"] = "0"
+    return resp
+
+
+def sync_deal_stock_labels() -> None:
+    """Keep product.stock text in sync with inventory so admin + storefront stay aligned."""
+    deals = load_deals(include_inactive=True)
+    changed = False
+    for d in deals:
+        pid = d.get("id") or ""
+        if not pid:
+            continue
+        left = stock_count(pid)
+        if left <= 0:
+            label = "SOLD OUT"
+        elif left <= 5:
+            label = f"{left} in stock"
+        else:
+            label = "In stock"
+        if str(d.get("stock") or "") != label:
+            d["stock"] = label
+            changed = True
+    if changed:
+        save_deals(deals)
+
+
 @app.get("/api/deals")
 def api_deals():
     deals = load_deals(include_inactive=False)
     for d in deals:
         d["stockLeft"] = stock_count(d.get("id", ""))
-    return jsonify({"deals": deals})
+    return _json_no_cache({"deals": deals})
 
 
 @app.get("/api/settings")
@@ -1019,12 +1051,20 @@ def api_settings():
 @app.get("/api/catalog")
 def api_catalog():
     deals = load_deals(include_inactive=False)
-    # Attach stock counts (not the actual codes)
+    # Attach stock counts (not the actual codes) — always fresh from inventory.json
     for d in deals:
-        d["stockLeft"] = stock_count(d.get("id", ""))
+        left = stock_count(d.get("id", ""))
+        d["stockLeft"] = left
+        # Prefer live inventory over stale product.stock text
+        if left <= 0:
+            d["stock"] = "SOLD OUT"
+        elif left <= 5:
+            d["stock"] = f"{left} in stock"
+        else:
+            d["stock"] = "In stock"
     brands = sorted({d.get("brand", "") for d in deals if d.get("brand")})
     categories = sorted({d.get("category", "") for d in deals if d.get("category")})
-    return jsonify(
+    return _json_no_cache(
         {
             "deals": deals,
             "settings": load_settings(),
@@ -4137,6 +4177,11 @@ def admin_inventory_product(product_id: str):
 @require_admin
 def admin_add_codes(product_id: str):
     """Add stock codes. Body: { "codes": "CODE1\\nCODE2" } or { "codes": ["A","B"] }"""
+    # Ensure product exists (avoid orphan inventory keys that never show on site)
+    deals = load_deals(include_inactive=True)
+    if not any(d.get("id") == product_id for d in deals):
+        return jsonify({"error": f"Unknown product id: {product_id}"}), 404
+
     data = request.get_json(silent=True) or {}
     raw = data.get("codes")
     if isinstance(raw, str):
@@ -4146,30 +4191,50 @@ def admin_add_codes(product_id: str):
     else:
         return jsonify({"error": "Provide codes as text (one per line) or array"}), 400
 
-    inv = load_inventory()
-    existing = inv.get(product_id) or []
-    existing_set = {c.get("code") for c in existing}
-    added = 0
-    for code in lines:
-        if code in existing_set:
-            continue
-        existing.append(
-            {
-                "code": code,
+    with _STORE_LOCK:
+        inv = load_inventory()
+        existing = list(inv.get(product_id) or [])
+        existing_set = {str(c.get("code") or "") for c in existing}
+        # Also treat username:password as duplicate key
+        for c in existing:
+            u, p = c.get("username") or "", c.get("password") or ""
+            if u or p:
+                existing_set.add(f"{u}:{p}")
+        added = 0
+        for line in lines:
+            if line in existing_set:
+                continue
+            cred = parse_credential_entry(line)
+            row = {
+                "code": line,
                 "status": "available",
                 "addedAt": __import__("datetime").datetime.utcnow().isoformat() + "Z",
             }
-        )
-        existing_set.add(code)
-        added += 1
-    inv[product_id] = existing
-    save_inventory(inv)
+            if cred.get("username") or cred.get("password"):
+                row["username"] = cred.get("username") or ""
+                row["password"] = cred.get("password") or ""
+            existing.append(row)
+            existing_set.add(line)
+            added += 1
+        inv[product_id] = existing
+        save_inventory(inv)
+        available = sum(1 for c in existing if c.get("status", "available") == "available")
+        total = len(existing)
+
+    # Update product "stock" label so it matches Codes / Stock
+    try:
+        sync_deal_stock_labels()
+    except Exception:
+        pass
+
     return jsonify(
         {
             "ok": True,
             "added": added,
-            "available": sum(1 for c in existing if c.get("status") == "available"),
-            "total": len(existing),
+            "available": available,
+            "total": total,
+            "productId": product_id,
+            "stockLeft": available,
         }
     )
 
@@ -4179,10 +4244,15 @@ def admin_add_codes(product_id: str):
 @require_admin
 def admin_clear_product_inventory(product_id: str):
     """Remove all codes for one product (available + sold → 0). POST …/clear for Cloudflare."""
-    inv = load_inventory()
-    removed = len(inv.get(product_id) or [])
-    inv[product_id] = []
-    save_inventory(inv)
+    with _STORE_LOCK:
+        inv = load_inventory()
+        removed = len(inv.get(product_id) or [])
+        inv[product_id] = []
+        save_inventory(inv)
+    try:
+        sync_deal_stock_labels()
+    except Exception:
+        pass
     return jsonify({"ok": True, "productId": product_id, "removed": removed})
 
 
@@ -4219,6 +4289,10 @@ def admin_clear_all_inventory():
             removed += len(codes) - len(kept)
             inv[pid] = kept
     save_inventory(inv)
+    try:
+        sync_deal_stock_labels()
+    except Exception:
+        pass
     return jsonify({"ok": True, "mode": mode, "removed": removed})
 
 

@@ -2779,19 +2779,42 @@ function escapeAttr(s) {
   return escapeHtml(s).replace(/'/g, "&#39;");
 }
 
-async function loadLiveCatalog() {
+let _catalogLoadedAt = 0;
+let _catalogRefreshing = null;
+
+/** Re-fetch deals + stockLeft from inventory (admin Codes / Stock). */
+async function loadLiveCatalog(opts = {}) {
+  const force = !!opts.force;
   try {
-    const res = await fetch("/api/catalog", { credentials: "same-origin" });
+    const res = await fetch("/api/catalog", {
+      credentials: "same-origin",
+      cache: "no-store",
+      headers: { "Cache-Control": "no-cache", Pragma: "no-cache" },
+    });
     if (!res.ok) throw new Error("offline");
     const data = await res.json();
     if (Array.isArray(data.deals) && data.deals.length) {
-      window.DEALS = data.deals.map((d) => ({
-        ...d,
-        includes: Array.isArray(d.includes) ? d.includes : [],
-        badge: d.badge || null,
-        // stockLeft from API inventory; 0 = SOLD OUT
-        stockLeft: typeof d.stockLeft === "number" ? d.stockLeft : Number(d.stockLeft) || 0,
-      }));
+      window.DEALS = data.deals.map((d) => {
+        const left =
+          typeof d.stockLeft === "number"
+            ? d.stockLeft
+            : Number(d.stockLeft);
+        const stockLeft = Number.isFinite(left) ? left : 0;
+        return {
+          ...d,
+          includes: Array.isArray(d.includes) ? d.includes : [],
+          badge: d.badge || null,
+          // Live inventory count from /api/catalog (admin Codes / Stock)
+          stockLeft,
+          stock:
+            stockLeft <= 0
+              ? "SOLD OUT"
+              : stockLeft <= 5
+                ? `${stockLeft} in stock`
+                : d.stock || "In stock",
+        };
+      });
+      _catalogLoadedAt = Date.now();
     }
     if (data.settings) {
       state.settings = data.settings;
@@ -2882,6 +2905,43 @@ function bridgePathToHash() {
   }
 }
 
+/**
+ * Refresh catalog/stock if stale. Call when opening deals or returning to the tab.
+ * @param {{ force?: boolean, rerender?: boolean, maxAgeMs?: number }} opts
+ */
+async function refreshCatalogIfStale(opts = {}) {
+  const maxAge = opts.maxAgeMs ?? 8000;
+  const force = !!opts.force;
+  if (!force && _catalogLoadedAt && Date.now() - _catalogLoadedAt < maxAge) {
+    return false;
+  }
+  if (_catalogRefreshing) return _catalogRefreshing;
+  _catalogRefreshing = (async () => {
+    try {
+      const prev = JSON.stringify(
+        (window.DEALS || []).map((d) => [d.id, d.stockLeft])
+      );
+      await loadLiveCatalog({ force: true });
+      const next = JSON.stringify(
+        (window.DEALS || []).map((d) => [d.id, d.stockLeft])
+      );
+      if (opts.rerender && prev !== next) {
+        try {
+          render();
+        } catch {
+          /* ignore */
+        }
+      }
+      return true;
+    } catch {
+      return false;
+    } finally {
+      _catalogRefreshing = null;
+    }
+  })();
+  return _catalogRefreshing;
+}
+
 async function init() {
   try {
     if (!Array.isArray(window.DEALS)) window.DEALS = [];
@@ -2897,7 +2957,7 @@ async function init() {
     if (yearEl) yearEl.textContent = String(new Date().getFullYear());
 
     try {
-      await loadLiveCatalog();
+      await loadLiveCatalog({ force: true });
     } catch (e) {
       console.warn("catalog load failed, using bundled deals", e);
     }
@@ -3011,12 +3071,24 @@ async function init() {
     closeMobileMenu();
     parseRoute();
     window.scrollTo(0, 0);
+    // Pull latest stock when browsing catalog pages
+    refreshCatalogIfStale({ rerender: true });
   });
   window.addEventListener("cart:change", () => {
     updateBadge();
     if ($("#drawer").classList.contains("open")) renderCart();
   });
   window.addEventListener("rates:loaded", () => render());
+
+  // After adding stock in Admin, returning to the store refreshes counts
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+      refreshCatalogIfStale({ force: true, rerender: true });
+    }
+  });
+  window.addEventListener("focus", () => {
+    refreshCatalogIfStale({ force: true, rerender: true });
+  });
 
   // Footer + any Support CTA → Support page (email options are on that page)
   document.body.addEventListener("click", (e) => {

@@ -2143,7 +2143,19 @@ function bindShell() {
       });
       await loadInventory();
       state.stockProductId = "";
-      toast(`Added ${data.added} codes (${data.available} available)`);
+      // Reload products so Stock label on Products tab matches
+      try {
+        await loadAll();
+      } catch {
+        /* inventory toast still ok */
+      }
+      const left = data.available ?? data.stockLeft;
+      toast(
+        data.added
+          ? `Added ${data.added} codes · ${left} available on storefront (refresh shop if open)`
+          : `No new codes added (duplicates?) · ${left} available`
+      );
+      render();
     } catch (err) {
       toast(err.message, true);
     }
