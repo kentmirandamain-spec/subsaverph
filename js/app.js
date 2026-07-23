@@ -570,10 +570,11 @@ function card(d, highlightQ = "") {
   const fillFrame = false;
   const logoFit = true;
   const photoFit = photo && !fillFrame;
-  const saveHtml =
-    !soldOut && d.original > d.price
-      ? `<span class="price-compare">${formatDealPrice(d, "original")}</span>`
-      : "";
+  /* Always show retail + deal price on every card */
+  const hasRetail = d.original != null && Number(d.original) > 0;
+  const retailHtml = hasRetail
+    ? `<span class="price-compare" title="${escapeAttr(t("retail") || "Retail")}">${formatDealPrice(d, "original")}</span>`
+    : "";
   return `
     <article class="card product-card ${soldOut ? "sold-out" : ""}${fillFrame ? " product-card--cover" : ""}${logoFit ? " product-card--logo-fit" : ""}${photoFit ? " product-card--photo" : ""}${photo ? " product-card--has-photo" : ""}" data-product-id="${escapeAttr(d.id)}" data-brand="${escapeAttr(d.brand || "")}">
       <a class="product-card-media${fillFrame ? " product-card-media--cover" : photoFit ? " product-card-media--photo card-media--logo" : " card-media--logo"}${logoFit ? " product-card-media--logo-fit" : ""}${img ? " has-product-photo" : ""}" href="#/deal/${d.id}" style="--brand-bg:${escapeAttr(bg)}">
@@ -587,7 +588,7 @@ function card(d, highlightQ = "") {
             ? `<span class="product-badge sold-out-badge">${escapeHtml(t("sold_out"))}</span>`
             : d.badge
               ? `<span class="product-badge">${escapeHtml(d.badge)}</span>`
-              : !soldOut
+              : !soldOut && hasRetail && Number(d.original) > Number(d.price)
                 ? `<span class="product-badge">−${off(d)}%</span>`
                 : ""
         }
@@ -601,7 +602,7 @@ function card(d, highlightQ = "") {
         <p class="listing-game">${escapeHtml(brandLabel)}</p>
         <div class="listing-footer">
           <div class="listing-price">
-            ${saveHtml}
+            ${retailHtml}
             <span class="price-now">${formatDealPrice(d, "price")}</span>
             <small class="price-code">${escapeHtml(getCurrencyCode())}</small>
           </div>

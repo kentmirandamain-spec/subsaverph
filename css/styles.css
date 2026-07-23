@@ -8074,23 +8074,34 @@ html[data-theme="light"] .hero--orbit .hero-cat-chip:hover {
   margin-bottom: 0.75rem;
 }
 .listing-price {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
   font-size: 1.15rem;
   font-weight: 600;
   letter-spacing: -0.02em;
   color: var(--text);
-  line-height: 1.2;
+  line-height: 1.25;
+  min-width: 0;
 }
 .listing-price .price-compare,
 .price-compare {
-  display: block;
-  font-size: 0.75rem;
+  display: block !important;
+  visibility: visible !important;
+  font-size: 0.78rem;
   color: var(--mute-2);
   text-decoration: line-through;
   font-weight: 400;
-  margin-bottom: 0.1rem;
+  margin: 0;
+  line-height: 1.2;
 }
 .listing-price .price-now {
-  display: inline;
+  display: block;
+  font-size: 1.12rem;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.2;
 }
 .listing-price .price-code,
 .listing-price small {
@@ -8098,7 +8109,7 @@ html[data-theme="light"] .hero--orbit .hero-cat-chip:hover {
   font-size: 0.72rem;
   font-weight: 400;
   color: var(--mute-2);
-  margin-top: 0.1rem;
+  margin-top: 0;
   letter-spacing: 0.06em;
 }
 .seller {
@@ -11368,10 +11379,31 @@ html[data-theme="light"] .hero-cat-box:hover {
   .home-deals-inner .listing-price,
   #view-all-deals .listing-price {
     font-size: 0.82rem !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 1px !important;
   }
   .deals-grid .price-compare,
-  .deals-grid .price-code,
   .home-deals-inner .price-compare,
+  #view-all-deals .price-compare {
+    display: block !important;
+    visibility: visible !important;
+    font-size: 0.68rem !important;
+    text-decoration: line-through !important;
+    color: var(--mute-2) !important;
+    line-height: 1.15 !important;
+  }
+  .deals-grid .price-now,
+  .home-deals-inner .price-now,
+  #view-all-deals .price-now {
+    display: block !important;
+    font-size: 0.92rem !important;
+    font-weight: 700 !important;
+    line-height: 1.15 !important;
+  }
+  .deals-grid .price-code,
+  .home-deals-inner .price-code,
   #view-all-deals .price-code {
     font-size: 0.6rem !important;
   }
