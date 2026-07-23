@@ -9367,3 +9367,266 @@ html[data-theme="light"] .ops-signal {
     font-size: 0.7rem;
   }
 }
+
+/* ============================================================
+   Hero categories v3 — centered rail of modern tiles
+   ============================================================ */
+
+.hero-cats-block--v3 {
+  width: 100%;
+  max-width: min(100%, 820px);
+  margin: 1.35rem auto 0;
+  text-align: center;
+  position: relative;
+  z-index: 2;
+}
+
+.hero-cats-head--v3 {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 0.85rem;
+  align-items: center;
+}
+.hero-cats-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #e0f2fe;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
+}
+.hero-cats-kicker-line {
+  display: block;
+  width: 28px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(125, 211, 252, 0.85));
+}
+.hero-cats-kicker-line:last-child {
+  background: linear-gradient(90deg, rgba(125, 211, 252, 0.85), transparent);
+}
+
+/* Horizontal centered rail */
+.hero-cat-rail {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(108px, 1fr));
+  gap: 0.65rem;
+  width: 100%;
+  margin: 0 auto;
+  padding: 0.15rem;
+  box-sizing: border-box;
+}
+
+.hero-cat-tile {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: 118px;
+  padding: 0.95rem 0.65rem 0.8rem;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, transparent 48%),
+    rgba(8, 12, 22, 0.82);
+  color: #f8fafc;
+  cursor: pointer;
+  font: inherit;
+  text-align: center;
+  overflow: hidden;
+  transition:
+    transform 0.22s var(--ease),
+    border-color 0.22s var(--ease),
+    box-shadow 0.22s var(--ease),
+    background 0.22s var(--ease);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
+}
+.hero-cat-tile-glow {
+  position: absolute;
+  inset: auto 50% -30% auto;
+  width: 90px;
+  height: 90px;
+  transform: translateX(50%);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.28), transparent 68%);
+  opacity: 0.55;
+  pointer-events: none;
+  z-index: 0;
+  transition: opacity 0.22s, transform 0.22s;
+}
+.hero-cat-tile > *:not(.hero-cat-tile-glow) {
+  position: relative;
+  z-index: 1;
+}
+.hero-cat-tile:hover {
+  transform: translateY(-4px);
+  border-color: rgba(125, 211, 252, 0.5);
+  box-shadow:
+    0 16px 36px rgba(0, 0, 0, 0.4),
+    0 0 28px rgba(56, 189, 248, 0.14);
+  background:
+    linear-gradient(180deg, rgba(56, 189, 248, 0.14) 0%, transparent 50%),
+    rgba(10, 16, 28, 0.92);
+}
+.hero-cat-tile:hover .hero-cat-tile-glow {
+  opacity: 1;
+  transform: translateX(50%) scale(1.15);
+}
+
+.hero-cat-tile-icon {
+  width: 2.4rem;
+  height: 2.4rem;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  font-size: 1.1rem;
+  color: #7dd3fc;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  background: rgba(56, 189, 248, 0.12);
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.12);
+}
+.hero-cat-tile-name {
+  font-size: 0.88rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #ffffff;
+  line-height: 1.15;
+}
+.hero-cat-tile-meta {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.25rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.hero-cat-tile-count {
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #bae6fd;
+  letter-spacing: -0.02em;
+}
+.hero-cat-tile-label {
+  font-size: 0.58rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+.hero-cat-tile-hint {
+  font-size: 0.65rem;
+  color: #cbd5e1;
+  line-height: 1.25;
+  max-width: 11ch;
+  opacity: 0.9;
+}
+
+/* Per-category accent tones */
+.hero-cat-tile--ai .hero-cat-tile-icon {
+  color: #a5b4fc;
+  border-color: rgba(165, 180, 252, 0.4);
+  background: rgba(99, 102, 241, 0.16);
+  box-shadow: 0 0 16px rgba(99, 102, 241, 0.18);
+}
+.hero-cat-tile--ai .hero-cat-tile-glow {
+  background: radial-gradient(circle, rgba(129, 140, 248, 0.32), transparent 68%);
+}
+.hero-cat-tile--design .hero-cat-tile-icon {
+  color: #67e8f9;
+  border-color: rgba(103, 232, 249, 0.4);
+  background: rgba(6, 182, 212, 0.16);
+}
+.hero-cat-tile--design .hero-cat-tile-glow {
+  background: radial-gradient(circle, rgba(34, 211, 238, 0.3), transparent 68%);
+}
+.hero-cat-tile--video .hero-cat-tile-icon {
+  color: #f9a8d4;
+  border-color: rgba(249, 168, 212, 0.4);
+  background: rgba(236, 72, 153, 0.14);
+}
+.hero-cat-tile--video .hero-cat-tile-glow {
+  background: radial-gradient(circle, rgba(244, 114, 182, 0.28), transparent 68%);
+}
+.hero-cat-tile--stream .hero-cat-tile-icon {
+  color: #fca5a5;
+  border-color: rgba(252, 165, 165, 0.4);
+  background: rgba(239, 68, 68, 0.14);
+}
+.hero-cat-tile--stream .hero-cat-tile-glow {
+  background: radial-gradient(circle, rgba(248, 113, 113, 0.28), transparent 68%);
+}
+.hero-cat-tile--learn .hero-cat-tile-icon {
+  color: #86efac;
+  border-color: rgba(134, 239, 172, 0.4);
+  background: rgba(34, 197, 94, 0.14);
+}
+.hero-cat-tile--learn .hero-cat-tile-glow {
+  background: radial-gradient(circle, rgba(74, 222, 128, 0.28), transparent 68%);
+}
+.hero-cat-tile--all {
+  border-style: dashed;
+  border-color: rgba(125, 211, 252, 0.35);
+  background:
+    linear-gradient(180deg, rgba(56, 189, 248, 0.12) 0%, transparent 50%),
+    rgba(8, 12, 22, 0.75);
+}
+.hero-cat-tile--all .hero-cat-tile-icon {
+  color: #e0f2fe;
+  border-color: rgba(224, 242, 254, 0.35);
+  background: rgba(56, 189, 248, 0.16);
+}
+
+/* Hide older cat card layouts if present */
+.hero-cats-block--v3 .hero-cat-grid,
+.hero-cats-block--v3 .hero-cat-card {
+  display: none !important;
+}
+
+@media (max-width: 720px) {
+  .hero-cat-rail {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.5rem;
+  }
+  .hero-cat-tile {
+    min-height: 104px;
+    padding: 0.75rem 0.45rem 0.65rem;
+    border-radius: 14px;
+  }
+  .hero-cat-tile-hint {
+    display: none;
+  }
+  .hero-cat-tile-icon {
+    width: 2.1rem;
+    height: 2.1rem;
+    font-size: 1rem;
+  }
+}
+@media (max-width: 420px) {
+  .hero-cat-rail {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+html[data-theme="light"] .hero-cat-tile {
+  background: #ffffff;
+  border-color: rgba(15, 23, 42, 0.1);
+  color: #0f172a;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+}
+html[data-theme="light"] .hero-cat-tile-name {
+  color: #0f172a;
+}
+html[data-theme="light"] .hero-cat-tile-hint {
+  color: #64748b;
+}
+html[data-theme="light"] .hero-cats-kicker {
+  color: #0369a1;
+  text-shadow: none;
+}

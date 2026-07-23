@@ -797,6 +797,13 @@ function viewHome() {
     Streaming: "Watch & listen",
     Learning: "Study & languages",
   };
+  const catTone = {
+    AI: "ai",
+    Design: "design",
+    Video: "video",
+    Streaming: "stream",
+    Learning: "learn",
+  };
 
   /* One slide per brand so every brand logo appears in the carousel */
   const brandOrder = ["xAI", "Canva", "CapCut", "Netflix", "YouTube", "Duolingo", "Spotify"];
@@ -899,49 +906,39 @@ function viewHome() {
               ${searchBarHTML(t("search_placeholder"))}
             </div>
 
-            <div class="hero-cats-block" id="home-categories">
-              <div class="hero-cats-head">
-                <div>
-                  <p class="hero-cats-eyebrow">01 · Loadout</p>
-                  <h2 class="hero-cats-title">${escapeHtml(t("categories_title") || "Categories")}</h2>
-                </div>
-                <button type="button" class="link-arrow hero-cats-all" data-category="All">
-                  ${escapeHtml(t("all_deals") || "All deals")} →
-                </button>
+            <div class="hero-cats-block hero-cats-block--v3" id="home-categories">
+              <div class="hero-cats-head hero-cats-head--v3">
+                <p class="hero-cats-kicker">
+                  <span class="hero-cats-kicker-line" aria-hidden="true"></span>
+                  ${escapeHtml(t("categories_title") || "Categories")}
+                  <span class="hero-cats-kicker-line" aria-hidden="true"></span>
+                </p>
               </div>
-              <div class="hero-cat-grid" role="list" aria-label="${escapeAttr(t("categories_title") || "Categories")}">
+              <div class="hero-cat-rail" role="list" aria-label="${escapeAttr(t("categories_title") || "Categories")}">
                 ${categories
                   .map(
                     (cat, i) => `
-                  <button type="button" class="hero-cat-card" data-category="${escapeAttr(cat.key)}" role="listitem">
-                    <div class="hero-cat-card-top">
-                      <span class="hero-cat-card-icon" aria-hidden="true">${catIcons[cat.key] || cat.mono}</span>
-                      <span class="hero-cat-card-index">${String(i + 1).padStart(2, "0")}</span>
-                    </div>
-                    <div class="hero-cat-card-body">
-                      <h3 class="hero-cat-card-name">${escapeHtml(cat.label)}</h3>
-                      <p class="hero-cat-card-blurb">${escapeHtml(catBlurb[cat.key] || cat.label)}</p>
-                    </div>
-                    <div class="hero-cat-card-foot">
-                      <span class="hero-cat-card-count"><strong>${cat.count}</strong> ${escapeHtml(t("meta_plans") || "plans")}</span>
-                      <span class="hero-cat-card-go">Browse</span>
-                    </div>
+                  <button type="button" class="hero-cat-tile hero-cat-tile--${escapeAttr(catTone[cat.key] || "default")}" data-category="${escapeAttr(cat.key)}" role="listitem">
+                    <span class="hero-cat-tile-glow" aria-hidden="true"></span>
+                    <span class="hero-cat-tile-icon" aria-hidden="true">${catIcons[cat.key] || cat.mono}</span>
+                    <span class="hero-cat-tile-name">${escapeHtml(cat.label)}</span>
+                    <span class="hero-cat-tile-meta">
+                      <span class="hero-cat-tile-count">${cat.count}</span>
+                      <span class="hero-cat-tile-label">${escapeHtml(t("meta_plans") || "plans")}</span>
+                    </span>
+                    <span class="hero-cat-tile-hint">${escapeHtml(catBlurb[cat.key] || "")}</span>
                   </button>`
                   )
                   .join("")}
-                <button type="button" class="hero-cat-card hero-cat-card--all" data-category="All" role="listitem">
-                  <div class="hero-cat-card-top">
-                    <span class="hero-cat-card-icon" aria-hidden="true">∞</span>
-                    <span class="hero-cat-card-index">${String(categories.length + 1).padStart(2, "0")}</span>
-                  </div>
-                  <div class="hero-cat-card-body">
-                    <h3 class="hero-cat-card-name">${escapeHtml(t("all_deals") || "All deals")}</h3>
-                    <p class="hero-cat-card-blurb">Full catalog</p>
-                  </div>
-                  <div class="hero-cat-card-foot">
-                    <span class="hero-cat-card-count"><strong>${all.length}</strong> ${escapeHtml(t("meta_plans") || "plans")}</span>
-                    <span class="hero-cat-card-go">Open</span>
-                  </div>
+                <button type="button" class="hero-cat-tile hero-cat-tile--all" data-category="All" role="listitem">
+                  <span class="hero-cat-tile-glow" aria-hidden="true"></span>
+                  <span class="hero-cat-tile-icon" aria-hidden="true">∞</span>
+                  <span class="hero-cat-tile-name">${escapeHtml(t("all_deals") || "All deals")}</span>
+                  <span class="hero-cat-tile-meta">
+                    <span class="hero-cat-tile-count">${all.length}</span>
+                    <span class="hero-cat-tile-label">${escapeHtml(t("meta_plans") || "plans")}</span>
+                  </span>
+                  <span class="hero-cat-tile-hint">Browse full catalog</span>
                 </button>
               </div>
             </div>
