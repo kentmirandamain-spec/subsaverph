@@ -2066,12 +2066,12 @@ function viewManualEwalletPending(order) {
   const itemsHtml = (order.items || [])
     .map(
       (i) =>
-        `<div class="line" style="margin-bottom:8px"><strong>${escapeHtml(i.name || i.id)}</strong> × ${escapeHtml(String(i.qty || 1))}</div>`
+        `<div class="manual-pay-line"><span class="manual-pay-line-name">${escapeHtml(i.name || i.id)}</span><span class="manual-pay-line-qty">× ${escapeHtml(String(i.qty || 1))}</span></div>`
     )
     .join("");
 
   return `
-    <div class="success manual-pay-page">
+    <div class="success manual-pay-page${submitted ? " manual-pay-page--submitted" : ""}">
       <div class="success-card success-card-wide manual-pay-card">
         <div class="manual-pay-head">
           <div class="ok">${submitted ? "✓" : "₱"}</div>
@@ -2129,16 +2129,17 @@ function viewManualEwalletPending(order) {
           <button class="btn solid full" type="submit" id="manualProofBtn">Submit payment reference</button>
         </form>`
             : `<div class="manual-pay-box manual-pay-box--submitted" role="region" aria-label="Payment received">
-          <div class="manual-pay-grid">
+          <h2 class="manual-pay-title">Payment details</h2>
+          <div class="manual-pay-grid manual-pay-grid--submitted">
             <div class="manual-pay-field">
               <span class="manual-pay-label">Method</span>
-              <div class="manual-pay-value-row">
+              <div class="manual-pay-value-row manual-pay-value-row--solo">
                 <code class="manual-pay-value">${escapeHtml(wallet)} QR</code>
               </div>
             </div>
             <div class="manual-pay-field">
               <span class="manual-pay-label">Amount</span>
-              <div class="manual-pay-value-row">
+              <div class="manual-pay-value-row manual-pay-value-row--solo">
                 <code class="manual-pay-value">${escapeHtml(amount)}</code>
               </div>
             </div>
@@ -2164,13 +2165,13 @@ function viewManualEwalletPending(order) {
 
         <div class="manual-pay-order-summary">
           <h3 class="manual-pay-summary-title">Your order</h3>
-          ${itemsHtml || "<p class='muted'>—</p>"}
+          <div class="manual-pay-lines">${itemsHtml || "<p class='muted manual-pay-empty'>—</p>"}</div>
         </div>
 
         <div class="support-inline manual-pay-support">
           <button type="button" class="btn ghost" data-go-support-order="${escapeAttr(order.id || "")}">Contact support</button>
         </div>
-        <div class="cta" style="justify-content:center;margin-top:18px">
+        <div class="cta manual-pay-cta">
           <a class="btn" href="#/deals">More deals</a>
           <a class="btn" href="#/home">Home</a>
         </div>
