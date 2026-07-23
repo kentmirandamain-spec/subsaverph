@@ -578,8 +578,8 @@ function card(d, highlightQ = "") {
     (photo && /photo-(xai|canva|capcut|duolingo)|cover-canva|cover-capcut/i.test(img));
   const logoFit = !fillFrame;
   const photoFit = photo && !fillFrame;
-  /* Retail + deal price; no struck retail when sold out */
-  const hasRetail = !soldOut && d.original != null && Number(d.original) > 0;
+  /* Always show retail + deal price on every card */
+  const hasRetail = d.original != null && Number(d.original) > 0;
   const retailHtml = hasRetail
     ? `<span class="price-compare" title="${escapeAttr(t("retail") || "Retail")}">${formatDealPrice(d, "original")}</span>`
     : "";
