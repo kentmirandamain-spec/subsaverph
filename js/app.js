@@ -3123,6 +3123,7 @@ function bind() {
       if (!modal) return;
       modal.hidden = false;
       document.body.style.overflow = "hidden";
+      document.body.classList.add("terms-modal-open");
       if (termsAccept) termsAccept.checked = false;
       if (termsConfirm) termsConfirm.disabled = true;
       if (termsErr) termsErr.textContent = "";
@@ -3132,13 +3133,21 @@ function bind() {
       if (termsConfirm) {
         termsConfirm.textContent = totalLabel ? `Accept & pay · ${totalLabel}` : `Accept & ${label}`;
       }
-      termsAccept?.focus();
+      // Scroll sheet body to top so rules/actions aren't stuck off-screen
+      const body = modal.querySelector(".terms-modal-body");
+      if (body) body.scrollTop = 0;
+      // Keep accept actions in view on mobile
+      requestAnimationFrame(() => {
+        modal.querySelector(".terms-modal-foot")?.scrollIntoView?.({ block: "nearest" });
+      });
+      termsAccept?.focus({ preventScroll: true });
     };
 
     const closeTermsModal = () => {
       if (!modal) return;
       modal.hidden = true;
       document.body.style.overflow = "";
+      document.body.classList.remove("terms-modal-open");
     };
 
     form.querySelectorAll('input[name="method"]').forEach((el) => {

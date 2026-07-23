@@ -13161,3 +13161,113 @@ html[data-theme="light"] .hero-cat-box:hover {
     text-align: left !important;
   }
 }
+
+/* ============================================================
+   Mobile terms modal — fix bottom blocked / unscrollable sheet
+   ============================================================ */
+
+@media (max-width: 900px) {
+  /* Full-screen overlay above nav + chat */
+  .terms-modal {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 6000 !important;
+    display: flex !important;
+    align-items: flex-end !important;
+    justify-content: center !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    box-sizing: border-box !important;
+  }
+  .terms-modal[hidden] {
+    display: none !important;
+  }
+  .terms-modal-backdrop {
+    position: absolute !important;
+    inset: 0 !important;
+    z-index: 0 !important;
+  }
+
+  /* Bottom sheet: constrained height, flex column, foot always on screen */
+  .terms-modal-panel {
+    position: relative !important;
+    z-index: 1 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    border-radius: 18px 18px 0 0 !important;
+    border-left: none !important;
+    border-right: none !important;
+    border-bottom: none !important;
+    /* leave room for status bar / home indicator */
+    max-height: min(88dvh, calc(100svh - 8px)) !important;
+    height: auto !important;
+    min-height: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+  }
+
+  .terms-modal-head {
+    flex: 0 0 auto !important;
+    padding: 14px 48px 12px 16px !important;
+  }
+
+  /* Critical: allow body to shrink + scroll inside flex parent */
+  .terms-modal-body {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    overscroll-behavior: contain !important;
+    padding: 12px 16px 16px !important;
+    text-align: left !important;
+  }
+
+  /* Sticky actions always visible above home indicator */
+  .terms-modal-foot {
+    flex: 0 0 auto !important;
+    position: relative !important;
+    z-index: 3 !important;
+    margin: 0 !important;
+    padding: 12px 16px calc(16px + env(safe-area-inset-bottom, 0px)) !important;
+    border-top: 1px solid var(--line) !important;
+    background: var(--panel-solid, #0a0a0a) !important;
+    box-shadow: 0 -10px 28px rgba(0, 0, 0, 0.45) !important;
+    text-align: left !important;
+  }
+
+  .terms-actions {
+    flex-direction: column-reverse !important;
+    width: 100% !important;
+    gap: 8px !important;
+  }
+  .terms-actions .btn {
+    width: 100% !important;
+    min-height: 50px !important;
+    flex: none !important;
+  }
+
+  /* Hide floating chat so it cannot cover Accept & pay */
+  body.terms-modal-open #ssphChatRoot,
+  body.terms-modal-open .ssph-chat-fab {
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+  }
+
+  /* Ensure nothing under the sheet intercepts taps */
+  body.terms-modal-open {
+    overflow: hidden !important;
+    touch-action: none !important;
+  }
+  body.terms-modal-open .terms-modal-body {
+    touch-action: pan-y !important;
+  }
+}
