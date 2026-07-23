@@ -626,6 +626,25 @@ function viewHome() {
     label: b === "xAI" ? "SuperGrok" : b,
   }));
 
+  const catOrder = ["AI", "Design", "Video", "Streaming", "Learning"];
+  const catSet = [...new Set(all.map((d) => d.category).filter(Boolean))];
+  const catMono = {
+    AI: "AI",
+    Design: "DE",
+    Video: "VI",
+    Streaming: "ST",
+    Learning: "LN",
+  };
+  const categories = catOrder
+    .filter((c) => catSet.includes(c))
+    .concat(catSet.filter((c) => !catOrder.includes(c)))
+    .map((c) => ({
+      key: c,
+      mono: catMono[c] || (c.slice(0, 2) || "??").toUpperCase(),
+      label: c,
+      count: all.filter((d) => d.category === c).length,
+    }));
+
   /* When searching: only matching products — no platforms / catalog / mission clutter */
   if (q) {
     const found =
@@ -680,6 +699,37 @@ function viewHome() {
       <div>${escapeHtml(c("strip3", "strip3"))}</div>
       <div>${escapeHtml(c("strip4", "strip4"))}</div>
     </div>
+
+    <section class="section home-categories" id="home-categories">
+      <div class="section-inner">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">${escapeHtml(t("eyebrow_categories") || "Categories")}</p>
+            <h2>${escapeHtml(t("categories_title") || "Shop by category")}</h2>
+            <p class="muted" style="margin:8px 0 0;max-width:42ch">${escapeHtml(
+              t("categories_lead") || "Browse AI, Design, Video, Streaming, and Learning plans."
+            )}</p>
+          </div>
+        </div>
+        <div class="category-grid" role="list">
+          ${categories
+            .map(
+              (cat) => `
+            <button type="button" class="category-tile" data-category="${escapeAttr(cat.key)}" role="listitem">
+              <span class="category-tile-mono">${escapeHtml(cat.mono)}</span>
+              <span class="category-tile-name">${escapeHtml(cat.label)}</span>
+              <span class="category-tile-count">${cat.count} plan${cat.count === 1 ? "" : "s"}</span>
+            </button>`
+            )
+            .join("")}
+          <button type="button" class="category-tile category-tile-all" data-category="All" role="listitem">
+            <span class="category-tile-mono">ALL</span>
+            <span class="category-tile-name">${escapeHtml(t("all_deals") || "All deals")}</span>
+            <span class="category-tile-count">${all.length} plan${all.length === 1 ? "" : "s"}</span>
+          </button>
+        </div>
+      </div>
+    </section>
 
     <section class="section">
       <div class="section-inner">
@@ -2645,6 +2695,17 @@ function bind() {
     btn.addEventListener("click", () => {
       state.brand = btn.dataset.brand;
       state.category = "All";
+      state.query = "";
+      location.hash = "#/deals";
+      parseRoute();
+    });
+  });
+
+  $$("[data-category]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const cat = btn.dataset.category || "All";
+      state.category = cat;
+      state.brand = "All";
       state.query = "";
       location.hash = "#/deals";
       parseRoute();

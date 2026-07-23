@@ -1648,6 +1648,66 @@ html[data-theme="light"] .btn:hover {
   font-weight: 600;
 }
 
+/* Home category tiles */
+.home-categories .section-head {
+  margin-bottom: 22px;
+}
+.category-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.category-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  text-align: left;
+  padding: 22px 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: linear-gradient(165deg, rgba(56, 189, 248, 0.06) 0%, transparent 55%), var(--bg-card, var(--panel-solid));
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color var(--dur) var(--ease), transform var(--dur) var(--ease),
+    box-shadow var(--dur) var(--ease), background var(--dur) var(--ease);
+}
+.category-tile:hover {
+  border-color: rgba(56, 189, 248, 0.35);
+  box-shadow: var(--shadow-glow);
+  transform: translateY(-2px);
+  background: linear-gradient(165deg, rgba(56, 189, 248, 0.1) 0%, transparent 55%), var(--surface);
+}
+.category-tile-mono {
+  font-family: var(--display);
+  font-size: 1.15rem;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+}
+.category-tile-name {
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.category-tile-count {
+  font-size: 0.78rem;
+  color: var(--mute);
+}
+.category-tile-all {
+  border-style: dashed;
+  border-color: var(--line-strong);
+}
+@media (max-width: 900px) {
+  .category-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 480px) {
+  .category-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* DEAL GRID — Orbit card grid */
 .grid {
   display: grid;
