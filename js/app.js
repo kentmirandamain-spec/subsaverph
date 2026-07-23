@@ -769,22 +769,6 @@ function viewHome() {
       </div>
     </section>
 
-    <section class="section section-platforms">
-      <div class="section-inner">
-        <div class="brands brands--orbit">
-          ${brands
-            .map(
-              (b) => `
-            <button type="button" class="brand-tile" data-brand="${b.key}">
-              <div class="mono">${b.mono}</div>
-              <div class="name">${b.label}</div>
-            </button>`
-            )
-            .join("")}
-        </div>
-      </div>
-    </section>
-
     <section class="section home-view-all section-alt" id="view-all-deals">
       <div class="section-inner home-deals-inner">
         ${dealsCatalogBlockHTML()}
