@@ -8299,3 +8299,57 @@ html[data-theme="light"] .hero--orbit .hero-cat-chip:hover {
   object-fit: cover !important;
   filter: none !important;
 }
+
+/* Sold out — clear red danger styling */
+.product-badge.sold-out-badge,
+.pill.sold-out-pill {
+  background: #ef4444 !important;
+  border-color: #dc2626 !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 16px rgba(239, 68, 68, 0.35);
+}
+.stock-line.is-sold-out,
+.is-sold-out,
+.listing-delivery.is-sold-out {
+  color: #f87171 !important;
+  font-weight: 800;
+}
+.product-card.sold-out,
+.card.sold-out {
+  opacity: 1;
+  border-color: rgba(239, 68, 68, 0.35) !important;
+}
+.product-card.sold-out .price-now,
+.card.sold-out .price strong {
+  color: #f87171 !important;
+  text-decoration: line-through;
+  opacity: 0.95;
+}
+.btn.sold-out-btn,
+.sold-out-btn,
+.card-actions-row .btn-add-cart.sold-out-btn {
+  background: rgba(239, 68, 68, 0.12) !important;
+  color: #fca5a5 !important;
+  border-color: rgba(239, 68, 68, 0.55) !important;
+  cursor: not-allowed !important;
+  opacity: 1 !important;
+}
+.btn.sold-out-btn:hover,
+.sold-out-btn:hover,
+.card-actions-row .btn-add-cart.sold-out-btn:hover {
+  background: rgba(239, 68, 68, 0.16) !important;
+  color: #fecaca !important;
+  border-color: rgba(239, 68, 68, 0.7) !important;
+}
+.sold-out-big {
+  color: #f87171 !important;
+}
+.you-save.sold-out-banner {
+  background: #ef4444 !important;
+  color: #ffffff !important;
+  border-color: #dc2626 !important;
+}
+/* Instant line when sold out text is shown */
+.product-card.sold-out .listing-delivery {
+  color: #f87171 !important;
+}

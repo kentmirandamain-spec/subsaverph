@@ -443,7 +443,7 @@ function card(d, highlightQ = "") {
       <div class="product-card-body card-body">
         <div class="product-card-meta">
           <span class="listing-type">${escapeHtml(typeLabel)}</span>
-          <span class="listing-delivery delivery-instant">${escapeHtml(soldOut ? t("sold_out") : "Instant")}</span>
+          <span class="listing-delivery${soldOut ? " is-sold-out" : " delivery-instant"}">${escapeHtml(soldOut ? t("sold_out") : "Instant")}</span>
         </div>
         <a class="product-card-title" href="#/deal/${d.id}">${nameHtml}</a>
         <p class="listing-game">${escapeHtml(brandLabel)}</p>

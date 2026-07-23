@@ -199,7 +199,7 @@ window.DEALS = [
     "imageSlide": "/assets/products/cover-capcut.png",
     "logo": "/assets/products/cover-capcut.png",
     "imageBg": "/assets/products/plate-capcut.png",
-    "brandColor": "#000000"
+    "brandColor": "#0a0c14"
   },
   {
     "id": "capcut-std",
@@ -237,7 +237,7 @@ window.DEALS = [
     "imageSlide": "/assets/products/cover-capcut.png",
     "logo": "/assets/products/cover-capcut.png",
     "imageBg": "/assets/products/plate-capcut.png",
-    "brandColor": "#000000"
+    "brandColor": "#0a0c14"
   },
   {
     "id": "netflix-prem",
