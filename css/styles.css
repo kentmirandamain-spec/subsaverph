@@ -12614,13 +12614,13 @@ html[data-theme="light"] .hero-cat-box:hover {
     margin-top: 0 !important;
   }
 
-  .page-checkout .form label {
+  .page-checkout .form label:not(.co-method) {
     text-align: center !important;
     align-items: center !important;
     width: 100%;
   }
 
-  .page-checkout .form input:not([type="checkbox"]) {
+  .page-checkout .form input:not([type="checkbox"]):not([type="radio"]) {
     text-align: center !important;
     width: 100% !important;
     max-width: 100% !important;
@@ -12987,8 +12987,8 @@ html[data-theme="light"] .hero-cat-box:hover {
     margin-top: 0 !important;
   }
 
-  /* Contact fields � left label + left input */
-  .page-checkout .form label {
+  /* Contact fields — left label + left input (do not apply to payment method rows) */
+  .page-checkout .form label:not(.co-method):not(.check):not(.terms-accept-label) {
     display: flex !important;
     flex-direction: column !important;
     align-items: stretch !important;
