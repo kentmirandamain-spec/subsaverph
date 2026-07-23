@@ -7737,34 +7737,11 @@ html[data-theme="light"] .hero--orbit .hero-cat-chip:hover {
   background: linear-gradient(90deg, #38bdf8, #818cf8);
 }
 
-.product-slider-controls {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  display: flex;
-  gap: 6px;
-  z-index: 5;
-}
-.product-slider-btn {
-  width: 36px;
-  height: 36px;
-  display: grid;
-  place-items: center;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(6, 8, 15, 0.55);
-  backdrop-filter: blur(10px);
-  color: #eef2f7;
-  cursor: pointer;
-  transition: background 0.2s, border-color 0.2s;
-}
-.product-slider-btn:hover {
-  background: rgba(56, 189, 248, 0.18);
-  border-color: rgba(56, 189, 248, 0.45);
-}
-.product-slider-pause[aria-pressed="true"] {
-  border-color: rgba(56, 189, 248, 0.5);
-  background: rgba(56, 189, 248, 0.15);
+/* Prev / next / pause buttons removed from slider markup */
+.product-slider-controls,
+.product-slider-btn,
+.product-slider-pause {
+  display: none !important;
 }
 
 .product-slider-dots {
@@ -12359,7 +12336,7 @@ html[data-theme="light"] .hero-cat-box:hover {
 }
 
 /* ============================================================
-   Mobile checkout — center, order, rules & regulations
+   Mobile checkout ï¿½ center, order, rules & regulations
    ============================================================ */
 
 .checkout-section-title {
@@ -12606,7 +12583,7 @@ html[data-theme="light"] .hero-cat-box:hover {
     width: 100% !important;
   }
 
-  /* Order lines — neat centered stack */
+  /* Order lines ï¿½ neat centered stack */
   .page-checkout .line {
     grid-template-columns: 40px 1fr auto !important;
     text-align: left !important;
@@ -12695,7 +12672,7 @@ html[data-theme="light"] .hero-cat-box:hover {
     text-align: center !important;
   }
 
-  /* ---- Terms / rules modal — ordered & readable ---- */
+  /* ---- Terms / rules modal ï¿½ ordered & readable ---- */
   .terms-modal {
     align-items: flex-end !important;
     justify-content: center !important;
@@ -12864,7 +12841,7 @@ html[data-theme="light"] .hero-cat-box:hover {
 }
 
 @media (max-width: 900px) {
-  /* Keep checkout simple — hide noisy rates line under order total */
+  /* Keep checkout simple ï¿½ hide noisy rates line under order total */
   .page-checkout .rates {
     display: none !important;
   }
@@ -12894,7 +12871,7 @@ html[data-theme="light"] .hero-cat-box:hover {
     margin-right: auto !important;
   }
 
-  /* Title block only — centered */
+  /* Title block only ï¿½ centered */
   .checkout-page-head {
     display: flex !important;
     flex-direction: column !important;
@@ -12952,7 +12929,7 @@ html[data-theme="light"] .hero-cat-box:hover {
     margin-top: 0 !important;
   }
 
-  /* Contact fields — left label + left input */
+  /* Contact fields ï¿½ left label + left input */
   .page-checkout .form label {
     display: flex !important;
     flex-direction: column !important;
@@ -13049,7 +13026,7 @@ html[data-theme="light"] .hero-cat-box:hover {
     border-top: 1px solid var(--line) !important;
   }
 
-  /* Payment methods — radio left, text left */
+  /* Payment methods ï¿½ radio left, text left */
   .page-checkout .pay-group-label {
     text-align: left !important;
     width: 100% !important;
@@ -13163,7 +13140,7 @@ html[data-theme="light"] .hero-cat-box:hover {
 }
 
 /* ============================================================
-   Mobile terms modal — fix bottom blocked / unscrollable sheet
+   Mobile terms modal ï¿½ fix bottom blocked / unscrollable sheet
    ============================================================ */
 
 @media (max-width: 900px) {
@@ -13373,7 +13350,7 @@ html[data-theme="light"] .hero-cat-box:hover {
 }
 
 /* ============================================================
-   Checkout redesign v2 — mobile-first clean flow
+   Checkout redesign v2 ï¿½ mobile-first clean flow
    ============================================================ */
 
 .page-checkout--v2 {
@@ -13906,7 +13883,7 @@ html[data-theme="light"] .co-method {
     }
   }
 
-  /* 2) Search — between logo and currency */
+  /* 2) Search ï¿½ between logo and currency */
   .nav-search,
   #globalSearch,
   .nav-inner > .nav-search {

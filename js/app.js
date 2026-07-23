@@ -1051,18 +1051,6 @@ function viewHome() {
           <div class="product-slider-progress" aria-hidden="true">
             <div class="product-slider-progress-bar" id="productSliderProgress"></div>
           </div>
-          <div class="product-slider-controls">
-            <button type="button" class="product-slider-btn" id="productSliderPrev" aria-label="Previous product">
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg>
-            </button>
-            <button type="button" class="product-slider-btn" id="productSliderNext" aria-label="Next product">
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>
-            </button>
-            <button type="button" class="product-slider-btn product-slider-pause" id="productSliderPause" aria-label="Pause slideshow" aria-pressed="false">
-              <svg class="icon-pause" viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
-              <svg class="icon-play" viewBox="0 0 24 24" width="14" height="14" fill="currentColor" hidden><path d="M8 5v14l11-7z"/></svg>
-            </button>
-          </div>
           <div class="product-slider-dots" id="productSliderDots" role="tablist" aria-label="Product slides">
             ${slides
               .map(
@@ -2652,7 +2640,7 @@ function render() {
   }
 }
 
-/** Homepage product image carousel (autoplay + controls). */
+/** Homepage product image carousel (autoplay; no prev/next/pause buttons). */
 let _productSliderTimer = null;
 let _productSliderProgressTimer = null;
 
@@ -2675,13 +2663,9 @@ function bindProductSlider() {
   const slides = $$(".product-slide", root);
   const dots = $$(".product-slider-dot", root);
   const progress = $("#productSliderProgress");
-  const btnPrev = $("#productSliderPrev");
-  const btnNext = $("#productSliderNext");
-  const btnPause = $("#productSliderPause");
   if (slides.length < 2) return;
 
   let index = 0;
-  let paused = false;
   const DURATION = 4500;
 
   const show = (i) => {
@@ -2704,10 +2688,8 @@ function bindProductSlider() {
       progress.style.width = "0%";
       // force reflow then animate
       void progress.offsetWidth;
-      if (!paused) {
-        progress.style.transition = `width ${DURATION}ms linear`;
-        progress.style.width = "100%";
-      }
+      progress.style.transition = `width ${DURATION}ms linear`;
+      progress.style.width = "100%";
     }
   };
 
@@ -2716,7 +2698,7 @@ function bindProductSlider() {
 
   const startAuto = () => {
     stopProductSlider();
-    if (paused || document.hidden) return;
+    if (document.hidden) return;
     if (progress) {
       progress.style.transition = "none";
       progress.style.width = "0%";
@@ -2727,38 +2709,12 @@ function bindProductSlider() {
     _productSliderTimer = setInterval(next, DURATION);
   };
 
-  btnPrev?.addEventListener("click", () => {
-    prev();
-    startAuto();
-  });
-  btnNext?.addEventListener("click", () => {
-    next();
-    startAuto();
-  });
   dots.forEach((dot) => {
     dot.addEventListener("click", () => {
       const to = Number(dot.getAttribute("data-slide-to") || 0);
       show(to);
       startAuto();
     });
-  });
-  btnPause?.addEventListener("click", () => {
-    paused = !paused;
-    btnPause.setAttribute("aria-pressed", paused ? "true" : "false");
-    btnPause.setAttribute("aria-label", paused ? "Play slideshow" : "Pause slideshow");
-    const pauseIcon = btnPause.querySelector(".icon-pause");
-    const playIcon = btnPause.querySelector(".icon-play");
-    if (pauseIcon) pauseIcon.hidden = paused;
-    if (playIcon) playIcon.hidden = !paused;
-    if (paused) {
-      stopProductSlider();
-      if (progress) {
-        progress.style.transition = "none";
-      }
-    } else {
-      show(index);
-      startAuto();
-    }
   });
 
   /* Mobile swipe between brands */
@@ -2794,7 +2750,7 @@ function bindProductSlider() {
   );
 
   window.__ssphSliderResume = () => {
-    if (!paused && !document.hidden) startAuto();
+    if (!document.hidden) startAuto();
   };
 
   if (!window.__ssphSliderVisBound) {
