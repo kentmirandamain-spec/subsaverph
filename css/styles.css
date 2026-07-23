@@ -2241,6 +2241,52 @@ html[data-theme="light"] .badge {
   margin: 16px 0 20px !important;
 }
 
+/* E-wallet delivery ETA notice (checkout + pay page) */
+.ewallet-eta-notice {
+  margin: 12px 0 0;
+  padding: 12px 14px;
+  border: 1px solid var(--line-strong);
+  border-left: 3px solid var(--text);
+  background: var(--soft-fill);
+  border-radius: var(--radius-sm);
+  text-align: left;
+}
+.ewallet-eta-notice strong {
+  display: block;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+  color: var(--text);
+}
+.ewallet-eta-notice p {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--mute);
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 400;
+}
+.ewallet-eta-notice-page {
+  margin: 16px 0;
+}
+.ewallet-eta-notice-page strong {
+  font-size: 0.9rem;
+  letter-spacing: 0.06em;
+}
+.ewallet-eta-notice-page p {
+  margin-top: 6px;
+  color: var(--mute);
+}
+.ewallet-eta-notice-page p strong {
+  display: inline;
+  font-size: inherit;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text);
+}
+
 /* Manual e-wallet pay instructions */
 .manual-pay-box {
   margin: 20px 0 16px;

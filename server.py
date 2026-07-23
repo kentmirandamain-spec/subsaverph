@@ -1792,7 +1792,7 @@ def available_payment_methods() -> list:
                     "id": "manual_gcash",
                     "label": "GCash (QR)",
                     "provider": "manual",
-                    "desc": "Scan our GCash QR — codes after we confirm",
+                    "desc": "Scan QR · delivery in 10–30 minutes after payment",
                     "group": "ewallet",
                 }
             )
@@ -1802,7 +1802,7 @@ def available_payment_methods() -> list:
                     "id": "manual_maya",
                     "label": "Maya (QR)",
                     "provider": "manual",
-                    "desc": "Scan our Maya QR — codes after we confirm",
+                    "desc": "Scan QR · delivery in 10–30 minutes after payment",
                     "group": "ewallet",
                 }
             )
@@ -2119,18 +2119,21 @@ def _manual_ewallet_checkout(email, name, method, normalized, cart_meta):
                 f"Pay exactly ₱{amount_php:,.2f}{name_bit}.",
                 f"Put Order ID {order_id} in the message / notes field if asked.",
                 "After paying, paste your payment reference below and submit.",
-                "We verify the transfer and release your login codes.",
+                "Delivery of login codes: usually 10–30 minutes after we verify payment.",
             ],
             "note": cfg.get("note") or "",
             "qrUrl": qr_url,
+            "deliveryEta": "10–30 minutes",
         },
         "paymentReference": "",
         "paymentProofNote": "",
         "createdAt": __import__("datetime").datetime.utcnow().isoformat() + "Z",
         "delivery": "after_confirm",
+        "deliveryEta": "10–30 minutes",
         "message": (
             f"Scan the {wallet} QR and pay ₱{amount_php:,.2f}. "
-            f"Use Order ID {order_id} as reference. Codes unlock after we confirm payment."
+            f"Use Order ID {order_id} as reference. "
+            f"Login codes are delivered in about 10–30 minutes after payment is verified."
         ),
         "emailSent": False,
     }
@@ -2188,9 +2191,10 @@ def api_manual_proof():
         "paymentReference": ref[:120],
         "paymentProofNote": note,
         "paymentSubmittedAt": __import__("datetime").datetime.utcnow().isoformat() + "Z",
+        "deliveryEta": found.get("deliveryEta") or "10–30 minutes",
         "message": (
             "Payment reference received. We are verifying your transfer. "
-            "Codes will unlock once payment is confirmed."
+            "Login codes are usually delivered within 10–30 minutes after confirmation."
         ),
     }
     orders[idx] = found

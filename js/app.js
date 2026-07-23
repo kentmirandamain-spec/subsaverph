@@ -1237,10 +1237,12 @@ function paymentMethodsList() {
     ? state.paymentMethods
     : [
         // Card/Stripe omitted from fallback — use PayPal for card payments
-        { id: "gcash", label: "GCash", desc: "Pay with GCash (PHP)", group: "ewallet" },
-        { id: "paymaya", label: "Maya", desc: "Pay with Maya / PayMaya (PHP)", group: "ewallet" },
-        { id: "grab_pay", label: "GrabPay", desc: "Pay with GrabPay (PHP)", group: "ewallet" },
-        { id: "shopeepay", label: "ShopeePay", desc: "Pay with ShopeePay (PHP)", group: "ewallet" },
+        { id: "gcash", label: "GCash", desc: "Pay with GCash (PHP) · delivery 10–30 min", group: "ewallet" },
+        { id: "paymaya", label: "Maya", desc: "Pay with Maya (PHP) · delivery 10–30 min", group: "ewallet" },
+        { id: "grab_pay", label: "GrabPay", desc: "Pay with GrabPay (PHP) · delivery 10–30 min", group: "ewallet" },
+        { id: "shopeepay", label: "ShopeePay", desc: "Pay with ShopeePay (PHP) · delivery 10–30 min", group: "ewallet" },
+        { id: "manual_gcash", label: "GCash (QR)", desc: "Scan QR · delivery in 10–30 minutes after payment", group: "ewallet" },
+        { id: "manual_maya", label: "Maya (QR)", desc: "Scan QR · delivery in 10–30 minutes after payment", group: "ewallet" },
         { id: "paypal", label: "PayPal", desc: "Pay with PayPal balance or linked card", group: "other" },
         { id: "crypto", label: "Crypto", desc: "USDT, BTC, ETH & more", group: "other" },
         { id: "liqpay", label: "LiqPay", desc: "Card & wallets via LiqPay", group: "other" },
@@ -1346,7 +1348,7 @@ function viewCheckout() {
               state.cryptoEnabled ||
               state.liqpayEnabled ||
               manualOn
-                ? "Pick a method below. Gateway methods redirect to a secure page. Manual GCash/Maya show our number so you can send payment — codes unlock after we confirm."
+                ? "Pick a method below. Gateway methods redirect to a secure page. GCash/Maya QR: scan, pay, then wait 10–30 minutes for delivery after we verify."
                 : "Demo mode — no real money. Add payment keys or set up manual GCash/Maya in Admin."
             }
           </p>
@@ -1354,9 +1356,13 @@ function viewCheckout() {
             manualOn
               ? `<p class="muted" style="margin:8px 0 0;font-size:0.8rem;text-transform:none;letter-spacing:0;font-weight:400">
             <strong style="color:var(--text)">GCash / Maya QR</strong> —
-            scan our QR code, pay the exact amount, then submit your reference number.
-            Login codes are released after we verify payment (not instant).
-          </p>`
+            scan our QR, pay the exact amount, submit your reference.
+            <strong style="color:var(--text)">Delivery time: 10–30 minutes</strong> after we verify payment (not instant).
+          </p>
+          <div class="ewallet-eta-notice" id="ewalletEtaNotice" hidden>
+            <strong>E-wallet delivery</strong>
+            <p>After you pay via GCash or Maya and we confirm, your login codes are usually delivered in <strong>10–30 minutes</strong>. Keep this page or check your email.</p>
+          </div>`
               : ""
           }
           ${
@@ -1626,9 +1632,14 @@ function viewManualEwalletPending(order) {
         <p style="margin-top:10px;font-weight:600">${escapeHtml(
           order.message ||
             (submitted
-              ? "We received your reference. Codes unlock after we confirm payment."
+              ? "We received your reference. Login codes usually arrive in 10–30 minutes after confirmation."
               : "Scan the QR, pay the exact amount, then submit your reference.")
         )}</p>
+
+        <div class="ewallet-eta-notice ewallet-eta-notice-page" role="status">
+          <strong>Delivery time: 10–30 minutes</strong>
+          <p>E-wallet payments are verified manually. After you pay and we confirm, your login codes are usually delivered within <strong>10–30 minutes</strong> (not instant).</p>
+        </div>
 
         <div class="manual-pay-box" role="region" aria-label="Payment QR instructions">
           <h2 class="manual-pay-title">Pay exactly this amount</h2>
@@ -1667,8 +1678,9 @@ function viewManualEwalletPending(order) {
             ? `<div class="manual-pay-submitted">
             <p><strong>Reference submitted:</strong> <code>${escapeHtml(order.paymentReference || "—")}</code></p>
             <p class="muted" style="margin-top:8px">Status: <strong style="color:var(--text)">${escapeHtml(order.status)}</strong>.
-              Keep this page — refresh after we confirm to see your login codes.
-              Or email support with Order ID <strong style="color:var(--text)">${escapeHtml(order.id || "")}</strong>.</p>
+              Typical delivery: <strong style="color:var(--text)">10–30 minutes</strong> after we confirm.
+              Keep this page — refresh to see your login codes, or check email.
+              Support: Order ID <strong style="color:var(--text)">${escapeHtml(order.id || "")}</strong>.</p>
             <button type="button" class="btn solid" id="manualRefreshBtn" style="margin-top:14px">Check payment status</button>
             <p class="err" id="manualProofErr" style="color:#ff8a8a;font-size:0.85rem;min-height:1.2em;margin-top:8px"></p>
           </div>`
@@ -2556,6 +2568,11 @@ function bind() {
       const method = form.querySelector('input[name="method"]:checked')?.value || "card";
       const testBox = $("#stripeTestBox");
       if (testBox) testBox.hidden = method !== "card";
+      const etaBox = $("#ewalletEtaNotice");
+      if (etaBox) {
+        // Show when any PH e-wallet is selected (QR or gateway)
+        etaBox.hidden = !PH_EWALLETS.has(method);
+      }
       if (!btn) return;
       // Keep review CTA until they open terms
       btn.textContent = totalLabel ? `Review & continue · ${totalLabel}` : "Review & continue";
