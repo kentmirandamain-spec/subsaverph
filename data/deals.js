@@ -424,7 +424,7 @@ window.DEALS = [
     "imageSlide": "/assets/products/logos/brand-duolingo-fixed.svg",
     "logo": "/assets/products/logos/brand-duolingo-fixed.svg",
     "imageBg": "/assets/products/plate-duolingo.png",
-    "brandColor": "#58cc02"
+    "brandColor": "#ffffff"
   },
   {
     "id": "spotify-premium-1m",
