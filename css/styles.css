@@ -8446,10 +8446,10 @@ html[data-theme="light"] .hero--orbit .hero-cat-chip:hover {
   padding: 0;
   margin: 0;
   pointer-events: none;
-  /* expand blur box to cover entire top page */
-  background: rgba(6, 8, 15, 0.48);
-  backdrop-filter: blur(22px) saturate(1.25);
-  -webkit-backdrop-filter: blur(22px) saturate(1.25);
+  /* expand blur box to cover entire top page — light frost */
+  background: rgba(6, 8, 15, 0.28);
+  backdrop-filter: blur(8px) saturate(1.1);
+  -webkit-backdrop-filter: blur(8px) saturate(1.1);
   border: none;
   border-radius: 0;
   box-shadow: none;
@@ -8526,9 +8526,9 @@ html[data-theme="light"] .hero--orbit .hero-cat-chip:hover {
     padding: calc(var(--nav-h) + 0.85rem) 0 2.5rem;
   }
   .hero--with-slider .hero-orbit-chrome {
-    backdrop-filter: blur(18px) saturate(1.2);
-    -webkit-backdrop-filter: blur(18px) saturate(1.2);
-    background: rgba(6, 8, 15, 0.52);
+    backdrop-filter: blur(6px) saturate(1.08);
+    -webkit-backdrop-filter: blur(6px) saturate(1.08);
+    background: rgba(6, 8, 15, 0.32);
   }
   .product-slider--hero .product-slider-controls {
     top: calc(var(--nav-h) + 8px);
