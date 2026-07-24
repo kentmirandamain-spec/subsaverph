@@ -842,6 +842,21 @@ function heroTitleHtml() {
  * Exact All deals / View all arrangement (shared by #/deals and homepage scroll).
  * Same filters, sort, search, and product grid.
  */
+/** Icon/image for Service filter chips (mobile + desktop). */
+function serviceFilterIconHtml(brand) {
+  const b = String(brand || "");
+  if (!b || b === "All") {
+    return `<span class="filter-service-icon filter-service-icon--all" aria-hidden="true">✦</span>`;
+  }
+  // Grok / xAI — show original photo mark
+  if (b === "xAI") {
+    return `<span class="filter-service-icon filter-service-icon--photo filter-service-icon--grok" aria-hidden="true"><img class="product-img filter-service-icon-img" src="/assets/products/m-orig-xai.png?v=svcicon1" alt="" width="28" height="28" loading="lazy" decoding="async" /></span>`;
+  }
+  const logo = OFFICIAL_BRAND_LOGO[b] || MOBILE_OFFICIAL_PHOTO[b] || "";
+  if (!logo) return "";
+  return `<span class="filter-service-icon filter-service-icon--logo" aria-hidden="true"><img class="product-img filter-service-icon-img" src="${escapeAttr(logo)}" alt="" width="28" height="28" loading="lazy" decoding="async" /></span>`;
+}
+
 function dealsCatalogBlockHTML() {
   const list = filtered();
   return `
@@ -869,13 +884,16 @@ function dealsCatalogBlockHTML() {
               <h3 class="filter-group-title">Service</h3>
               <div class="filter-group-options" role="radiogroup" aria-label="Service">
                 ${(Array.isArray(window.BRANDS) ? window.BRANDS : ["All"])
-                  .map(
-                    (b) => `
-                <label class="radio">
-                  <input type="radio" name="brand" value="${b}" ${state.brand === b ? "checked" : ""} />
-                  <span>${b === "All" ? "All services" : b === "xAI" ? "SuperGrok (xAI)" : b}</span>
-                </label>`
-                  )
+                  .map((b) => {
+                    const label = b === "All" ? "All services" : b === "xAI" ? "SuperGrok (xAI)" : b;
+                    const icon = serviceFilterIconHtml(b);
+                    return `
+                <label class="radio filter-service-chip${icon ? " filter-service-chip--has-icon" : ""}${b === "xAI" ? " filter-service-chip--grok" : ""}" data-service-brand="${escapeAttr(b)}">
+                  <input type="radio" name="brand" value="${escapeAttr(b)}" ${state.brand === b ? "checked" : ""} />
+                  ${icon}
+                  <span class="filter-service-label">${escapeHtml(label)}</span>
+                </label>`;
+                  })
                   .join("")}
               </div>
             </div>

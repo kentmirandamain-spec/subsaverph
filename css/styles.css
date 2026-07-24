@@ -593,8 +593,8 @@ select {
   color: var(--selection-fg);
 }
 
-/* Hide stray images; allow logos, product art, payment logos, QR codes */
-img:not(.logo-mark):not(.brand-logo):not(.pay-qr):not(.qr-preview-img):not(.product-img):not(.co-method-logo-img) {
+/* Hide stray images; allow logos, product art, payment logos, QR codes, filter icons */
+img:not(.logo-mark):not(.brand-logo):not(.pay-qr):not(.qr-preview-img):not(.product-img):not(.co-method-logo-img):not(.filter-service-icon-img) {
   display: none !important;
 }
 
@@ -15249,5 +15249,85 @@ html[data-theme="light"] .co-method {
       52dvh,
       calc(100dvh - var(--nav-h, 64px) - 130px)
     ) !important;
+  }
+}
+
+/* ============================================================
+   Service filter chips — brand icons (Grok photo on mobile)
+   ============================================================ */
+
+.filter-service-chip {
+  display: inline-flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+.filter-service-icon {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: #000;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 0.75rem;
+  line-height: 1;
+  color: #7dd3fc;
+}
+.filter-service-icon--all {
+  background: rgba(56, 189, 248, 0.12);
+  color: #7dd3fc;
+}
+.filter-service-icon--grok,
+.filter-service-icon--photo {
+  background: #000000;
+  padding: 0;
+}
+.filter-service-icon-img {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  object-fit: contain !important;
+  object-position: center center !important;
+  margin: 0 !important;
+  padding: 3px !important;
+  background: transparent !important;
+}
+.filter-service-label {
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+@media (max-width: 900px) {
+  .deals-filters .filter-group--service .filter-service-chip,
+  .deals-filters .filter-group--service .radio.filter-service-chip {
+    display: inline-flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 8px !important;
+    padding: 6px 12px 6px 8px !important;
+    min-height: 42px !important;
+    height: auto !important;
+  }
+  .deals-filters .filter-group--service .filter-service-icon {
+    width: 30px !important;
+    height: 30px !important;
+    border-radius: 9px !important;
+  }
+  .deals-filters .filter-group--service .filter-service-icon--grok {
+    width: 32px !important;
+    height: 32px !important;
+    background: #000 !important;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1);
+  }
+  .deals-filters .filter-group--service .filter-service-icon-img {
+    padding: 2px !important;
+  }
+  .deals-filters .filter-group--service .filter-service-chip--grok:has(input:checked) .filter-service-icon--grok {
+    box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.55), 0 0 12px rgba(56, 189, 248, 0.25);
   }
 }
