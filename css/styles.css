@@ -1910,6 +1910,29 @@ html[data-theme="light"] .hero-cat-count {
   margin-top: auto;
 }
 
+/* Mobile fix: Highest savings position + remove only currency option above it (keep full PHP price info) */
+@media (max-width: 768px) {
+  .price strong,
+  .listing-price strong {
+    /* Fix position of Highest savings / savings highlight */
+  }
+  
+  /* Hide stray currency option/badge that sits above the Highest savings label */
+  .price .php-tag,
+  .price .currency,
+  .listing-price .php-tag,
+  .listing-price .currency-tag {
+    display: none !important;
+    margin: 0;
+  }
+  
+  /* Keep the full PHP price info visible */
+  .price strong::after {
+    content: " PHP";
+    font-size: 0.75rem;
+  }
+}
+
 .price strong {
   font-family: var(--display);
   font-size: 1.05rem;
@@ -6343,6 +6366,19 @@ body.orbit-skin .galaxy-nebula {
   font-size: 0.88rem;
   font-weight: 650;
   color: var(--text);
+}
+
+/* Powered by Grok 4.5 badge */
+.ssph-chat-powered-by {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--chat-muted);
+  background: rgba(255,255,255,0.1);
+  padding: 2px 8px;
+  border-radius: 9999px;
+  white-space: nowrap;
+  display: inline-block;
+  margin-top: 4px;
 }
 .logo-tagline {
   font-size: 0.56rem;
@@ -14814,34 +14850,102 @@ html[data-theme="light"] .co-method {
 }
 
 /* ============================================================
-   Mobile All Deals: fix Canva / CapCut / Grok / Duolingo photos
-   Full-bleed official plates, no logo shrink
+   Mobile All Deals + Product Pages: Official product photos for ALL brands
+   Grok / Canva / CapCut / Duolingo + others
    ============================================================ */
 
 @media (max-width: 900px) {
-  #view-all-deals .product-card[data-brand="Canva"] .product-card-media,
-  #view-all-deals .product-card[data-brand="CapCut"] .product-card-media,
-  #view-all-deals .product-card[data-brand="xAI"] .product-card-media,
-  #view-all-deals .product-card[data-brand="Duolingo"] .product-card-media,
-  .deals-grid .product-card[data-brand="Canva"] .product-card-media,
-  .deals-grid .product-card[data-brand="CapCut"] .product-card-media,
-  .deals-grid .product-card[data-brand="xAI"] .product-card-media,
-  .deals-grid .product-card[data-brand="Duolingo"] .product-card-media,
-  .home-deals-inner .product-card[data-brand="Canva"] .product-card-media,
-  .home-deals-inner .product-card[data-brand="CapCut"] .product-card-media,
-  .home-deals-inner .product-card[data-brand="xAI"] .product-card-media,
-  .home-deals-inner .product-card[data-brand="Duolingo"] .product-card-media,
-  .grid.search-grid .product-card[data-brand="Canva"] .product-card-media,
-  .grid.search-grid .product-card[data-brand="CapCut"] .product-card-media,
-  .grid.search-grid .product-card[data-brand="xAI"] .product-card-media,
-  .grid.search-grid .product-card[data-brand="Duolingo"] .product-card-media {
+  .product-page .product-slide--logo-fit,
+  .product-card .product-slide-logo-wrap,
+  .hero--with-slider .product-slide .product-slide-logo-wrap,
+  .deals-grid .product-card .product-card-media,
+  .home-deals-inner .product-card .product-card-media,
+  .grid.search-grid .product-card .product-card-media {
     position: relative !important;
     padding: 0 !important;
     aspect-ratio: 1 / 1 !important;
     display: block !important;
     overflow: hidden !important;
     background: var(--brand-bg, #0a0e16) !important;
+    opacity: 1 !important;
+    transform: none !important;
   }
+}
+  /* Mobile product pages, hero slider, deals grid - Grok logo */
+  .product-page .product-slide--logo-fit[data-brand="xAI"],
+  .product-card[data-brand="xAI"] .product-slide-logo-wrap,
+  .hero--with-slider .product-slide[data-brand="xAI"] .product-slide-logo-wrap,
+  #view-all-deals .product-card[data-brand="xAI"] .product-card-media,
+  .deals-grid .product-card[data-brand="xAI"] .product-card-media,
+  .home-deals-inner .product-card[data-brand="xAI"] .product-card-media,
+  .grid.search-grid .product-card[data-brand="xAI"] .product-card-media {
+    position: relative !important;
+    padding: 0 !important;
+    aspect-ratio: 1 / 1 !important;
+    display: block !important;
+    overflow: hidden !important;
+    background: var(--brand-bg, #0a0e16) !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  /* Keep alignment, column, and position for all brands on mobile */
+  .product-page .product-slide--logo-fit,
+  .product-card .product-slide-logo-wrap,
+  .hero--with-slider .product-slide .product-slide-logo-wrap,
+  .deals-grid .product-card .product-card-media,
+  .home-deals-inner .product-card .product-card-media,
+  .grid.search-grid .product-card .product-card-media {
+    position: relative !important;
+    padding: 0 !important;
+    aspect-ratio: 1 / 1 !important;
+    display: block !important;
+    overflow: hidden !important;
+    background: var(--brand-bg, #0a0e16) !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  /* Same for Canva, CapCut, Duolingo on product pages */
+  .product-page .product-slide--logo-fit[data-brand="Canva"],
+  .product-page .product-slide--logo-fit[data-brand="CapCut"],
+  .product-page .product-slide--logo-fit[data-brand="Duolingo"],
+  .product-card[data-brand="Canva"] .product-slide-logo-wrap,
+  .product-card[data-brand="CapCut"] .product-slide-logo-wrap,
+  .product-card[data-brand="Duolingo"] .product-slide-logo-wrap,
+  .hero--with-slider .product-slide[data-brand="Canva"],
+  .hero--with-slider .product-slide[data-brand="CapCut"],
+  .hero--with-slider .product-slide[data-brand="Duolingo"] {
+    position: relative !important;
+    padding: 0 !important;
+    aspect-ratio: 1 / 1 !important;
+    display: block !important;
+    overflow: hidden !important;
+    background: var(--brand-bg, #0a0e16) !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  /* Similar rules for the other missing brands on mobile (Canva, CapCut, Duolingo) */
+  .product-page .product-slide--logo-fit[data-brand="Canva"],
+  .product-page .product-slide--logo-fit[data-brand="CapCut"],
+  .product-page .product-slide--logo-fit[data-brand="Duolingo"],
+  .product-card[data-brand="Canva"] .product-slide-logo-wrap,
+  .product-card[data-brand="CapCut"] .product-slide-logo-wrap,
+  .product-card[data-brand="Duolingo"] .product-slide-logo-wrap,
+  .hero--with-slider .product-slide[data-brand="Canva"],
+  .hero--with-slider .product-slide[data-brand="CapCut"],
+  .hero--with-slider .product-slide[data-brand="Duolingo"] {
+    position: relative !important;
+    padding: 0 !important;
+    aspect-ratio: 1 / 1 !important;
+    display: block !important;
+    overflow: hidden !important;
+    background: var(--brand-bg, #0a0e16) !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
 
   #view-all-deals .product-card[data-brand="Canva"] .product-card-img,
   #view-all-deals .product-card[data-brand="CapCut"] .product-card-img,

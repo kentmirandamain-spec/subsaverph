@@ -43,7 +43,8 @@ function friendlyApiError(status, raw, data) {
     text.includes("Attention Required");
   if (status === 405) {
     return (
-      `HTTP 405 (method not allowed) — hard-refresh (Ctrl+F5) to load the latest admin, then try again. ` +
+      `HTTP 405 (method not allowed) — hard-refresh (Ctrl+F5) to load the latest admin, then try again. ` + 
+      `<p style="margin:8px 0 0;font-size:0.8rem;">On mobile, always hard-refresh (Ctrl+Shift+R) after changing styles or stock.</p>`
       `If it continues: Cloudflare Dashboard → Security → turn Bot Fight Mode off, Security Level Medium.`
     );
   }
