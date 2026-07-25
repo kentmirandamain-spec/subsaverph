@@ -3699,11 +3699,11 @@ async function init() {
     bindPrefsPanel();
 
     try {
-      const { mountChatbot } = await import("./chatbot.js?v=nocapcut1");
+      const { mountChatbot } = await import("./chatbot.js?v=cachebust20260725");
       mountChatbot();
       window.__ssphOpenChat = async () => {
         try {
-          const m = await import("./chatbot.js?v=nocapcut1");
+          const m = await import("./chatbot.js?v=cachebust20260725");
           m.openChatbot?.();
         } catch {
           /* ignore */
