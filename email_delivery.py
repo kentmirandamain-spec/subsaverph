@@ -19,7 +19,6 @@ import os
 import smtplib
 import ssl
 import urllib.error
-import urllib.parse
 import urllib.request
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
