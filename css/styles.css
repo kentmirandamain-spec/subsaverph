@@ -12691,6 +12691,95 @@ img.product-img.product-media-logo {
     min-height: 100% !important;
     object-fit: cover !important;
   }
+
+  /* ============================================================
+     Mobile hero slider: center every logo/photo, fully visible
+     (object-fit:contain — never crop brand marks)
+     ============================================================ */
+  .product-slider--hero .product-slide,
+  .product-slider--hero .product-slide--dual,
+  .product-slider--hero .product-slide--cover,
+  .product-slider--hero .product-slide--canva,
+  .product-slider--hero .product-slide--capcut {
+    background: var(--brand-bg, #0a0e16) !important;
+    overflow: hidden !important;
+  }
+
+  .product-slider--hero .product-slide-logo-wrap,
+  .product-slider--hero .product-slide-logo-wrap--dual,
+  .product-slider--hero .product-slide--cover .product-slide-logo-wrap,
+  .product-slider--hero .product-slide--dual .product-slide-logo-wrap--dual {
+    position: absolute !important;
+    inset: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    place-items: center !important;
+    padding: 14vh 11vw 16vh !important;
+    box-sizing: border-box !important;
+    background: var(--brand-bg, #0a0e16) !important;
+    overflow: hidden !important;
+    z-index: 1 !important;
+  }
+
+  /* Centered logo/photo — full mark always in view */
+  .product-slider--hero .product-slide--dual img.product-img.product-media-photo,
+  .product-slider--hero .product-slide--cover img.product-img.product-media-photo,
+  .product-slider--hero .product-slide--cover .product-cover-img,
+  .product-slider--hero .product-slide--cover .product-cover-img--canva,
+  .product-slider--hero .product-slide--canva .product-cover-img,
+  .product-slider--hero .product-slide--canva .product-cover-img--canva,
+  .product-slider--hero .product-slide--capcut .product-cover-img,
+  .product-slider--hero .product-slide-img.product-media-photo,
+  .product-slider--hero .product-slide-img.product-cover-img,
+  .product-slider--hero img.product-slide-img {
+    position: relative !important;
+    inset: auto !important;
+    top: auto !important;
+    left: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    display: block !important;
+    width: auto !important;
+    height: auto !important;
+    max-width: min(78vw, 360px) !important;
+    max-height: min(38vh, 280px) !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    margin: 0 auto !important;
+    object-fit: contain !important;
+    object-position: center center !important;
+    transform: none !important;
+    transform-origin: center center !important;
+    filter: drop-shadow(0 14px 32px rgba(0, 0, 0, 0.45)) !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    z-index: 2 !important;
+  }
+
+  /* Lighter shade so logos stay readable on mobile */
+  .product-slider--hero .product-slide-shade--logo {
+    background:
+      linear-gradient(
+        180deg,
+        rgba(5, 6, 10, 0.12) 0%,
+        rgba(5, 6, 10, 0.05) 42%,
+        rgba(5, 6, 10, 0.28) 100%
+      ) !important;
+    pointer-events: none !important;
+  }
+
+  .hero--with-slider .hero-orbit-chrome {
+    background: rgba(6, 8, 15, 0.12) !important;
+    backdrop-filter: blur(1.5px) saturate(1.02) !important;
+    -webkit-backdrop-filter: blur(1.5px) saturate(1.02) !important;
+  }
+
+  /* Brand tag stays clear under the centered logo */
+  .product-slider--hero .product-slide-brand-tag {
+    bottom: 3.5rem !important;
+    z-index: 5 !important;
+  }
 }
 
 /* ============================================================
