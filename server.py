@@ -1047,24 +1047,13 @@ def _safe_support_inbox() -> str:
 @app.get("/api/health")
 def health():
     try:
-        from email_delivery import mail_configured, _from_header, sms_configured, owner_mobile
+        from email_delivery import mail_configured, _from_header
 
         mail_ok = mail_configured()
         mail_from = _from_header() if mail_ok else None
-        sms_ok = sms_configured()
-        mobile_ok = bool(owner_mobile())
-        if (os.environ.get("SEMAPHORE_API_KEY") or "").strip():
-            sms_provider = "semaphore"
-        elif (os.environ.get("TWILIO_ACCOUNT_SID") or os.environ.get("TWILIO_SID") or "").strip():
-            sms_provider = "twilio"
-        else:
-            sms_provider = None
     except Exception:
         mail_ok = False
         mail_from = None
-        sms_ok = False
-        mobile_ok = False
-        sms_provider = None
     outbound = get_outbound_ip()
     # Stock snapshot (helps diagnose SOLD OUT vs admin inventory)
     stock_summary = {}
@@ -1082,9 +1071,7 @@ def health():
             "service": "SubSaverPH",
             "emailConfigured": mail_ok,
             "mailFrom": mail_from,
-            "ownerMobileConfigured": mobile_ok,
-            "smsConfigured": sms_ok,
-            "smsProvider": sms_provider if sms_ok else None,
+
             "stripeConfigured": stripe_configured(),
             "paymongoConfigured": paymongo_configured(),
             "xenditConfigured": xendit_configured(),
@@ -1376,7 +1363,7 @@ def _email_invoice_for_order(order: dict) -> dict:
     except Exception as e:
         result = {"ok": False, "provider": None, "detail": str(e)}
 
-    # Extra merchant alert for e-wallet (email + SMS) when paid/fulfilled
+    # Extra merchant email alert for e-wallet when paid/fulfilled
     if _is_ewallet_order(order) and not order.get("ownerAlertOk"):
         try:
             from email_delivery import send_owner_ewallet_payment_alert
@@ -1384,7 +1371,6 @@ def _email_invoice_for_order(order: dict) -> dict:
             owner_alert = send_owner_ewallet_payment_alert(order)
             order["ownerAlertOk"] = bool(owner_alert.get("ok"))
             order["ownerAlertEmail"] = owner_alert.get("email") or {}
-            order["ownerAlertSms"] = owner_alert.get("sms") or {}
             order["ownerAlertAt"] = (
                 __import__("datetime").datetime.utcnow().isoformat() + "Z"
                 if owner_alert.get("ok")
@@ -1433,7 +1419,7 @@ def _email_payment_received_for_order(order: dict) -> dict:
     except Exception as e:
         result = {"ok": False, "provider": None, "detail": str(e)}
 
-    # Merchant: email + SMS when customer pays / submits e-wallet proof
+    # Merchant email when customer pays / submits e-wallet proof
     owner_alert: dict = {}
     try:
         from email_delivery import send_owner_ewallet_payment_alert
@@ -1452,10 +1438,8 @@ def _email_payment_received_for_order(order: dict) -> dict:
     )
     order["ownerAlertOk"] = bool(owner_alert.get("ok"))
     order["ownerAlertEmail"] = (owner_alert.get("email") or {})
-    order["ownerAlertSms"] = (owner_alert.get("sms") or {})
     order["ownerAlertDetail"] = str(
         (owner_alert.get("email") or {}).get("detail")
-        or (owner_alert.get("sms") or {}).get("detail")
         or owner_alert.get("detail")
         or ""
     )[:500]
@@ -4846,43 +4830,6 @@ def admin_resend_order_email(order_id: str):
             },
         }
     )
-
-
-@app.post("/api/admin/test-sms")
-@require_admin
-def admin_test_sms():
-    """
-    Send a test SMS to owner mobile (or body.to) via Semaphore/Twilio.
-    Body: { to?: "0917…", message?: "…" }
-    """
-    try:
-        from email_delivery import owner_mobile, send_sms, sms_configured
-    except Exception as e:
-        return jsonify({"error": f"SMS module error: {e}"}), 500
-
-    data = request.get_json(silent=True) or {}
-    to = (data.get("to") or data.get("number") or owner_mobile() or "").strip()
-    msg = (
-        (data.get("message") or data.get("body") or "").strip()
-        or "SubSaverPH test SMS — e-wallet alerts are working."
-    )
-    if not to:
-        return jsonify(
-            {
-                "error": "No mobile number. Set Admin → Owner mobile or OWNER_MOBILE, or pass {\"to\":\"0917…\"}.",
-            }
-        ), 400
-    if not sms_configured() and not (os.environ.get("SEMAPHORE_API_KEY") or "").strip():
-        return jsonify(
-            {
-                "error": "SMS not configured. Set SEMAPHORE_API_KEY on Render (see SEMAPHORE-SETUP.md).",
-            }
-        ), 400
-
-    result = send_sms(to, msg)
-    if result.get("ok"):
-        return jsonify({"ok": True, "sms": result})
-    return jsonify({"ok": False, "error": result.get("detail") or "SMS failed", "sms": result}), 400
 
 
 @app.post("/api/admin/test-invoice")

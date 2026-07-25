@@ -949,148 +949,6 @@ def _settings_dict() -> dict[str, Any]:
     return {}
 
 
-def owner_mobile() -> str:
-    """
-    Merchant phone for e-wallet SMS alerts.
-    Priority: settings.ownerMobile → OWNER_MOBILE / MERCHANT_MOBILE / TWILIO_TO env.
-    Accepts PH formats: 09xxxxxxxxx, +639xxxxxxxxx, 639xxxxxxxxx.
-    """
-    raw = (
-        str(_settings_dict().get("ownerMobile") or "").strip()
-        or (os.environ.get("OWNER_MOBILE") or "").strip()
-        or (os.environ.get("MERCHANT_MOBILE") or "").strip()
-        or (os.environ.get("TWILIO_TO") or "").strip()
-    )
-    return raw
-
-
-def normalize_ph_mobile(number: str) -> str:
-    """Normalize PH mobile to +63XXXXXXXXXX when possible; otherwise return digits/+ as-is."""
-    n = (number or "").strip()
-    if not n:
-        return ""
-    digits = "".join(c for c in n if c.isdigit())
-    if n.startswith("+") and len(digits) >= 10:
-        return "+" + digits
-    if digits.startswith("63") and len(digits) >= 12:
-        return "+" + digits
-    if digits.startswith("0") and len(digits) == 11:
-        return "+63" + digits[1:]
-    if len(digits) == 10 and digits.startswith("9"):
-        return "+63" + digits
-    return ("+" + digits) if digits else n
-
-
-def sms_configured() -> bool:
-    if not owner_mobile():
-        return False
-    if (os.environ.get("SEMAPHORE_API_KEY") or "").strip():
-        return True
-    sid = (os.environ.get("TWILIO_ACCOUNT_SID") or os.environ.get("TWILIO_SID") or "").strip()
-    token = (os.environ.get("TWILIO_AUTH_TOKEN") or os.environ.get("TWILIO_TOKEN") or "").strip()
-    frm = (os.environ.get("TWILIO_FROM") or "").strip()
-    return bool(sid and token and frm)
-
-
-def send_sms(to_number: str, body: str) -> dict[str, Any]:
-    """
-    Send SMS via Semaphore (PH-friendly) or Twilio.
-    Env:
-      SEMAPHORE_API_KEY (+ optional SEMAPHORE_SENDER)
-      or TWILIO_ACCOUNT_SID + TWILIO_AUTH_TOKEN + TWILIO_FROM
-    """
-    to_raw = (to_number or "").strip() or owner_mobile()
-    to = normalize_ph_mobile(to_raw)
-    text = (body or "").strip()
-    if not to or not text:
-        return {"ok": False, "provider": None, "detail": "Missing phone or message"}
-
-    # 1) Semaphore (PH SMS): https://semaphore.co/docs
-    # POST application/x-www-form-urlencoded → /api/v4/messages
-    sem_key = (os.environ.get("SEMAPHORE_API_KEY") or "").strip()
-    if sem_key:
-        sender = (os.environ.get("SEMAPHORE_SENDER") or os.environ.get("SEMAPHORE_SENDERNAME") or "").strip()[:11]
-        # Semaphore prefers PH local 09… (also accepts 63…)
-        number = to.lstrip("+")
-        if number.startswith("63") and len(number) >= 12:
-            number = "0" + number[2:]
-        form: dict[str, str] = {
-            "apikey": sem_key,
-            "number": number,
-            "message": text[:800],
-        }
-        if sender:
-            form["sendername"] = sender
-        try:
-            payload = urllib.parse.urlencode(form).encode("utf-8")
-            req = urllib.request.Request(
-                "https://api.semaphore.co/api/v4/messages",
-                data=payload,
-                method="POST",
-                headers={
-                    "Content-Type": "application/x-www-form-urlencoded",
-                    "Accept": "application/json",
-                    "User-Agent": "SubSaverPH/1.0 (+https://subsaverph.com; Semaphore SMS)",
-                },
-            )
-            with urllib.request.urlopen(req, timeout=25) as resp:
-                raw = resp.read().decode("utf-8", errors="replace")[:500]
-            # Semaphore returns a JSON array of message objects on success
-            low = (raw or "").lower()
-            if "error" in low and "message_id" not in low:
-                return {"ok": False, "provider": "semaphore", "detail": raw, "to": to, "number": number}
-            return {"ok": True, "provider": "semaphore", "detail": raw, "to": to, "number": number}
-        except urllib.error.HTTPError as e:
-            err = e.read().decode("utf-8", errors="replace")[:400]
-            return {
-                "ok": False,
-                "provider": "semaphore",
-                "detail": f"HTTP {e.code}: {err}",
-                "to": to,
-                "number": number,
-            }
-        except Exception as e:
-            return {"ok": False, "provider": "semaphore", "detail": str(e), "to": to, "number": number}
-
-    # 2) Twilio REST
-    sid = (os.environ.get("TWILIO_ACCOUNT_SID") or os.environ.get("TWILIO_SID") or "").strip()
-    token = (os.environ.get("TWILIO_AUTH_TOKEN") or os.environ.get("TWILIO_TOKEN") or "").strip()
-    frm = (os.environ.get("TWILIO_FROM") or "").strip()
-    if sid and token and frm:
-        try:
-            import base64
-
-            auth = base64.b64encode(f"{sid}:{token}".encode()).decode()
-            form = urllib.parse.urlencode(
-                {"To": to, "From": frm, "Body": text[:1500]}
-            ).encode("utf-8")
-            req = urllib.request.Request(
-                f"https://api.twilio.com/2010-04-01/Accounts/{sid}/Messages.json",
-                data=form,
-                method="POST",
-                headers={
-                    "Authorization": f"Basic {auth}",
-                    "Content-Type": "application/x-www-form-urlencoded",
-                },
-            )
-            with urllib.request.urlopen(req, timeout=25) as resp:
-                raw = resp.read().decode("utf-8", errors="replace")[:300]
-            return {"ok": True, "provider": "twilio", "detail": raw, "to": to}
-        except urllib.error.HTTPError as e:
-            err = e.read().decode("utf-8", errors="replace")[:300]
-            return {"ok": False, "provider": "twilio", "detail": f"HTTP {e.code}: {err}", "to": to}
-        except Exception as e:
-            return {"ok": False, "provider": "twilio", "detail": str(e), "to": to}
-
-    return {
-        "ok": False,
-        "provider": None,
-        "detail": "SMS not configured (set SEMAPHORE_API_KEY or TWILIO_* + OWNER_MOBILE)",
-        "to": to,
-        "skipped": True,
-    }
-
-
 def _order_product_lines(order: dict[str, Any]) -> list[str]:
     lines: list[str] = []
     for it in order.get("items") or []:
@@ -1104,9 +962,7 @@ def _order_product_lines(order: dict[str, Any]) -> list[str]:
 def send_owner_ewallet_payment_alert(order: dict[str, Any]) -> dict[str, Any]:
     """
     Merchant alert when a customer pays / submits payment via e-wallet.
-    Sends:
-      1) Email TO owner inbox (not only BCC)
-      2) SMS to owner mobile (if Semaphore/Twilio configured)
+    Sends email TO owner inbox (not only BCC).
     """
     order_id = str(order.get("id") or "—")
     name = str(order.get("name") or "Customer").strip() or "Customer"
@@ -1215,18 +1071,9 @@ def send_owner_ewallet_payment_alert(order: dict[str, Any]) -> dict[str, Any]:
             "detail": "Email not configured (RESEND_API_KEY or SMTP_*)",
         }
 
-    # --- SMS owner ---
-    sms_body = (
-        f"SubSaverPH e-wallet: {order_id} {amount} from {name}. "
-        f"Ref {ref}. "
-        + ("Confirm in Admin → Orders." if needs_confirm else "Paid — check Admin.")
-    )
-    sms_result = send_sms(owner_mobile(), sms_body)
-
     return {
-        "ok": bool(email_result.get("ok") or sms_result.get("ok")),
+        "ok": bool(email_result.get("ok")),
         "email": email_result,
-        "sms": sms_result,
         "kind": "owner_ewallet_alert",
         "orderId": order_id,
     }
