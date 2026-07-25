@@ -3370,11 +3370,21 @@ function bind() {
 
     const openTermsModal = () => {
       if (!modal) return;
+      // Escape body.galaxy stacking (z-index:1 on page) so Accept & pay is never under nav/chat
+      if (modal.parentElement !== document.body) {
+        document.body.appendChild(modal);
+      }
       modal.hidden = false;
+      modal.style.zIndex = "99999";
       document.body.style.overflow = "hidden";
       document.body.classList.add("terms-modal-open");
       if (termsAccept) termsAccept.checked = false;
-      if (termsConfirm) termsConfirm.disabled = true;
+      if (termsConfirm) {
+        termsConfirm.disabled = true;
+        termsConfirm.style.pointerEvents = "auto";
+        termsConfirm.style.position = "relative";
+        termsConfirm.style.zIndex = "20";
+      }
       if (termsErr) termsErr.textContent = "";
       // Sync confirm button label with selected method
       const method = form.querySelector('input[name="method"]:checked')?.value || "card";
@@ -3389,6 +3399,8 @@ function bind() {
       requestAnimationFrame(() => {
         const foot = modal.querySelector(".terms-modal-foot");
         if (!foot) return;
+        foot.style.pointerEvents = "auto";
+        foot.style.zIndex = "10";
         foot.scrollIntoView({ block: "nearest", inline: "nearest" });
         // Double-check after layout: if foot is still clipped, nudge panel max-height via body scroll only
         const rect = foot.getBoundingClientRect();

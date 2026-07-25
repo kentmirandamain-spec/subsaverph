@@ -2886,33 +2886,41 @@ html[data-theme="light"] .hero-cat-count {
   border-top: 1px solid var(--line);
 }
 
-/* Pre-payment terms modal */
-.terms-modal {
-  position: fixed;
-  inset: 0;
-  z-index: 6000;
+/* Pre-payment terms modal — must sit above body.galaxy stacking (z-index:1 children) */
+.terms-modal,
+body.galaxy > .terms-modal,
+body > .terms-modal {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 99999 !important;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 16px;
   padding-bottom: max(16px, env(safe-area-inset-bottom, 0px));
   box-sizing: border-box;
+  pointer-events: auto !important;
+  isolation: isolate;
 }
 
-.terms-modal[hidden] {
+.terms-modal[hidden],
+body.galaxy > .terms-modal[hidden],
+body > .terms-modal[hidden] {
   display: none !important;
 }
 
 .terms-modal-backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.72);
+  z-index: 0;
+  background: rgba(0, 0, 0, 0.78);
   backdrop-filter: blur(4px);
+  pointer-events: auto;
 }
 
 .terms-modal-panel {
   position: relative;
-  z-index: 1;
+  z-index: 2;
   width: min(560px, 100%);
   /* Keep Accept & pay visible: panel fits viewport, body scrolls, foot stays */
   max-height: min(86dvh, 720px);
@@ -2926,6 +2934,7 @@ html[data-theme="light"] .hero-cat-count {
   box-shadow: var(--shadow);
   color: var(--text);
   box-sizing: border-box;
+  pointer-events: auto !important;
 }
 
 .terms-modal-head {
@@ -3022,26 +3031,42 @@ html[data-theme="light"] .hero-cat-count {
 .terms-modal-foot {
   flex: 0 0 auto;
   position: relative;
-  z-index: 2;
+  z-index: 5;
   padding: 14px 20px 18px;
   border-top: 1px solid var(--line);
   background: var(--panel-solid, #0a0a0a);
   box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.28);
+  pointer-events: auto !important;
 }
 
-/* While terms are open: hide sticky CTA + chat so they cannot block Accept & pay */
+/* While terms are open: nothing under the modal can steal taps */
 body.terms-modal-open {
   overflow: hidden !important;
 }
-body.terms-modal-open .co-sticky {
-  display: none !important;
-  pointer-events: none !important;
-}
+body.terms-modal-open .co-sticky,
+body.terms-modal-open .nav,
+body.terms-modal-open header.nav,
+body.terms-modal-open .currency-picker,
+body.terms-modal-open .prefs-picker,
+body.terms-modal-open .fx-panel,
+body.terms-modal-open .prefs-panel,
 body.terms-modal-open #ssphChatRoot,
 body.terms-modal-open .ssph-chat-fab {
   display: none !important;
   visibility: hidden !important;
   pointer-events: none !important;
+  opacity: 0 !important;
+}
+body.terms-modal-open .terms-modal-foot,
+body.terms-modal-open .terms-actions,
+body.terms-modal-open #termsConfirmBtn {
+  pointer-events: auto !important;
+  position: relative;
+  z-index: 10;
+}
+body.terms-modal-open #termsConfirmBtn:not(:disabled) {
+  cursor: pointer !important;
+  opacity: 1 !important;
 }
 
 .terms-accept-label {
@@ -12767,12 +12792,12 @@ html[data-theme="light"] .hero-cat-box:hover {
     text-align: center !important;
   }
 
-  /* ---- Terms / rules modal � ordered & readable ---- */
+  /* ---- Terms / rules modal — ordered & readable (never below nav/chat) ---- */
   .terms-modal {
     align-items: flex-end !important;
     justify-content: center !important;
     padding: 0 !important;
-    z-index: 2600 !important;
+    z-index: 99999 !important;
   }
 
   .terms-modal-panel {
