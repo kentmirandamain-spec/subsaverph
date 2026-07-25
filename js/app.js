@@ -353,7 +353,8 @@ try {
 }
 
 function productBrandColor(d) {
-  /* Brand-colored plates behind logos / photo edges */
+  /* Admin custom plate color first, then brand defaults */
+  if (d && d.brandColor && String(d.brandColor).trim()) return String(d.brandColor).trim();
   const map = {
     xAI: "#000000",
     Canva: "#00c4cc",
@@ -364,7 +365,6 @@ function productBrandColor(d) {
     Spotify: "#191414",
   };
   if (d?.brand && map[d.brand]) return map[d.brand];
-  if (d && d.brandColor) return String(d.brandColor);
   return "#0a0e16";
 }
 
