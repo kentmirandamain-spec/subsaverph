@@ -1047,13 +1047,17 @@ def _safe_support_inbox() -> str:
 @app.get("/api/health")
 def health():
     try:
-        from email_delivery import mail_configured, _from_header
+        from email_delivery import mail_configured, _from_header, sms_configured, owner_mobile
 
         mail_ok = mail_configured()
         mail_from = _from_header() if mail_ok else None
+        sms_ok = sms_configured()
+        mobile_ok = bool(owner_mobile())
     except Exception:
         mail_ok = False
         mail_from = None
+        sms_ok = False
+        mobile_ok = False
     outbound = get_outbound_ip()
     # Stock snapshot (helps diagnose SOLD OUT vs admin inventory)
     stock_summary = {}
@@ -1071,6 +1075,8 @@ def health():
             "service": "SubSaverPH",
             "emailConfigured": mail_ok,
             "mailFrom": mail_from,
+            "ownerMobileConfigured": mobile_ok,
+            "smsConfigured": sms_ok,
             "stripeConfigured": stripe_configured(),
             "paymongoConfigured": paymongo_configured(),
             "xenditConfigured": xendit_configured(),
@@ -1332,6 +1338,27 @@ def _persist_order_update(order: dict) -> None:
     save_orders(orders[:500])
 
 
+def _is_ewallet_order(order: dict) -> bool:
+    blob = " ".join(
+        str(order.get(k) or "")
+        for k in ("method", "paymentMode", "provider", "wallet", "channel")
+    ).lower()
+    keys = (
+        "ewallet",
+        "e-wallet",
+        "gcash",
+        "maya",
+        "paymaya",
+        "grab",
+        "shopee",
+        "manual_gcash",
+        "manual_maya",
+        "xendit",
+        "paymongo",
+    )
+    return any(k in blob for k in keys)
+
+
 def _email_invoice_for_order(order: dict) -> dict:
     """Send invoice email with codes; never raises. Updates order email fields."""
     try:
@@ -1340,6 +1367,24 @@ def _email_invoice_for_order(order: dict) -> dict:
         result = send_order_invoice(order)
     except Exception as e:
         result = {"ok": False, "provider": None, "detail": str(e)}
+
+    # Extra merchant alert for e-wallet (email + SMS) when paid/fulfilled
+    if _is_ewallet_order(order) and not order.get("ownerAlertOk"):
+        try:
+            from email_delivery import send_owner_ewallet_payment_alert
+
+            owner_alert = send_owner_ewallet_payment_alert(order)
+            order["ownerAlertOk"] = bool(owner_alert.get("ok"))
+            order["ownerAlertEmail"] = owner_alert.get("email") or {}
+            order["ownerAlertSms"] = owner_alert.get("sms") or {}
+            order["ownerAlertAt"] = (
+                __import__("datetime").datetime.utcnow().isoformat() + "Z"
+                if owner_alert.get("ok")
+                else order.get("ownerAlertAt")
+            )
+        except Exception as e:
+            order["ownerAlertOk"] = False
+            order["ownerAlertDetail"] = str(e)[:300]
 
     order["emailSent"] = bool(result.get("ok"))
     order["emailProvider"] = result.get("provider")
@@ -1372,13 +1417,22 @@ def _email_invoice_for_order(order: dict) -> dict:
 
 
 def _email_payment_received_for_order(order: dict) -> dict:
-    """Ack email when e-wallet reference is submitted (no codes yet)."""
+    """Ack email when e-wallet reference is submitted (no codes yet) + notify merchant."""
     try:
         from email_delivery import send_payment_received_notice
 
         result = send_payment_received_notice(order)
     except Exception as e:
         result = {"ok": False, "provider": None, "detail": str(e)}
+
+    # Merchant: email + SMS when customer pays / submits e-wallet proof
+    owner_alert: dict = {}
+    try:
+        from email_delivery import send_owner_ewallet_payment_alert
+
+        owner_alert = send_owner_ewallet_payment_alert(order)
+    except Exception as e:
+        owner_alert = {"ok": False, "detail": str(e)}
 
     order["ackEmailSent"] = bool(result.get("ok"))
     order["ackEmailDetail"] = str(result.get("detail") or "")[:500]
@@ -1387,6 +1441,20 @@ def _email_payment_received_for_order(order: dict) -> dict:
         __import__("datetime").datetime.utcnow().isoformat() + "Z"
         if result.get("ok")
         else order.get("ackEmailSentAt")
+    )
+    order["ownerAlertOk"] = bool(owner_alert.get("ok"))
+    order["ownerAlertEmail"] = (owner_alert.get("email") or {})
+    order["ownerAlertSms"] = (owner_alert.get("sms") or {})
+    order["ownerAlertDetail"] = str(
+        (owner_alert.get("email") or {}).get("detail")
+        or (owner_alert.get("sms") or {}).get("detail")
+        or owner_alert.get("detail")
+        or ""
+    )[:500]
+    order["ownerAlertAt"] = (
+        __import__("datetime").datetime.utcnow().isoformat() + "Z"
+        if owner_alert.get("ok")
+        else order.get("ownerAlertAt")
     )
     if result.get("ok"):
         order["message"] = (

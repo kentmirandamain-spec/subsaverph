@@ -48,6 +48,45 @@ You can also drop files into `assets/qr/` and set the URL to `/assets/qr/filenam
 
 1. **Admin → Orders / Sales**  
 2. Status `awaiting_payment` or `payment_submitted`  
+
+---
+
+## Merchant alerts (email + SMS when customer pays e-wallet)
+
+When a buyer submits a GCash/Maya reference (or auto e-wallet pays), **you** get:
+
+1. **Email** to your owner inbox (`ownerInbox` in Admin, or `ORDER_NOTIFY_EMAIL` / `SUPPORT_INBOX` on Render)  
+2. **SMS** to your mobile (if SMS is configured)
+
+### Admin
+
+**Admin → Brand & contact → Owner mobile**  
+Example: `09171234567` or `+639171234567`
+
+### Render environment (SMS — pick one)
+
+**Option A — Semaphore (recommended in PH)**  
+https://semaphore.co
+
+| Key | Value |
+|-----|--------|
+| `SEMAPHORE_API_KEY` | your API key |
+| `SEMAPHORE_SENDER` | optional sender name (max 11 chars) |
+| `OWNER_MOBILE` | optional; overrides Admin if set |
+
+**Option B — Twilio**
+
+| Key | Value |
+|-----|--------|
+| `TWILIO_ACCOUNT_SID` | ACxxxx |
+| `TWILIO_AUTH_TOKEN` | token |
+| `TWILIO_FROM` | your Twilio number e.g. `+1…` |
+| `OWNER_MOBILE` | your phone e.g. `+63917…` |
+
+Also ensure email works (`RESEND_API_KEY` or SMTP) and **ownerInbox** / `ORDER_NOTIFY_EMAIL` is your real Gmail/Outlook.
+
+Check: `https://YOUR-APP.onrender.com/api/health`  
+→ `"ownerMobileConfigured": true` and `"smsConfigured": true` when ready. 
 3. Match the customer’s reference to your GCash/Maya history  
 4. **Confirm payment** → codes reserved + emailed  
 

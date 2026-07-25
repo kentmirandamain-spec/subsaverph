@@ -19,6 +19,7 @@ import os
 import smtplib
 import ssl
 import urllib.error
+import urllib.parse
 import urllib.request
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -931,6 +932,283 @@ def send_payment_received_notice(order: dict[str, Any]) -> dict[str, Any]:
         "detail": detail,
         "notified": bool(ok and notify),
         "kind": "payment_received",
+    }
+
+
+def _settings_dict() -> dict[str, Any]:
+    try:
+        from pathlib import Path
+
+        settings_path = Path(__file__).resolve().parent / "data" / "store" / "settings.json"
+        if settings_path.is_file():
+            raw = json.loads(settings_path.read_text(encoding="utf-8-sig") or "{}")
+            if isinstance(raw, dict):
+                return raw
+    except Exception:
+        pass
+    return {}
+
+
+def owner_mobile() -> str:
+    """
+    Merchant phone for e-wallet SMS alerts.
+    Priority: settings.ownerMobile → OWNER_MOBILE / MERCHANT_MOBILE / TWILIO_TO env.
+    Accepts PH formats: 09xxxxxxxxx, +639xxxxxxxxx, 639xxxxxxxxx.
+    """
+    raw = (
+        str(_settings_dict().get("ownerMobile") or "").strip()
+        or (os.environ.get("OWNER_MOBILE") or "").strip()
+        or (os.environ.get("MERCHANT_MOBILE") or "").strip()
+        or (os.environ.get("TWILIO_TO") or "").strip()
+    )
+    return raw
+
+
+def normalize_ph_mobile(number: str) -> str:
+    """Normalize PH mobile to +63XXXXXXXXXX when possible; otherwise return digits/+ as-is."""
+    n = (number or "").strip()
+    if not n:
+        return ""
+    digits = "".join(c for c in n if c.isdigit())
+    if n.startswith("+") and len(digits) >= 10:
+        return "+" + digits
+    if digits.startswith("63") and len(digits) >= 12:
+        return "+" + digits
+    if digits.startswith("0") and len(digits) == 11:
+        return "+63" + digits[1:]
+    if len(digits) == 10 and digits.startswith("9"):
+        return "+63" + digits
+    return ("+" + digits) if digits else n
+
+
+def sms_configured() -> bool:
+    if not owner_mobile():
+        return False
+    if (os.environ.get("SEMAPHORE_API_KEY") or "").strip():
+        return True
+    sid = (os.environ.get("TWILIO_ACCOUNT_SID") or os.environ.get("TWILIO_SID") or "").strip()
+    token = (os.environ.get("TWILIO_AUTH_TOKEN") or os.environ.get("TWILIO_TOKEN") or "").strip()
+    frm = (os.environ.get("TWILIO_FROM") or "").strip()
+    return bool(sid and token and frm)
+
+
+def send_sms(to_number: str, body: str) -> dict[str, Any]:
+    """
+    Send SMS via Semaphore (PH-friendly) or Twilio.
+    Env:
+      SEMAPHORE_API_KEY (+ optional SEMAPHORE_SENDER)
+      or TWILIO_ACCOUNT_SID + TWILIO_AUTH_TOKEN + TWILIO_FROM
+    """
+    to_raw = (to_number or "").strip() or owner_mobile()
+    to = normalize_ph_mobile(to_raw)
+    text = (body or "").strip()
+    if not to or not text:
+        return {"ok": False, "provider": None, "detail": "Missing phone or message"}
+
+    # 1) Semaphore (popular in PH): https://semaphore.co
+    sem_key = (os.environ.get("SEMAPHORE_API_KEY") or "").strip()
+    if sem_key:
+        sender = (os.environ.get("SEMAPHORE_SENDER") or "SubSaverPH").strip()[:11]
+        # Semaphore expects local 09… or international without +
+        number = to.lstrip("+")
+        if number.startswith("63") and len(number) >= 12:
+            number = "0" + number[2:]
+        try:
+            payload = json.dumps(
+                {"apikey": sem_key, "number": number, "message": text[:800], "sendername": sender}
+            ).encode("utf-8")
+            req = urllib.request.Request(
+                "https://api.semaphore.co/api/v4/messages",
+                data=payload,
+                method="POST",
+                headers={"Content-Type": "application/json", "Accept": "application/json"},
+            )
+            with urllib.request.urlopen(req, timeout=25) as resp:
+                raw = resp.read().decode("utf-8", errors="replace")[:400]
+            return {"ok": True, "provider": "semaphore", "detail": raw, "to": to}
+        except urllib.error.HTTPError as e:
+            err = e.read().decode("utf-8", errors="replace")[:300]
+            return {"ok": False, "provider": "semaphore", "detail": f"HTTP {e.code}: {err}", "to": to}
+        except Exception as e:
+            return {"ok": False, "provider": "semaphore", "detail": str(e), "to": to}
+
+    # 2) Twilio REST
+    sid = (os.environ.get("TWILIO_ACCOUNT_SID") or os.environ.get("TWILIO_SID") or "").strip()
+    token = (os.environ.get("TWILIO_AUTH_TOKEN") or os.environ.get("TWILIO_TOKEN") or "").strip()
+    frm = (os.environ.get("TWILIO_FROM") or "").strip()
+    if sid and token and frm:
+        try:
+            import base64
+
+            auth = base64.b64encode(f"{sid}:{token}".encode()).decode()
+            form = urllib.parse.urlencode(
+                {"To": to, "From": frm, "Body": text[:1500]}
+            ).encode("utf-8")
+            req = urllib.request.Request(
+                f"https://api.twilio.com/2010-04-01/Accounts/{sid}/Messages.json",
+                data=form,
+                method="POST",
+                headers={
+                    "Authorization": f"Basic {auth}",
+                    "Content-Type": "application/x-www-form-urlencoded",
+                },
+            )
+            with urllib.request.urlopen(req, timeout=25) as resp:
+                raw = resp.read().decode("utf-8", errors="replace")[:300]
+            return {"ok": True, "provider": "twilio", "detail": raw, "to": to}
+        except urllib.error.HTTPError as e:
+            err = e.read().decode("utf-8", errors="replace")[:300]
+            return {"ok": False, "provider": "twilio", "detail": f"HTTP {e.code}: {err}", "to": to}
+        except Exception as e:
+            return {"ok": False, "provider": "twilio", "detail": str(e), "to": to}
+
+    return {
+        "ok": False,
+        "provider": None,
+        "detail": "SMS not configured (set SEMAPHORE_API_KEY or TWILIO_* + OWNER_MOBILE)",
+        "to": to,
+        "skipped": True,
+    }
+
+
+def _order_product_lines(order: dict[str, Any]) -> list[str]:
+    lines: list[str] = []
+    for it in order.get("items") or []:
+        lines.append(f"- {it.get('name') or it.get('id') or 'Plan'} × {it.get('qty') or 1}")
+    if not lines:
+        for it in order.get("cart") or []:
+            lines.append(f"- {it.get('id') or 'Plan'} × {it.get('qty') or 1}")
+    return lines or ["- (see admin order)"]
+
+
+def send_owner_ewallet_payment_alert(order: dict[str, Any]) -> dict[str, Any]:
+    """
+    Merchant alert when a customer pays / submits payment via e-wallet.
+    Sends:
+      1) Email TO owner inbox (not only BCC)
+      2) SMS to owner mobile (if Semaphore/Twilio configured)
+    """
+    order_id = str(order.get("id") or "—")
+    name = str(order.get("name") or "Customer").strip() or "Customer"
+    email = str(order.get("email") or "—")
+    ref = str(order.get("paymentReference") or order.get("providerRef") or "—")
+    method = str(order.get("method") or order.get("paymentMode") or "e-wallet")
+    status = str(order.get("status") or "payment_submitted")
+    amount = str(
+        order.get("amountFormatted")
+        or (
+            f"₱{float(order.get('amountPhp') or 0):,.2f}"
+            if order.get("amountPhp") is not None
+            else "—"
+        )
+    )
+    products = "\n".join(_order_product_lines(order))
+    needs_confirm = status.lower() in (
+        "payment_submitted",
+        "awaiting_payment",
+        "checkout_open",
+    )
+
+    # --- Email owner ---
+    owner_to = support_inbox()
+    email_result: dict[str, Any] = {
+        "ok": False,
+        "skipped": True,
+        "detail": "No owner inbox configured",
+    }
+    if owner_to and mail_configured():
+        subject = f"[SubSaverPH] E-wallet payment · {order_id} · {amount}"
+        action = (
+            "Open Admin → Orders and Confirm payment to release login codes."
+            if needs_confirm
+            else "Order is paid — codes should already be releasing / delivered."
+        )
+        text = "\n".join(
+            [
+                "SubSaverPH — E-wallet payment alert",
+                "=" * 44,
+                f"Order ID:  {order_id}",
+                f"Status:    {status}",
+                f"Customer:  {name}",
+                f"Email:     {email}",
+                f"Method:    {method}",
+                f"Amount:    {amount}",
+                f"Reference: {ref}",
+                "",
+                "Products:",
+                products,
+                "",
+                action,
+                "Admin: https://subsaverph.com/admin",
+            ]
+        )
+        html = f"""<!DOCTYPE html><html><body style="margin:0;padding:0;background:#000;color:#fff;font-family:system-ui,sans-serif">
+  <table width="100%" style="background:#000;padding:28px 12px"><tr><td align="center">
+  <table width="100%" style="max-width:520px;background:#0a0a0a;border:1px solid #2a2a2a">
+    <tr><td style="padding:24px">
+      <div style="font-size:12px;letter-spacing:0.16em;text-transform:uppercase;color:#fbbf24">Merchant alert</div>
+      <h1 style="margin:10px 0 0;font-size:20px">E-wallet payment</h1>
+      <p style="color:#aaa;font-size:14px;line-height:1.5">A customer paid (or submitted payment proof) via e-wallet.</p>
+      <table width="100%" style="font-size:13px;color:#aaa;border:1px solid #333;background:#111;margin-top:14px">
+        <tr><td style="padding:10px 12px;border-bottom:1px solid #222">Order ID</td>
+            <td align="right" style="padding:10px 12px;border-bottom:1px solid #222;color:#fff;font-family:monospace">{escape(order_id)}</td></tr>
+        <tr><td style="padding:10px 12px;border-bottom:1px solid #222">Status</td>
+            <td align="right" style="padding:10px 12px;border-bottom:1px solid #222;color:#fff">{escape(status)}</td></tr>
+        <tr><td style="padding:10px 12px;border-bottom:1px solid #222">Customer</td>
+            <td align="right" style="padding:10px 12px;border-bottom:1px solid #222;color:#fff">{escape(name)}<br/><span style="color:#888">{escape(email)}</span></td></tr>
+        <tr><td style="padding:10px 12px;border-bottom:1px solid #222">Method</td>
+            <td align="right" style="padding:10px 12px;border-bottom:1px solid #222;color:#fff">{escape(method)}</td></tr>
+        <tr><td style="padding:10px 12px;border-bottom:1px solid #222">Amount</td>
+            <td align="right" style="padding:10px 12px;border-bottom:1px solid #222;color:#fff">{escape(amount)}</td></tr>
+        <tr><td style="padding:10px 12px">Reference</td>
+            <td align="right" style="padding:10px 12px;color:#fff;font-family:monospace">{escape(ref)}</td></tr>
+      </table>
+      <pre style="margin:14px 0 0;padding:12px;background:#111;border:1px solid #333;color:#ccc;font-size:12px;white-space:pre-wrap">{escape(products)}</pre>
+      <p style="color:#fbbf24;font-size:13px;margin:16px 0 0">{escape(action)}</p>
+      <p style="margin:14px 0 0"><a href="https://subsaverph.com/admin" style="color:#34d399">Open Admin → Orders</a></p>
+    </td></tr>
+  </table>
+  </td></tr></table>
+</body></html>"""
+        if (os.environ.get("RESEND_API_KEY") or "").strip():
+            ok, detail = _send_via_resend(owner_to, subject, text, html, bcc=None)
+            email_result = {
+                "ok": ok,
+                "provider": "resend",
+                "detail": detail,
+                "to": owner_to,
+                "skipped": False,
+            }
+        else:
+            ok, detail = _send_via_smtp(owner_to, subject, text, html, bcc=None)
+            email_result = {
+                "ok": ok,
+                "provider": "smtp",
+                "detail": detail,
+                "to": owner_to,
+                "skipped": False,
+            }
+    elif not mail_configured():
+        email_result = {
+            "ok": False,
+            "skipped": True,
+            "detail": "Email not configured (RESEND_API_KEY or SMTP_*)",
+        }
+
+    # --- SMS owner ---
+    sms_body = (
+        f"SubSaverPH e-wallet: {order_id} {amount} from {name}. "
+        f"Ref {ref}. "
+        + ("Confirm in Admin → Orders." if needs_confirm else "Paid — check Admin.")
+    )
+    sms_result = send_sms(owner_mobile(), sms_body)
+
+    return {
+        "ok": bool(email_result.get("ok") or sms_result.get("ok")),
+        "email": email_result,
+        "sms": sms_result,
+        "kind": "owner_ewallet_alert",
+        "orderId": order_id,
     }
 
 

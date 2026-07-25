@@ -1095,7 +1095,10 @@ function settingsView() {
         <label>Owner inbox (where support form emails go — use your Outlook, not Gmail if that is where you want tickets)
           <input name="ownerInbox" type="email" value="${escapeAttr(s.ownerInbox || "")}" placeholder="subsaver@outlook.com" />
         </label>
-        <p class="muted" style="margin-top:0">Support form messages go here first. Order copies may still use <code>ORDER_NOTIFY_EMAIL</code> on Render (often Gmail). Leave blank only if you rely on env <code>SUPPORT_INBOX</code>.</p>
+        <label>Owner mobile (SMS alert when customer pays with e-wallet — PH format OK: 09xxxxxxxxx or +639…)
+          <input name="ownerMobile" type="tel" value="${escapeAttr(s.ownerMobile || "")}" placeholder="09171234567" autocomplete="tel" />
+        </label>
+        <p class="muted" style="margin-top:0">Support form messages go here first. E-wallet payments also email this inbox and SMS your mobile (set <code>SEMAPHORE_API_KEY</code> or Twilio on Render). Order invoice copies may use <code>ORDER_NOTIFY_EMAIL</code>.</p>
         <label>Website URL
           <input name="websiteUrl" value="${escapeAttr(s.websiteUrl || "")}" />
         </label>
