@@ -134,7 +134,7 @@ function loginView() {
 function shell(content) {
   const pendingPay = (state.orders || []).filter(
     (o) =>
-      o.paymentMode === "manual_ewallet" &&
+      (o.paymentMode === "manual_ewallet" || o.paymentMode === "manual_crypto") &&
       String(o.status || "").toLowerCase() === "payment_submitted" &&
       (o.paymentReference || "").trim()
   ).length;
@@ -206,7 +206,7 @@ function dashboardView() {
   );
   const pending = orders.filter(
     (o) =>
-      o.paymentMode === "manual_ewallet" &&
+      (o.paymentMode === "manual_ewallet" || o.paymentMode === "manual_crypto") &&
       orderStatusKey(o) === "payment_submitted" &&
       (o.paymentReference || "").trim()
   );
@@ -913,31 +913,59 @@ function settingsView() {
 
       <!-- ========== 4c. CRYPTO (NOWPayments) ========== -->
       <section class="settings-block" id="sc-crypto">
-        <h3 class="settings-h">4c · Crypto payments (NOWPayments)</h3>
+        <h3 class="settings-h">4c · Crypto payments</h3>
         <p class="muted settings-lead">
-          Crypto checkout uses your <strong>NOWPayments merchant account</strong>.
-          Funds go to the wallet/payout settings inside NOWPayments — not a QR in this admin.
-          To <strong>change the crypto payment account</strong>, replace the API key on Render (steps below).
+          Two options: <strong>direct wallet</strong> (you control the address — recommended alternative)
+          and/or <strong>NOWPayments</strong> (auto gateway with API key on Render).
         </p>
-        <label>Checkout label (optional — shown next to Crypto method)
-          <input name="cryptoCheckoutLabel" value="${escapeAttr(s.cryptoCheckoutLabel || "")}" placeholder="Crypto (USDT, BTC, ETH…)" />
-        </label>
-        <label>Checkout description (optional)
-          <input name="cryptoCheckoutDesc" value="${escapeAttr(s.cryptoCheckoutDesc || "")}" placeholder="Pay with crypto · instant codes after confirm" />
-        </label>
-        <div class="panel" style="margin-top:12px;padding:14px;border:1px solid var(--line);border-radius:10px;background:rgba(0,0,0,0.2)">
-          <p style="margin:0 0 8px;font-weight:700">How to change crypto account</p>
-          <ol class="muted" style="margin:0;padding-left:1.2rem;line-height:1.55">
-            <li>Log in (or create) at <a href="https://account.nowpayments.io/" target="_blank" rel="noopener">account.nowpayments.io</a></li>
-            <li><strong>Settings → API keys</strong> → create/copy the new API key</li>
-            <li>Set payout/wallet in the NOWPayments dashboard (where crypto funds land)</li>
-            <li>Render → subsaverph → <strong>Environment</strong> → set <code>NOWPAYMENTS_API_KEY</code> to the new key</li>
-            <li>Optional: <code>NOWPAYMENTS_IPN_SECRET</code> from NOWPayments IPN settings</li>
-            <li>IPN URL: <code>https://subsaverph.com/api/webhooks/nowpayments</code></li>
-            <li>Whitelist server IP from <code>https://subsaverph.com/api/health</code> → <code>outboundIp</code></li>
-            <li>Save env → Manual Deploy → confirm health shows <code>cryptoConfigured: true</code></li>
-          </ol>
-          <p class="muted" style="margin:10px 0 0">Do <strong>not</strong> paste API keys into this admin form — only on Render.</p>
+
+        <div class="settings-sub">
+          <h4 class="settings-sub-h">A · Direct crypto wallet (alternative — no NOWPayments)</h4>
+          <p class="muted">Customer sends crypto to your address, pastes TXID; you Confirm in Orders (same as GCash QR).</p>
+          <label class="check-row" style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+            <input type="checkbox" name="manualCryptoEnabled" value="1" ${
+              s.manualCryptoEnabled === false || s.manualCryptoEnabled === "0" || s.manualCryptoEnabled === "false"
+                ? ""
+                : "checked"
+            } />
+            <span>Enable crypto wallet at checkout (when address is set)</span>
+          </label>
+          <label>Checkout label
+            <input name="manualCryptoLabel" value="${escapeAttr(s.manualCryptoLabel || "")}" placeholder="Crypto wallet" />
+          </label>
+          <label>Network / coin (important — show clearly to customers)
+            <input name="manualCryptoNetwork" value="${escapeAttr(s.manualCryptoNetwork || "")}" placeholder="USDT (TRC20)" />
+          </label>
+          <label>Wallet address (where customers send payment)
+            <input name="manualCryptoAddress" value="${escapeAttr(s.manualCryptoAddress || "")}" placeholder="T… or 0x… or your wallet address" autocomplete="off" />
+          </label>
+          <label>Optional QR image URL (for this wallet)
+            <input name="manualCryptoQrUrl" value="${escapeAttr(s.manualCryptoQrUrl || "")}" placeholder="/assets/qr/crypto-qr.png or https://…" />
+          </label>
+          <label>Note on pay page
+            <textarea name="manualCryptoNote" rows="2" placeholder="Send only on the network shown. Wrong network = lost funds.">${escapeHtml(s.manualCryptoNote || "")}</textarea>
+          </label>
+        </div>
+
+        <div class="settings-sub">
+          <h4 class="settings-sub-h">B · NOWPayments (auto crypto gateway)</h4>
+          <label>Checkout label (optional)
+            <input name="cryptoCheckoutLabel" value="${escapeAttr(s.cryptoCheckoutLabel || "")}" placeholder="Crypto (USDT, BTC, ETH…)" />
+          </label>
+          <label>Checkout description (optional)
+            <input name="cryptoCheckoutDesc" value="${escapeAttr(s.cryptoCheckoutDesc || "")}" placeholder="Pay with crypto · instant codes after confirm" />
+          </label>
+          <div class="panel" style="margin-top:12px;padding:14px;border:1px solid var(--line);border-radius:10px;background:rgba(0,0,0,0.2)">
+            <p style="margin:0 0 8px;font-weight:700">Change NOWPayments account</p>
+            <ol class="muted" style="margin:0;padding-left:1.2rem;line-height:1.55">
+              <li>Log in at <a href="https://account.nowpayments.io/" target="_blank" rel="noopener">account.nowpayments.io</a></li>
+              <li><strong>Settings → API keys</strong> → copy API key</li>
+              <li>Render → Environment → <code>NOWPAYMENTS_API_KEY</code></li>
+              <li>IPN: <code>https://subsaverph.com/api/webhooks/nowpayments</code></li>
+              <li>Whitelist <code>outboundIp</code> from /api/health → Manual Deploy</li>
+            </ol>
+            <p class="muted" style="margin:10px 0 0">Do not paste API keys into this form — only on Render.</p>
+          </div>
         </div>
       </section>
 
@@ -1914,7 +1942,7 @@ function ordersView() {
   if (pipe === "preparing") {
     list = list.filter(
       (o) =>
-        o.paymentMode === "manual_ewallet" &&
+        (o.paymentMode === "manual_ewallet" || o.paymentMode === "manual_crypto") &&
         orderStatusKey(o) === "payment_submitted" &&
         (o.paymentReference || "").trim()
     );
@@ -1936,11 +1964,12 @@ function ordersView() {
       // Only payment_submitted counts as admin-pending (buyer sent a reference).
       // Incomplete QR checkouts never appear here — stock not held until confirm.
       const isManualPending =
-        o.paymentMode === "manual_ewallet" &&
+        (o.paymentMode === "manual_ewallet" || o.paymentMode === "manual_crypto") &&
         st === "payment_submitted" &&
         !!(o.paymentReference || "").trim();
       const lineTotal =
-        o.amountPhp != null && o.paymentMode === "manual_ewallet"
+        o.amountPhp != null &&
+        (o.paymentMode === "manual_ewallet" || o.paymentMode === "manual_crypto")
           ? Number(o.amountPhp)
           : orderLineTotal(o);
       const codes = (o.items || []).map((i) => `${i.name}: ${(i.codes || []).join(", ")}`).join(" · ");
@@ -1976,13 +2005,20 @@ function ordersView() {
       return `
       <tr class="${isRefunded ? "row-refunded" : isManualPending ? "row-pending" : ""}">
         <td><strong>${escapeHtml(o.id)}</strong><div class="muted">${escapeHtml(o.createdAt || "")}</div>
-          ${o.paymentMode === "manual_ewallet" ? `<div class="muted">manual e-wallet</div>` : ""}</td>
+          ${
+            o.paymentMode === "manual_ewallet"
+              ? `<div class="muted">manual e-wallet</div>`
+              : o.paymentMode === "manual_crypto"
+                ? `<div class="muted">manual crypto wallet</div>`
+                : ""
+          }</td>
         <td>${escapeHtml(o.email)}<div class="muted">${escapeHtml(o.name || "")}</div></td>
         <td><span class="${badgeClass}">${escapeHtml(o.status || "")}</span>
           <div class="muted">${escapeHtml(mail)}</div>
           ${actions ? `<div style="margin-top:6px">${actions}</div>` : ""}</td>
         <td><strong class="${isRefunded ? "sales-loss" : ""}">${isRefunded ? "− " : ""}${
-          o.amountFormatted && o.paymentMode === "manual_ewallet"
+          o.amountFormatted &&
+          (o.paymentMode === "manual_ewallet" || o.paymentMode === "manual_crypto")
             ? escapeHtml(o.amountFormatted)
             : escapeHtml(money(lineTotal))
         }</strong>
@@ -2385,7 +2421,7 @@ function bindShell() {
       if (!id) return;
       if (
         !confirm(
-          "Confirm this e-wallet transfer? Login codes will be reserved from stock and emailed to the customer."
+          "Confirm this manual payment (e-wallet or crypto)? Login codes will be reserved from stock and emailed to the customer."
         )
       ) {
         return;
@@ -2767,6 +2803,7 @@ function bindShell() {
     }
     // Unchecked checkbox is omitted from FormData
     payload.manualEwalletEnabled = fd.get("manualEwalletEnabled") === "1";
+    payload.manualCryptoEnabled = fd.get("manualCryptoEnabled") === "1";
     payload.uiStrings = uiStrings;
     try {
       const data = await api("/api/admin/settings", {

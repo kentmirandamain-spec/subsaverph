@@ -1204,6 +1204,7 @@ def api_catalog():
             "xenditEnabled": xendit_configured(),
             "paypalEnabled": paypal_configured(),
             "cryptoEnabled": crypto_configured(),
+            "manualCryptoEnabled": manual_crypto_configured(),
             "liqpayEnabled": liqpay_configured(),
             "manualEwalletEnabled": manual_ewallet_configured(),
             "ewalletProvider": ewallet_provider(),
@@ -1241,6 +1242,7 @@ def any_live_payment_provider() -> bool:
         or xendit_configured()
         or paypal_configured()
         or crypto_configured()
+        or manual_crypto_configured()
         or liqpay_configured()
         or manual_ewallet_configured()
     )
@@ -1348,6 +1350,8 @@ def _is_ewallet_order(order: dict) -> bool:
         "shopee",
         "manual_gcash",
         "manual_maya",
+        "manual_crypto",
+        "crypto",
         "xendit",
         "paymongo",
     )
@@ -1727,6 +1731,64 @@ def manual_ewallet_configured() -> bool:
     return bool(manual_ewallet_config().get("enabled"))
 
 
+def manual_crypto_config() -> dict:
+    """
+    Alternative crypto: customer sends to your wallet address, pastes TXID,
+    admin confirms (same flow as manual GCash/Maya). Independent of NOWPayments.
+    """
+    s = load_settings() or {}
+    env_enabled = _truthy_env("MANUAL_CRYPTO_ENABLED")
+    settings_enabled = s.get("manualCryptoEnabled")
+    if isinstance(settings_enabled, str):
+        settings_enabled = settings_enabled.strip().lower() in ("1", "true", "yes", "on")
+    elif settings_enabled is None:
+        settings_enabled = True
+    else:
+        settings_enabled = bool(settings_enabled)
+
+    address = (
+        (os.environ.get("MANUAL_CRYPTO_ADDRESS") or "").strip()
+        or str(s.get("manualCryptoAddress") or "").strip()
+    )
+    network = (
+        (os.environ.get("MANUAL_CRYPTO_NETWORK") or "").strip()
+        or str(s.get("manualCryptoNetwork") or "").strip()
+        or "USDT (TRC20)"
+    )
+    label = (
+        (os.environ.get("MANUAL_CRYPTO_LABEL") or "").strip()
+        or str(s.get("manualCryptoLabel") or "").strip()
+        or "Crypto wallet"
+    )
+    note = (
+        (os.environ.get("MANUAL_CRYPTO_NOTE") or "").strip()
+        or str(s.get("manualCryptoNote") or "").strip()
+        or "Send the exact amount to the wallet address. Use the correct network. Paste your transaction ID (TXID) after sending."
+    )
+    qr_url = _normalize_qr_url(
+        (os.environ.get("MANUAL_CRYPTO_QR_URL") or "").strip()
+        or str(s.get("manualCryptoQrUrl") or "").strip()
+    )
+    enabled = env_enabled if env_enabled is not None else settings_enabled
+    return {
+        "enabled": bool(enabled and address),
+        "address": address,
+        "network": network,
+        "label": label,
+        "note": note,
+        "qrUrl": qr_url,
+    }
+
+
+def manual_crypto_configured() -> bool:
+    return bool(manual_crypto_config().get("enabled"))
+
+
+def is_manual_payment_mode(mode: str) -> bool:
+    m = str(mode or "").lower()
+    return m in ("manual_ewallet", "manual_crypto")
+
+
 def paymongo_configured() -> bool:
     return bool((os.environ.get("PAYMONGO_SECRET_KEY") or "").strip())
 
@@ -2066,6 +2128,22 @@ def available_payment_methods() -> list:
                 }
             )
 
+    # Alternative crypto — direct wallet transfer (no NOWPayments)
+    mc = manual_crypto_config()
+    if mc.get("enabled"):
+        net = mc.get("network") or "crypto"
+        methods.append(
+            {
+                "id": "manual_crypto",
+                "label": mc.get("label") or "Crypto wallet",
+                "provider": "manual",
+                "desc": f"{net} · send to wallet · 10–30 min after confirm",
+                "group": "instant",
+                "delivery": "manual",
+                "deliveryLabel": "10–30 minutes",
+            }
+        )
+
     # PayPal — live keys required (shown with auto delivery). Env PAYPAL_SHOW=0 to hide.
     show_paypal = _truthy_env("PAYPAL_SHOW")
     if show_paypal is None:
@@ -2307,9 +2385,11 @@ def api_checkout_start():
             return jsonify({"error": str(e)}), 409
         return jsonify({"ok": True, "provider": "demo", "order": order})
 
-    # ---- Manual GCash / Maya (customer send + admin confirm) ----
+    # ---- Manual GCash / Maya / Crypto wallet (customer send + admin confirm) ----
     if provider == "manual" and method in ("manual_gcash", "manual_maya"):
         return _manual_ewallet_checkout(email, name, method, normalized, cart_meta)
+    if provider == "manual" and method == "manual_crypto":
+        return _manual_crypto_checkout(email, name, normalized, cart_meta)
 
     # ---- CARD via Stripe ----
     if method == "card" and provider == "stripe":
@@ -2478,10 +2558,137 @@ def _manual_ewallet_checkout(email, name, method, normalized, cart_meta):
     )
 
 
+def _manual_crypto_checkout(email, name, normalized, cart_meta):
+    """
+    Alternative crypto: pay to store wallet address, submit TXID, admin confirms.
+    Same incomplete-checkout pattern as manual e-wallet (no stock until confirm).
+    """
+    cfg = manual_crypto_config()
+    if not cfg.get("enabled") or not cfg.get("address"):
+        return jsonify(
+            {
+                "error": "Manual crypto wallet is not configured. Add a wallet address in Admin → Crypto.",
+            }
+        ), 503
+
+    amount_php = cart_total_php(normalized)
+    if amount_php < 1:
+        return jsonify({"error": "Order total too low for crypto payment."}), 400
+
+    line_results = []
+    for row in normalized:
+        deal = row["deal"]
+        qty = row["qty"]
+        includes = deal.get("includes") or []
+        if isinstance(includes, str):
+            includes = [x.strip() for x in includes.split("\n") if x.strip()]
+        elif not isinstance(includes, list):
+            includes = []
+        line_results.append(
+            {
+                "id": row["id"],
+                "name": deal.get("name"),
+                "monogram": deal.get("monogram"),
+                "brand": deal.get("brand"),
+                "category": deal.get("category"),
+                "qty": qty,
+                "price": deal.get("price"),
+                "priceBase": deal.get("priceBase", "USD"),
+                "duration": deal.get("duration"),
+                "delivery": deal.get("delivery"),
+                "codes": [],
+                "credentials": [],
+            }
+        )
+
+    try:
+        purge_stale_ewallet_checkouts()
+    except Exception:
+        pass
+
+    order_id = "PH" + uuid.uuid4().hex[:10].upper()
+    network = cfg.get("network") or "crypto"
+    address = cfg.get("address") or ""
+    label = cfg.get("label") or "Crypto wallet"
+    qr_url = cfg.get("qrUrl") or ""
+    order = {
+        "id": order_id,
+        "email": email,
+        "name": name,
+        "currency": "PHP",
+        "items": line_results,
+        "cart": cart_meta,
+        "status": "awaiting_payment",
+        "paymentMode": "manual_crypto",
+        "method": "manual_crypto",
+        "providerRef": f"manual-crypto-{order_id}",
+        "amountPhp": amount_php,
+        "amountFormatted": f"₱{amount_php:,.2f}",
+        "payTo": {
+            "wallet": label,
+            "network": network,
+            "address": address,
+            "name": network,
+            "qrUrl": qr_url,
+        },
+        "paymentInstructions": {
+            "steps": [
+                f"Send crypto on network: {network}.",
+                f"Wallet address: {address}",
+                f"Send the equivalent of exactly ₱{amount_php:,.2f} (use a trusted rate; overpay slightly if needed to cover fees).",
+                f"Put Order ID {order_id} in the memo/note if your wallet supports it.",
+                "After the transfer, paste your transaction ID (TXID / hash) below and submit.",
+                "Stock is not held until you submit your TXID.",
+                "Login codes: usually 10–30 minutes after we verify the payment on-chain.",
+            ],
+            "note": cfg.get("note") or "",
+            "qrUrl": qr_url,
+            "address": address,
+            "network": network,
+            "deliveryEta": "10–30 minutes",
+        },
+        "paymentReference": "",
+        "paymentProofNote": "",
+        "createdAt": __import__("datetime").datetime.utcnow().isoformat() + "Z",
+        "delivery": "after_confirm",
+        "deliveryEta": "10–30 minutes",
+        "stockHeld": False,
+        "countsAsPending": False,
+        "isIncompleteCheckout": True,
+        "message": (
+            f"Send crypto ({network}) to the wallet address shown. "
+            f"Amount due ₱{amount_php:,.2f}. Order ID {order_id}. "
+            f"Submit your TXID after sending. Codes after verification (about 10–30 minutes)."
+        ),
+        "emailSent": False,
+    }
+    with _STORE_LOCK:
+        checkouts = load_ewallet_checkouts()
+        checkouts[order_id] = order
+        if len(checkouts) > 500:
+            items = sorted(
+                checkouts.items(),
+                key=lambda kv: str((kv[1] or {}).get("createdAt") or ""),
+            )
+            checkouts = dict(items[-400:])
+        save_ewallet_checkouts(checkouts)
+
+    return jsonify(
+        {
+            "ok": True,
+            "provider": "manual",
+            "pending": False,
+            "incompleteCheckout": True,
+            "stockHeld": False,
+            "order": order,
+        }
+    )
+
+
 @app.post("/api/checkout/manual/proof")
 def api_manual_proof():
     """
-    Customer submits e-wallet reference after sending payment.
+    Customer submits e-wallet reference or crypto TXID after sending payment.
     Only then does the checkout become a real order (payment_submitted / admin-pending).
     Still does NOT reserve stock until admin confirms.
     """
@@ -2494,7 +2701,11 @@ def api_manual_proof():
     if not order_id:
         return jsonify({"error": "Order ID is required"}), 400
     if not ref or len(ref) < 4:
-        return jsonify({"error": "Enter your GCash/Maya reference number (at least 4 characters)"}), 400
+        return jsonify(
+            {
+                "error": "Enter your payment reference or crypto TXID (at least 4 characters)",
+            }
+        ), 400
 
     # 1) Prefer incomplete checkout (not yet an order)
     with _STORE_LOCK:
@@ -2521,7 +2732,7 @@ def api_manual_proof():
             order = {
                 **draft,
                 "status": "payment_submitted",
-                "paymentReference": ref[:120],
+                "paymentReference": ref[:160],
                 "paymentProofNote": note,
                 "paymentSubmittedAt": __import__("datetime").datetime.utcnow().isoformat()
                 + "Z",
@@ -2562,8 +2773,8 @@ def api_manual_proof():
             break
     if not found:
         return jsonify({"error": "Order not found. Start checkout again or contact support."}), 404
-    if found.get("paymentMode") != "manual_ewallet":
-        return jsonify({"error": "This order is not a manual e-wallet payment"}), 400
+    if not is_manual_payment_mode(found.get("paymentMode")):
+        return jsonify({"error": "This order is not a manual payment (e-wallet / crypto wallet)"}), 400
     st = str(found.get("status") or "").lower()
     if st == "paid":
         return jsonify({"ok": True, "order": found, "alreadyPaid": True})
@@ -2575,7 +2786,7 @@ def api_manual_proof():
     found = {
         **found,
         "status": "payment_submitted",
-        "paymentReference": ref[:120],
+        "paymentReference": ref[:160],
         "paymentProofNote": note,
         "paymentSubmittedAt": __import__("datetime").datetime.utcnow().isoformat() + "Z",
         "deliveryEta": found.get("deliveryEta") or "10–30 minutes",
@@ -2600,7 +2811,7 @@ def api_manual_proof():
 
 @app.get("/api/checkout/manual/<order_id>")
 def api_manual_order_status(order_id: str):
-    """Public status poll for manual e-wallet (draft checkout or real order)."""
+    """Public status poll for manual e-wallet / crypto wallet (draft checkout or real order)."""
     oid = str(order_id or "").strip()
     email = (request.args.get("email") or "").strip().lower()
 
@@ -2623,8 +2834,8 @@ def api_manual_order_status(order_id: str):
     for o in load_orders():
         if str(o.get("id") or "") != oid:
             continue
-        if o.get("paymentMode") != "manual_ewallet":
-            return jsonify({"error": "Not a manual e-wallet order"}), 400
+        if not is_manual_payment_mode(o.get("paymentMode")):
+            return jsonify({"error": "Not a manual payment order"}), 400
         if email and str(o.get("email") or "").strip().lower() != email:
             return jsonify({"error": "Email does not match this order"}), 403
         return jsonify({"ok": True, "order": _public_view(o)})
@@ -4680,7 +4891,7 @@ def admin_orders():
     orders = []
     for o in raw:
         if (
-            o.get("paymentMode") == "manual_ewallet"
+            is_manual_payment_mode(o.get("paymentMode"))
             and str(o.get("status") or "").lower() == "awaiting_payment"
             and not (o.get("paymentReference") or "").strip()
         ):
@@ -4696,7 +4907,7 @@ def admin_order_set_status(order_id: str):
     Mark an order paid or refunded for P&L.
     Body: { "status": "paid" | "refunded" }
     Refunded sales are deducted from Orders/Sales profit.
-    Note: for manual e-wallet pending orders use /confirm-payment (releases codes).
+    Note: for manual e-wallet / crypto pending orders use /confirm-payment (releases codes).
     """
     data = request.get_json(silent=True) or {}
     new_status = str(data.get("status") or "").strip().lower()
@@ -4711,14 +4922,14 @@ def admin_order_set_status(order_id: str):
             # Manual pending → paid without codes is wrong; require confirm-payment
             if (
                 new_status == "paid"
-                and o.get("paymentMode") == "manual_ewallet"
+                and is_manual_payment_mode(o.get("paymentMode"))
                 and str(o.get("status") or "").lower()
                 in ("awaiting_payment", "payment_submitted", "checkout_open")
             ):
                 return (
                     jsonify(
                         {
-                            "error": "Use Confirm payment to release codes for manual e-wallet orders.",
+                            "error": "Use Confirm payment to release codes for manual e-wallet/crypto orders.",
                             "hint": f"POST /api/admin/orders/{oid}/confirm-payment",
                         }
                     ),
@@ -4746,8 +4957,8 @@ def admin_order_set_status(order_id: str):
 @require_admin
 def admin_confirm_manual_payment(order_id: str):
     """
-    Confirm a manual e-wallet transfer and release login codes.
-    Body optional: { "note": "seen in GCash" }
+    Confirm a manual e-wallet or crypto wallet transfer and release login codes.
+    Body optional: { "note": "seen on chain / GCash" }
     """
     data = request.get_json(silent=True) or {}
     note = str(data.get("note") or "").strip()[:500]
@@ -4761,8 +4972,8 @@ def admin_confirm_manual_payment(order_id: str):
             break
     if not found:
         return jsonify({"error": "Order not found"}), 404
-    if found.get("paymentMode") != "manual_ewallet":
-        return jsonify({"error": "Not a manual e-wallet order"}), 400
+    if not is_manual_payment_mode(found.get("paymentMode")):
+        return jsonify({"error": "Not a manual e-wallet or crypto wallet order"}), 400
 
     st = str(found.get("status") or "").lower()
     if st == "cancelled":

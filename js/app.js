@@ -68,6 +68,7 @@ const state = {
   xenditEnabled: false,
   paypalEnabled: false,
   cryptoEnabled: false,
+  manualCryptoEnabled: false,
   liqpayEnabled: false,
   manualEwalletEnabled: false,
   ewalletProvider: "demo",
@@ -1762,7 +1763,8 @@ function paymentMethodsList() {
     : [
         // Card/Stripe omitted from fallback — use PayPal for card payments
         { id: "paypal", label: "PayPal", desc: "Instant codes", group: "instant", delivery: "auto" },
-        { id: "crypto", label: "Crypto", desc: "Instant codes", group: "instant", delivery: "auto" },
+        { id: "crypto", label: "Crypto (NOWPayments)", desc: "Instant codes", group: "instant", delivery: "auto" },
+        { id: "manual_crypto", label: "Crypto wallet", desc: "10–30 min", group: "instant", delivery: "manual" },
         { id: "manual_gcash", label: "GCash (QR)", desc: "10–30 min", group: "ewallet", delivery: "manual" },
         { id: "manual_maya", label: "Maya (QR)", desc: "10–30 min", group: "ewallet", delivery: "manual" },
         { id: "gcash", label: "GCash", desc: "Instant codes", group: "ewallet", delivery: "auto" },
@@ -1783,6 +1785,8 @@ const PH_EWALLETS = new Set([
   "manual_maya",
 ]);
 const MANUAL_EWALLETS = new Set(["manual_gcash", "manual_maya"]);
+const MANUAL_CRYPTO = new Set(["manual_crypto"]);
+const MANUAL_PAY_METHODS = new Set(["manual_gcash", "manual_maya", "manual_crypto"]);
 /** Instant code delivery after payment succeeds */
 const AUTO_DELIVERY_METHODS = new Set([
   "paypal",
@@ -1796,8 +1800,16 @@ function isManualEwalletMethod(method) {
   return MANUAL_EWALLETS.has(method);
 }
 
+function isManualCryptoMethod(method) {
+  return MANUAL_CRYPTO.has(method);
+}
+
+function isManualPayMethod(method) {
+  return MANUAL_PAY_METHODS.has(method);
+}
+
 function isAutoDeliveryMethod(method) {
-  if (isManualEwalletMethod(method)) return false;
+  if (isManualPayMethod(method)) return false;
   if (AUTO_DELIVERY_METHODS.has(method)) return true;
   // Gateway PH e-wallets (PayMongo/Xendit) are auto; manual QR is not
   if (PH_EWALLETS.has(method) && !isManualEwalletMethod(method)) return true;
@@ -1807,6 +1819,7 @@ function isAutoDeliveryMethod(method) {
 function payButtonLabel(method) {
   if (method === "manual_gcash") return "Continue — scan GCash QR";
   if (method === "manual_maya") return "Continue — scan Maya QR";
+  if (method === "manual_crypto") return "Continue — pay with crypto wallet";
   if (method === "gcash") return "Continue to GCash";
   if (method === "paymaya") return "Continue to Maya";
   if (method === "grab_pay") return "Continue to GrabPay";
@@ -1832,6 +1845,7 @@ const PAYMENT_LOGOS = {
   paymaya: { src: "/assets/payments/maya.svg?v=paylogo1", alt: "Maya", wide: true },
   paypal: { src: "/assets/payments/paypal.svg?v=paylogo1", alt: "PayPal" },
   crypto: { src: "/assets/payments/bitcoin.svg?v=paylogo1", alt: "Crypto" },
+  manual_crypto: { src: "/assets/payments/bitcoin.svg?v=paylogo1", alt: "Crypto wallet" },
   card: { src: "/assets/payments/card-mark.svg?v=paylogo1", alt: "Card" },
   stripe: { src: "/assets/payments/stripe.svg?v=paylogo1", alt: "Stripe" },
   liqpay: { src: "/assets/payments/liqpay.svg?v=paylogo1", alt: "LiqPay", wide: true },
@@ -2141,7 +2155,20 @@ function checkoutTermsModalHtml(cart, totals) {
 
 function viewManualEwalletPending(order) {
   const payTo = order.payTo || {};
-  const wallet = payTo.wallet || (order.method === "manual_maya" ? "Maya" : "GCash");
+  const isCrypto =
+    order.paymentMode === "manual_crypto" || order.method === "manual_crypto";
+  const wallet =
+    payTo.wallet ||
+    (isCrypto
+      ? "Crypto wallet"
+      : order.method === "manual_maya"
+        ? "Maya"
+        : "GCash");
+  const network = payTo.network || (order.paymentInstructions && order.paymentInstructions.network) || "";
+  const address =
+    payTo.address ||
+    (order.paymentInstructions && order.paymentInstructions.address) ||
+    "";
   const accountName = payTo.name || "";
   const amount =
     order.amountFormatted ||
@@ -2159,26 +2186,63 @@ function viewManualEwalletPending(order) {
     )
     .join("");
 
-  return `
-    <div class="success manual-pay-page${submitted ? " manual-pay-page--submitted" : ""}">
-      <div class="success-card success-card-wide manual-pay-card">
-        <div class="manual-pay-head">
-          <div class="ok">${submitted ? "✓" : "₱"}</div>
-          <h1>${submitted ? "Payment submitted" : "Pay with " + escapeHtml(wallet)}</h1>
-          <p class="muted manual-pay-meta">Order <strong class="success-order-id">${escapeHtml(order.id || "")}</strong>
-            ${order.email ? ` · ${escapeHtml(order.email)}` : ""}</p>
-          <p class="muted manual-pay-lead">
-            ${
-              submitted
-                ? "We received your reference. Codes are usually ready within <strong>10–30 minutes</strong>."
-                : "Scan the QR, pay the exact amount, then submit your reference below."
-            }
-          </p>
+  const payBox = isCrypto
+    ? `<div class="manual-pay-box" role="region" aria-label="Crypto wallet payment">
+          <h2 class="manual-pay-title">Amount to pay</h2>
+          <div class="manual-pay-amount">${escapeHtml(amount)}</div>
+          ${
+            network
+              ? `<p class="muted" style="margin:8px 0 0"><strong>Network:</strong> ${escapeHtml(network)}</p>`
+              : ""
+          }
+          ${
+            address
+              ? `<div class="manual-pay-grid" style="margin-top:12px">
+            <div class="manual-pay-field">
+              <span class="manual-pay-label">Wallet address</span>
+              <div class="manual-pay-value-row">
+                <code class="manual-pay-value" style="word-break:break-all">${escapeHtml(address)}</code>
+                <button type="button" class="btn sm cred-copy" data-copy="${escapeAttr(address)}">Copy</button>
+              </div>
+            </div>
+            <div class="manual-pay-field">
+              <span class="manual-pay-label">Order ID</span>
+              <div class="manual-pay-value-row">
+                <code class="manual-pay-value">${escapeHtml(order.id || "")}</code>
+                <button type="button" class="btn sm cred-copy" data-copy="${escapeAttr(order.id || "")}">Copy</button>
+              </div>
+            </div>
+          </div>`
+              : `<p class="err manual-pay-err">Wallet address missing — contact support with Order ID ${escapeHtml(order.id || "")}.</p>`
+          }
+          ${
+            qrUrl
+              ? `<div class="manual-pay-qr" style="margin-top:12px">
+              <p class="manual-pay-qr-label">Optional QR</p>
+              <img class="pay-qr" src="${escapeAttr(qrUrl)}" alt="Crypto wallet QR" width="220" height="220" decoding="async" />
+            </div>`
+              : ""
+          }
+          <ol class="manual-pay-steps">
+            <li>Open your crypto wallet / exchange</li>
+            <li>Select network <strong>${escapeHtml(network || "as shown")}</strong> (wrong network = lost funds)</li>
+            <li>Send the equivalent of <strong>${escapeHtml(amount)}</strong> to the address above</li>
+            <li>Paste your <strong>TXID / transaction hash</strong> below</li>
+          </ol>
         </div>
 
-        ${
-          !submitted
-            ? `<div class="manual-pay-box" role="region" aria-label="Payment QR">
+        <form id="manualProofForm" class="form manual-proof-form">
+          <h3 class="manual-proof-title">I already paid</h3>
+          <label class="manual-proof-label">Transaction ID (TXID)
+            <input required name="paymentReference" placeholder="e.g. 0x… or blockchain TX hash" autocomplete="off" inputmode="text" />
+          </label>
+          <label class="manual-proof-label">Optional note
+            <input name="note" placeholder="Coin / from exchange…" autocomplete="off" />
+          </label>
+          <p class="err manual-proof-err" id="manualProofErr"></p>
+          <button class="btn solid full" type="submit" id="manualProofBtn">Submit TXID</button>
+        </form>`
+    : `<div class="manual-pay-box" role="region" aria-label="Payment QR">
           <h2 class="manual-pay-title">Amount to pay</h2>
           <div class="manual-pay-amount">${escapeHtml(amount)}</div>
           ${
@@ -2216,14 +2280,37 @@ function viewManualEwalletPending(order) {
           </label>
           <p class="err manual-proof-err" id="manualProofErr"></p>
           <button class="btn solid full" type="submit" id="manualProofBtn">Submit payment reference</button>
-        </form>`
+        </form>`;
+
+  return `
+    <div class="success manual-pay-page${submitted ? " manual-pay-page--submitted" : ""}">
+      <div class="success-card success-card-wide manual-pay-card">
+        <div class="manual-pay-head">
+          <div class="ok">${submitted ? "✓" : isCrypto ? "₿" : "₱"}</div>
+          <h1>${submitted ? "Payment submitted" : "Pay with " + escapeHtml(wallet)}</h1>
+          <p class="muted manual-pay-meta">Order <strong class="success-order-id">${escapeHtml(order.id || "")}</strong>
+            ${order.email ? ` · ${escapeHtml(order.email)}` : ""}</p>
+          <p class="muted manual-pay-lead">
+            ${
+              submitted
+                ? "We received your payment proof. Codes are usually ready within <strong>10–30 minutes</strong>."
+                : isCrypto
+                  ? "Send crypto to the wallet below, then submit your <strong>TXID</strong>."
+                  : "Scan the QR, pay the exact amount, then submit your reference below."
+            }
+          </p>
+        </div>
+
+        ${
+          !submitted
+            ? payBox
             : `<div class="manual-pay-box manual-pay-box--submitted" role="region" aria-label="Payment received">
           <h2 class="manual-pay-title">Payment details</h2>
           <div class="manual-pay-grid manual-pay-grid--submitted">
             <div class="manual-pay-field">
               <span class="manual-pay-label">Method</span>
               <div class="manual-pay-value-row manual-pay-value-row--solo">
-                <code class="manual-pay-value">${escapeHtml(wallet)} QR</code>
+                <code class="manual-pay-value">${escapeHtml(wallet)}${isCrypto && network ? " · " + escapeHtml(network) : isCrypto ? "" : " QR"}</code>
               </div>
             </div>
             <div class="manual-pay-field">
@@ -2347,10 +2434,10 @@ function viewSuccess() {
     return `<div class="success"><div class="empty"><h2>No order</h2><a class="btn solid" href="#/deals">Shop</a></div></div>`;
   }
 
-  // Manual e-wallet: show pay instructions until status is paid
+  // Manual e-wallet / crypto wallet: show pay instructions until status is paid
   const orderStatus = String(order.status || "").toLowerCase();
   if (
-    order.paymentMode === "manual_ewallet" &&
+    (order.paymentMode === "manual_ewallet" || order.paymentMode === "manual_crypto") &&
     orderStatus !== "paid" &&
     orderStatus !== "refunded"
   ) {
@@ -3562,6 +3649,7 @@ async function loadLiveCatalog(opts = {}) {
     state.xenditEnabled = !!data.xenditEnabled;
     state.paypalEnabled = !!data.paypalEnabled;
     state.cryptoEnabled = !!data.cryptoEnabled;
+    state.manualCryptoEnabled = !!data.manualCryptoEnabled;
     state.liqpayEnabled = !!data.liqpayEnabled;
     state.manualEwalletEnabled = !!data.manualEwalletEnabled;
     state.ewalletProvider = data.ewalletProvider || "demo";
