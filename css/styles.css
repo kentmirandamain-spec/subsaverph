@@ -12457,17 +12457,21 @@ html[data-theme="light"] .hero-cat-box:hover {
 
 /* ============================================================
    Dual media: official PHOTO on mobile, LOGO on desktop
-   Controlled by CSS only (phones always get photos).
+   Must beat img.product-img { display:block !important } via
+   equal/higher specificity (img.product-media-*).
    ============================================================ */
 
-/* Mobile-first default: show official product photos */
-.product-media-photo {
+/* Mobile-first: official product photos only */
+img.product-img.product-media-photo {
   display: block !important;
   opacity: 1 !important;
   visibility: visible !important;
 }
-.product-media-logo {
+img.product-img.product-media-logo {
   display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
 }
 
 .product-card-media--dual,
@@ -12479,7 +12483,7 @@ html[data-theme="light"] .hero-cat-box:hover {
   overflow: hidden !important;
   background: var(--brand-bg, #0a0e16) !important;
 }
-.product-card-media--dual .product-media-photo {
+.product-card-media--dual img.product-img.product-media-photo {
   position: absolute !important;
   inset: 0 !important;
   width: 100% !important;
@@ -12498,7 +12502,7 @@ html[data-theme="light"] .hero-cat-box:hover {
   aspect-ratio: 1 / 1 !important;
   background: var(--brand-bg, #0a0e16) !important;
 }
-.detail-product-img-wrap--dual .product-media-photo {
+.detail-product-img-wrap--dual img.product-img.product-media-photo {
   position: absolute !important;
   inset: 0 !important;
   width: 100% !important;
@@ -12514,7 +12518,7 @@ html[data-theme="light"] .hero-cat-box:hover {
   width: 100% !important;
   height: 100% !important;
 }
-.product-slide--dual .product-media-photo {
+.product-slide--dual img.product-img.product-media-photo {
   position: absolute !important;
   inset: 0 !important;
   width: 100% !important;
@@ -12525,15 +12529,19 @@ html[data-theme="light"] .hero-cat-box:hover {
   object-position: center center !important;
 }
 
-/* Desktop: hide photos, show brand logos (logo-fit) */
+/* Desktop: logos only */
 @media (min-width: 901px) {
-  .product-media-photo {
+  img.product-img.product-media-photo {
     display: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
   }
-  .product-media-logo {
+  img.product-img.product-media-logo {
     display: block !important;
     opacity: 1 !important;
     visibility: visible !important;
+    pointer-events: auto !important;
   }
 
   .product-card-media--dual {
@@ -12542,7 +12550,7 @@ html[data-theme="light"] .hero-cat-box:hover {
     justify-content: center !important;
     padding: 16% 14% !important;
   }
-  .product-card-media--dual .product-media-logo {
+  .product-card-media--dual img.product-img.product-media-logo {
     position: relative !important;
     inset: auto !important;
     width: auto !important;
@@ -12561,7 +12569,7 @@ html[data-theme="light"] .hero-cat-box:hover {
     padding: 12% 10% !important;
     aspect-ratio: 16 / 10 !important;
   }
-  .detail-product-img-wrap--dual .product-media-logo {
+  .detail-product-img-wrap--dual img.product-img.product-media-logo {
     position: relative !important;
     inset: auto !important;
     max-width: 70% !important;
@@ -12571,7 +12579,7 @@ html[data-theme="light"] .hero-cat-box:hover {
     object-fit: contain !important;
   }
 
-  .product-slide--dual .product-media-logo {
+  .product-slide--dual img.product-img.product-media-logo {
     position: relative !important;
     inset: auto !important;
     max-width: 55% !important;
@@ -12588,19 +12596,23 @@ html[data-theme="light"] .hero-cat-box:hover {
   }
 }
 
-/* Force mobile photos even if a phone reports a large CSS width */
+/* Phones / coarse pointer tablets: force photos */
 @media (max-width: 900px), (max-width: 1200px) and (pointer: coarse) {
-  .product-media-photo {
+  img.product-img.product-media-photo {
     display: block !important;
     opacity: 1 !important;
     visibility: visible !important;
+    pointer-events: auto !important;
   }
-  .product-media-logo {
+  img.product-img.product-media-logo {
     display: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
   }
-  .product-card-media--dual .product-media-photo,
-  .detail-product-img-wrap--dual .product-media-photo,
-  .product-slide--dual .product-media-photo {
+  .product-card-media--dual img.product-img.product-media-photo,
+  .detail-product-img-wrap--dual img.product-img.product-media-photo,
+  .product-slide--dual img.product-img.product-media-photo {
     position: absolute !important;
     inset: 0 !important;
     width: 100% !important;
