@@ -15952,3 +15952,85 @@ html[data-theme="light"] .co-method {
     box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.55), 0 0 12px rgba(56, 189, 248, 0.25);
   }
 }
+
+/* ============================================================
+   FINAL desktop-only Canva fix (highest priority)
+   Hide cropped photo layer; show full Canva wordmark logo.
+   ============================================================ */
+@media (min-width: 901px) {
+  .product-card[data-brand="Canva"] img.product-media-photo,
+  .product-card[data-brand="Canva"] img.product-cover-img.product-media-photo,
+  .product-card[data-brand="Canva"] .product-card-media--dual img.product-media-photo,
+  .product-slide[data-brand="Canva"] img.product-media-photo,
+  .product-slide[data-brand="Canva"] img.product-cover-img,
+  .product-slide--canva img.product-media-photo,
+  .product-slide--canva img.product-cover-img,
+  .product-slide--canva img.product-cover-img--canva {
+    display: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+    width: 0 !important;
+    height: 0 !important;
+    max-width: 0 !important;
+    max-height: 0 !important;
+    position: absolute !important;
+    left: -9999px !important;
+  }
+
+  .product-card[data-brand="Canva"] .product-card-media,
+  .product-card[data-brand="Canva"] .product-card-media--dual,
+  .product-card[data-brand="Canva"] .product-card-media--cover {
+    background: #00c4cc !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 16% 14% !important;
+    overflow: hidden !important;
+  }
+
+  .product-card[data-brand="Canva"] img.product-media-logo,
+  .product-card[data-brand="Canva"] img.product-logo-img,
+  .product-card[data-brand="Canva"] img.product-logo-img--fit {
+    display: block !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    position: relative !important;
+    inset: auto !important;
+    left: auto !important;
+    width: auto !important;
+    height: auto !important;
+    max-width: 82% !important;
+    max-height: 72% !important;
+    object-fit: contain !important;
+    object-position: center center !important;
+    margin: 0 auto !important;
+    transform: none !important;
+    filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.2)) !important;
+  }
+
+  .product-slider--hero .product-slide[data-brand="Canva"] .product-slide-logo-wrap,
+  .product-slider--hero .product-slide--canva .product-slide-logo-wrap {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 10vh 12vw !important;
+    background: #00c4cc !important;
+  }
+
+  .product-slider--hero .product-slide[data-brand="Canva"] img.product-media-logo,
+  .product-slider--hero .product-slide--canva img.product-media-logo {
+    display: block !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    position: relative !important;
+    inset: auto !important;
+    width: auto !important;
+    height: auto !important;
+    max-width: min(46vw, 480px) !important;
+    max-height: min(34vh, 280px) !important;
+    object-fit: contain !important;
+    margin: auto !important;
+    transform: none !important;
+  }
+}
