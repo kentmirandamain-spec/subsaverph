@@ -2099,13 +2099,29 @@ def available_payment_methods() -> list:
     show_crypto = _truthy_env("CRYPTO_SHOW")
     if show_crypto is None:
         show_crypto = True
+    # Optional checkout labels from Admin → Crypto
+    try:
+        s_crypto = load_settings() or {}
+    except Exception:
+        s_crypto = {}
+    if not isinstance(s_crypto, dict):
+        s_crypto = {}
+    crypto_label = str(s_crypto.get("cryptoCheckoutLabel") or "").strip() or "Crypto"
+    crypto_desc_live = (
+        str(s_crypto.get("cryptoCheckoutDesc") or "").strip()
+        or "USDT, BTC, ETH · Instant automatic delivery"
+    )
+    crypto_desc_demo = (
+        str(s_crypto.get("cryptoCheckoutDesc") or "").strip()
+        or "Crypto · Instant delivery (demo — set NOWPAYMENTS_API_KEY for live)"
+    )
     if has_crypto and show_crypto:
         methods.append(
             {
                 "id": "crypto",
-                "label": "Crypto",
+                "label": crypto_label,
                 "provider": "nowpayments",
-                "desc": "USDT, BTC, ETH · Instant automatic delivery",
+                "desc": crypto_desc_live,
                 "group": "instant",
                 "delivery": "auto",
                 "deliveryLabel": "Instant automatic delivery",
@@ -2115,9 +2131,9 @@ def available_payment_methods() -> list:
         methods.append(
             {
                 "id": "crypto",
-                "label": "Crypto",
+                "label": crypto_label,
                 "provider": "demo",
-                "desc": "Crypto · Instant delivery (demo — set NOWPAYMENTS_API_KEY for live)",
+                "desc": crypto_desc_demo,
                 "group": "instant",
                 "delivery": "auto",
                 "deliveryLabel": "Instant automatic delivery",

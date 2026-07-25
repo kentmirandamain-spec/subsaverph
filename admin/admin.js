@@ -701,6 +701,7 @@ function settingsView() {
       <a href="#sc-support">3 · Support</a>
       <a href="#sc-checkout">4 · Checkout rules</a>
       <a href="#sc-manual-pay">4b · Manual GCash / Maya</a>
+      <a href="#sc-crypto">4c · Crypto</a>
       <a href="#sc-success">5 · After payment</a>
       <a href="#sc-footer">6 · Footer</a>
       <a href="#sc-terms">7 · Terms</a>
@@ -908,6 +909,36 @@ function settingsView() {
         <label>Customer note (shown on pay page)
           <textarea name="manualEwalletNote" rows="2" placeholder="Scan the QR, pay exact amount, put Order ID in the message.">${escapeHtml(s.manualEwalletNote || "")}</textarea>
         </label>
+      </section>
+
+      <!-- ========== 4c. CRYPTO (NOWPayments) ========== -->
+      <section class="settings-block" id="sc-crypto">
+        <h3 class="settings-h">4c · Crypto payments (NOWPayments)</h3>
+        <p class="muted settings-lead">
+          Crypto checkout uses your <strong>NOWPayments merchant account</strong>.
+          Funds go to the wallet/payout settings inside NOWPayments — not a QR in this admin.
+          To <strong>change the crypto payment account</strong>, replace the API key on Render (steps below).
+        </p>
+        <label>Checkout label (optional — shown next to Crypto method)
+          <input name="cryptoCheckoutLabel" value="${escapeAttr(s.cryptoCheckoutLabel || "")}" placeholder="Crypto (USDT, BTC, ETH…)" />
+        </label>
+        <label>Checkout description (optional)
+          <input name="cryptoCheckoutDesc" value="${escapeAttr(s.cryptoCheckoutDesc || "")}" placeholder="Pay with crypto · instant codes after confirm" />
+        </label>
+        <div class="panel" style="margin-top:12px;padding:14px;border:1px solid var(--line);border-radius:10px;background:rgba(0,0,0,0.2)">
+          <p style="margin:0 0 8px;font-weight:700">How to change crypto account</p>
+          <ol class="muted" style="margin:0;padding-left:1.2rem;line-height:1.55">
+            <li>Log in (or create) at <a href="https://account.nowpayments.io/" target="_blank" rel="noopener">account.nowpayments.io</a></li>
+            <li><strong>Settings → API keys</strong> → create/copy the new API key</li>
+            <li>Set payout/wallet in the NOWPayments dashboard (where crypto funds land)</li>
+            <li>Render → subsaverph → <strong>Environment</strong> → set <code>NOWPAYMENTS_API_KEY</code> to the new key</li>
+            <li>Optional: <code>NOWPAYMENTS_IPN_SECRET</code> from NOWPayments IPN settings</li>
+            <li>IPN URL: <code>https://subsaverph.com/api/webhooks/nowpayments</code></li>
+            <li>Whitelist server IP from <code>https://subsaverph.com/api/health</code> → <code>outboundIp</code></li>
+            <li>Save env → Manual Deploy → confirm health shows <code>cryptoConfigured: true</code></li>
+          </ol>
+          <p class="muted" style="margin:10px 0 0">Do <strong>not</strong> paste API keys into this admin form — only on Render.</p>
+        </div>
       </section>
 
       <!-- ========== 6. SUCCESS ========== -->

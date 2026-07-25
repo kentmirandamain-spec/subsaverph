@@ -27,13 +27,29 @@ Crypto is always listed at **Checkout** under **Other methods**.
 
 ---
 
-## 3. Set environment variables (Render)
+## 3. Set / change environment variables (Render)
+
+### Change crypto payment account
+
+Crypto funds go to the **NOWPayments account** tied to your API key. To switch accounts:
+
+1. Create or log into the **new** NOWPayments account  
+2. Copy its **API key** (+ set payout wallets in that dashboard)  
+3. On Render, replace `NOWPAYMENTS_API_KEY` with the new key  
+4. Update IPN secret if you use one; keep IPN URL  
+   `https://subsaverph.com/api/webhooks/nowpayments`  
+5. Re-whitelist `outboundIp` from `/api/health`  
+6. **Manual Deploy**
+
+Admin → **Settings → 4c · Crypto** also lists these steps (no API keys in Admin).
+
+### Env vars
 
 Render → **subsaverph** → **Environment**:
 
 ```env
 NOWPAYMENTS_API_KEY=your_api_key_here
-PUBLIC_URL=https://subsaverph.onrender.com
+PUBLIC_URL=https://subsaverph.com
 ```
 
 Optional:
