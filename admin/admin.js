@@ -1092,10 +1092,14 @@ function settingsView() {
             <input name="supportEmail" value="${escapeAttr(s.supportEmail || "support@subsaverph.com")}" />
           </label>
         </div>
-        <label>Owner inbox (where support form emails go — use your Outlook, not Gmail if that is where you want tickets)
-          <input name="ownerInbox" type="email" value="${escapeAttr(s.ownerInbox || "")}" placeholder="subsaver@outlook.com" />
+        <label>Owner inbox (YOUR email — support form + e-wallet purchase alerts)
+          <input name="ownerInbox" type="email" value="${escapeAttr(s.ownerInbox || "")}" placeholder="you@outlook.com" required />
         </label>
-        <p class="muted" style="margin-top:0">Support form messages go here first. E-wallet payments also email this inbox. Order invoice copies may use <code>ORDER_NOTIFY_EMAIL</code> on Render.</p>
+        <p class="muted" style="margin-top:0">
+          When a customer buys with <strong>GCash / Maya / e-wallet</strong>, you get a purchase alert at this address
+          (order ID, amount, reference, products). Also used for the support form.
+          Optional Render backup: <code>ORDER_NOTIFY_EMAIL</code>. Requires email configured on the server (<code>RESEND_API_KEY</code> or SMTP).
+        </p>
         <label>Website URL
           <input name="websiteUrl" value="${escapeAttr(s.websiteUrl || "")}" />
         </label>

@@ -958,10 +958,41 @@ def _order_product_lines(order: dict[str, Any]) -> list[str]:
     return lines or ["- (see admin order)"]
 
 
+def _owner_alert_recipients() -> list[str]:
+    """
+    All inboxes that should get e-wallet purchase alerts.
+    ownerInbox (Admin) first, then ORDER_NOTIFY_EMAIL / MAIL_NOTIFY_TO / MAIL_REPLY_TO.
+    """
+    seen: set[str] = set()
+    out: list[str] = []
+
+    def _add(addr: str) -> None:
+        e = (addr or "").strip()
+        if not e or "@" not in e:
+            return
+        if _is_public_brand_address(e):
+            return
+        key = e.lower()
+        if key in seen:
+            return
+        seen.add(key)
+        out.append(e)
+
+    _add(support_inbox())
+    for e in _notify_emails():
+        _add(e)
+    # Direct settings ownerInbox even if support_inbox filtered something
+    try:
+        _add(str(_settings_dict().get("ownerInbox") or ""))
+    except Exception:
+        pass
+    return out
+
+
 def send_owner_ewallet_payment_alert(order: dict[str, Any]) -> dict[str, Any]:
     """
     Merchant alert when a customer pays / submits payment via e-wallet.
-    Sends email TO owner inbox (not only BCC).
+    Emails TO every owner/notify inbox (not only BCC of customer mail).
     """
     order_id = str(order.get("id") or "—")
     name = str(order.get("name") or "Customer").strip() or "Customer"
@@ -984,46 +1015,64 @@ def send_owner_ewallet_payment_alert(order: dict[str, Any]) -> dict[str, Any]:
         "checkout_open",
     )
 
-    # --- Email owner ---
-    owner_to = support_inbox()
-    email_result: dict[str, Any] = {
-        "ok": False,
-        "skipped": True,
-        "detail": "No owner inbox configured",
-    }
-    if owner_to and mail_configured():
-        subject = f"[SubSaverPH] E-wallet payment · {order_id} · {amount}"
-        action = (
-            "Open Admin → Orders and Confirm payment to release login codes."
-            if needs_confirm
-            else "Order is paid — codes should already be releasing / delivered."
-        )
-        text = "\n".join(
-            [
-                "SubSaverPH — E-wallet payment alert",
-                "=" * 44,
-                f"Order ID:  {order_id}",
-                f"Status:    {status}",
-                f"Customer:  {name}",
-                f"Email:     {email}",
-                f"Method:    {method}",
-                f"Amount:    {amount}",
-                f"Reference: {ref}",
-                "",
-                "Products:",
-                products,
-                "",
-                action,
-                "Admin: https://subsaverph.com/admin",
-            ]
-        )
-        html = f"""<!DOCTYPE html><html><body style="margin:0;padding:0;background:#000;color:#fff;font-family:system-ui,sans-serif">
+    recipients = _owner_alert_recipients()
+    if not mail_configured():
+        return {
+            "ok": False,
+            "email": {
+                "ok": False,
+                "skipped": True,
+                "detail": "Email not configured (RESEND_API_KEY or SMTP_*)",
+            },
+            "kind": "owner_ewallet_alert",
+            "orderId": order_id,
+        }
+    if not recipients:
+        return {
+            "ok": False,
+            "email": {
+                "ok": False,
+                "skipped": True,
+                "detail": "No owner inbox — set Admin → Owner inbox (or ORDER_NOTIFY_EMAIL on Render)",
+            },
+            "kind": "owner_ewallet_alert",
+            "orderId": order_id,
+        }
+
+    subject = f"[SubSaverPH] E-wallet purchase · {order_id} · {amount}"
+    action = (
+        "Open Admin → Orders and Confirm payment to release login codes."
+        if needs_confirm
+        else "Order is paid — codes should already be releasing / delivered."
+    )
+    text = "\n".join(
+        [
+            "SubSaverPH — E-wallet purchase alert",
+            "=" * 44,
+            "Someone bought / submitted payment via e-wallet.",
+            "",
+            f"Order ID:  {order_id}",
+            f"Status:    {status}",
+            f"Customer:  {name}",
+            f"Email:     {email}",
+            f"Method:    {method}",
+            f"Amount:    {amount}",
+            f"Reference: {ref}",
+            "",
+            "Products:",
+            products,
+            "",
+            action,
+            "Admin: https://subsaverph.com/admin",
+        ]
+    )
+    html = f"""<!DOCTYPE html><html><body style="margin:0;padding:0;background:#000;color:#fff;font-family:system-ui,sans-serif">
   <table width="100%" style="background:#000;padding:28px 12px"><tr><td align="center">
   <table width="100%" style="max-width:520px;background:#0a0a0a;border:1px solid #2a2a2a">
     <tr><td style="padding:24px">
       <div style="font-size:12px;letter-spacing:0.16em;text-transform:uppercase;color:#fbbf24">Merchant alert</div>
-      <h1 style="margin:10px 0 0;font-size:20px">E-wallet payment</h1>
-      <p style="color:#aaa;font-size:14px;line-height:1.5">A customer paid (or submitted payment proof) via e-wallet.</p>
+      <h1 style="margin:10px 0 0;font-size:20px">E-wallet purchase</h1>
+      <p style="color:#aaa;font-size:14px;line-height:1.5">Someone bought (or submitted payment proof) via e-wallet.</p>
       <table width="100%" style="font-size:13px;color:#aaa;border:1px solid #333;background:#111;margin-top:14px">
         <tr><td style="padding:10px 12px;border-bottom:1px solid #222">Order ID</td>
             <td align="right" style="padding:10px 12px;border-bottom:1px solid #222;color:#fff;font-family:monospace">{escape(order_id)}</td></tr>
@@ -1045,34 +1094,44 @@ def send_owner_ewallet_payment_alert(order: dict[str, Any]) -> dict[str, Any]:
   </table>
   </td></tr></table>
 </body></html>"""
-        if (os.environ.get("RESEND_API_KEY") or "").strip():
-            ok, detail = _send_via_resend(owner_to, subject, text, html, bcc=None)
-            email_result = {
-                "ok": ok,
-                "provider": "resend",
-                "detail": detail,
-                "to": owner_to,
-                "skipped": False,
-            }
-        else:
-            ok, detail = _send_via_smtp(owner_to, subject, text, html, bcc=None)
-            email_result = {
-                "ok": ok,
-                "provider": "smtp",
-                "detail": detail,
-                "to": owner_to,
-                "skipped": False,
-            }
-    elif not mail_configured():
-        email_result = {
-            "ok": False,
-            "skipped": True,
-            "detail": "Email not configured (RESEND_API_KEY or SMTP_*)",
-        }
+
+    use_resend = bool((os.environ.get("RESEND_API_KEY") or "").strip())
+    primary = recipients[0]
+    others = recipients[1:]
+    details: list[str] = []
+    any_ok = False
+    provider = "resend" if use_resend else "smtp"
+
+    # First recipient = To; rest = BCC on the same send when possible
+    if use_resend:
+        ok, detail = _send_via_resend(primary, subject, text, html, bcc=others or None)
+        any_ok = ok
+        details.append(f"{primary}: {detail}")
+        # If BCC failed silently for some providers, also send each extra as To
+        if not ok and others:
+            for extra in others:
+                ok2, d2 = _send_via_resend(extra, subject, text, html, bcc=None)
+                any_ok = any_ok or ok2
+                details.append(f"{extra}: {d2}")
+    else:
+        ok, detail = _send_via_smtp(primary, subject, text, html, bcc=others or None)
+        any_ok = ok
+        details.append(f"{primary}: {detail}")
+        if not ok and others:
+            for extra in others:
+                ok2, d2 = _send_via_smtp(extra, subject, text, html, bcc=None)
+                any_ok = any_ok or ok2
+                details.append(f"{extra}: {d2}")
 
     return {
-        "ok": bool(email_result.get("ok")),
-        "email": email_result,
+        "ok": any_ok,
+        "email": {
+            "ok": any_ok,
+            "provider": provider,
+            "detail": " | ".join(details)[:800],
+            "to": recipients,
+            "skipped": False,
+        },
         "kind": "owner_ewallet_alert",
         "orderId": order_id,
     }

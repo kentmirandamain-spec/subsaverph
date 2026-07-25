@@ -1412,14 +1412,7 @@ def _email_invoice_for_order(order: dict) -> dict:
 
 def _email_payment_received_for_order(order: dict) -> dict:
     """Ack email when e-wallet reference is submitted (no codes yet) + notify merchant."""
-    try:
-        from email_delivery import send_payment_received_notice
-
-        result = send_payment_received_notice(order)
-    except Exception as e:
-        result = {"ok": False, "provider": None, "detail": str(e)}
-
-    # Merchant email when customer pays / submits e-wallet proof
+    # Merchant first: you always get an email when someone buys via e-wallet
     owner_alert: dict = {}
     try:
         from email_delivery import send_owner_ewallet_payment_alert
@@ -1427,6 +1420,13 @@ def _email_payment_received_for_order(order: dict) -> dict:
         owner_alert = send_owner_ewallet_payment_alert(order)
     except Exception as e:
         owner_alert = {"ok": False, "detail": str(e)}
+
+    try:
+        from email_delivery import send_payment_received_notice
+
+        result = send_payment_received_notice(order)
+    except Exception as e:
+        result = {"ok": False, "provider": None, "detail": str(e)}
 
     order["ackEmailSent"] = bool(result.get("ok"))
     order["ackEmailDetail"] = str(result.get("detail") or "")[:500]
