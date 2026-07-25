@@ -94,26 +94,55 @@ const OFFICIAL_BRAND_LOGO = {
   Spotify: "/assets/products/logos/brand-spotify-fixed.svg?v=reallogo1",
 };
 /**
- * Official product photos for every catalog brand.
+ * Official product photos — every product id + brand.
  * Used on cards, detail pages, and hero slides (mobile + desktop).
  */
 const OFFICIAL_BRAND_PHOTO = {
-  xAI: "/assets/products/photo-xai.png?v=officialm2",
-  Canva: "/assets/products/photo-canva.png?v=officialm2",
-  CapCut: "/assets/products/photo-capcut.png?v=officialm2",
-  Netflix: "/assets/products/photo-netflix.png?v=officialm2",
-  YouTube: "/assets/products/photo-youtube.png?v=officialm2",
-  Duolingo: "/assets/products/photo-duolingo.png?v=officialm2",
-  Spotify: "/assets/products/photo-spotify.png?v=officialm2",
+  xAI: "/assets/products/photo-xai.png?v=officialm3",
+  Canva: "/assets/products/photo-canva.png?v=officialm3",
+  CapCut: "/assets/products/photo-capcut.png?v=officialm3",
+  Netflix: "/assets/products/photo-netflix.png?v=officialm3",
+  YouTube: "/assets/products/photo-youtube.png?v=officialm3",
+  Duolingo: "/assets/products/photo-duolingo.png?v=officialm3",
+  Spotify: "/assets/products/photo-spotify.png?v=officialm3",
 };
 const OFFICIAL_BRAND_PHOTO_SLIDE = {
-  xAI: "/assets/products/photo-xai-slide.png?v=officialm2",
-  Canva: "/assets/products/photo-canva-slide.png?v=officialm2",
-  CapCut: "/assets/products/photo-capcut-slide.png?v=officialm2",
-  Netflix: "/assets/products/photo-netflix-slide.png?v=officialm2",
-  YouTube: "/assets/products/photo-youtube-slide.png?v=officialm2",
-  Duolingo: "/assets/products/photo-duolingo-slide.png?v=officialm2",
-  Spotify: "/assets/products/photo-spotify-slide.png?v=officialm2",
+  xAI: "/assets/products/photo-xai-slide.png?v=officialm3",
+  Canva: "/assets/products/photo-canva-slide.png?v=officialm3",
+  CapCut: "/assets/products/photo-capcut-slide.png?v=officialm3",
+  Netflix: "/assets/products/photo-netflix-slide.png?v=officialm3",
+  YouTube: "/assets/products/photo-youtube-slide.png?v=officialm3",
+  Duolingo: "/assets/products/photo-duolingo-slide.png?v=officialm3",
+  Spotify: "/assets/products/photo-spotify-slide.png?v=officialm3",
+};
+/** Per-product official photos so every listing always has its image. */
+const OFFICIAL_PRODUCT_PHOTO = {
+  "supergrok-7d": OFFICIAL_BRAND_PHOTO.xAI,
+  "supergrok-1m": OFFICIAL_BRAND_PHOTO.xAI,
+  "canva-pro": OFFICIAL_BRAND_PHOTO.Canva,
+  "canva-teams": OFFICIAL_BRAND_PHOTO.Canva,
+  "capcut-pro": OFFICIAL_BRAND_PHOTO.CapCut,
+  "capcut-std": OFFICIAL_BRAND_PHOTO.CapCut,
+  "netflix-prem": OFFICIAL_BRAND_PHOTO.Netflix,
+  "netflix-std": OFFICIAL_BRAND_PHOTO.Netflix,
+  "yt-premium": OFFICIAL_BRAND_PHOTO.YouTube,
+  "yt-family": OFFICIAL_BRAND_PHOTO.YouTube,
+  "duolingo-super-1m": OFFICIAL_BRAND_PHOTO.Duolingo,
+  "spotify-premium-1m": OFFICIAL_BRAND_PHOTO.Spotify,
+};
+const OFFICIAL_PRODUCT_SLIDE = {
+  "supergrok-7d": OFFICIAL_BRAND_PHOTO_SLIDE.xAI,
+  "supergrok-1m": OFFICIAL_BRAND_PHOTO_SLIDE.xAI,
+  "canva-pro": OFFICIAL_BRAND_PHOTO_SLIDE.Canva,
+  "canva-teams": OFFICIAL_BRAND_PHOTO_SLIDE.Canva,
+  "capcut-pro": OFFICIAL_BRAND_PHOTO_SLIDE.CapCut,
+  "capcut-std": OFFICIAL_BRAND_PHOTO_SLIDE.CapCut,
+  "netflix-prem": OFFICIAL_BRAND_PHOTO_SLIDE.Netflix,
+  "netflix-std": OFFICIAL_BRAND_PHOTO_SLIDE.Netflix,
+  "yt-premium": OFFICIAL_BRAND_PHOTO_SLIDE.YouTube,
+  "yt-family": OFFICIAL_BRAND_PHOTO_SLIDE.YouTube,
+  "duolingo-super-1m": OFFICIAL_BRAND_PHOTO_SLIDE.Duolingo,
+  "spotify-premium-1m": OFFICIAL_BRAND_PHOTO_SLIDE.Spotify,
 };
 /** @deprecated aliases — keep older call sites working */
 const MOBILE_OFFICIAL_PHOTO = OFFICIAL_BRAND_PHOTO;
@@ -130,13 +159,50 @@ function isMobileView() {
   }
 }
 
+/** Normalize brand key for map lookup. */
+function brandKey(brand) {
+  const b = String(brand || "").trim();
+  if (!b) return "";
+  if (OFFICIAL_BRAND_PHOTO[b]) return b;
+  const lower = b.toLowerCase();
+  if (lower === "xai" || lower === "grok" || lower === "supergrok") return "xAI";
+  if (lower === "canva") return "Canva";
+  if (lower === "capcut" || lower === "cap cut") return "CapCut";
+  if (lower === "netflix") return "Netflix";
+  if (lower === "youtube" || lower === "yt") return "YouTube";
+  if (lower === "duolingo") return "Duolingo";
+  if (lower === "spotify") return "Spotify";
+  return b;
+}
+
+/** Stamp official photo fields onto a deal object (mutates + returns). */
+function applyOfficialPhotos(d) {
+  if (!d || typeof d !== "object") return d;
+  const id = String(d.id || "");
+  const brand = brandKey(d.brand);
+  const photo =
+    (id && OFFICIAL_PRODUCT_PHOTO[id]) ||
+    (brand && OFFICIAL_BRAND_PHOTO[brand]) ||
+    "";
+  const slide =
+    (id && OFFICIAL_PRODUCT_SLIDE[id]) ||
+    (brand && OFFICIAL_BRAND_PHOTO_SLIDE[brand]) ||
+    photo ||
+    "";
+  if (photo) d.image = photo;
+  if (slide) d.imageSlide = slide;
+  return d;
+}
+
 /** Official brand logo path (SVG mark). */
 function productLogo(d) {
   if (!d) return "";
+  const brand = brandKey(d.brand);
+  if (brand && OFFICIAL_BRAND_LOGO[brand]) return OFFICIAL_BRAND_LOGO[brand];
   if (d.brand && OFFICIAL_BRAND_LOGO[d.brand]) return OFFICIAL_BRAND_LOGO[d.brand];
   if (d.logo) return String(d.logo);
-  const brand = String(d.brand || "").toLowerCase().replace(/\s+/g, "");
-  if (brand) return `/assets/products/logos/brand-${brand === "xai" ? "xai" : brand}-fixed.svg?v=official3`;
+  const key = String(d.brand || "").toLowerCase().replace(/\s+/g, "");
+  if (key) return `/assets/products/logos/brand-${key === "xai" ? "xai" : key}-fixed.svg?v=official3`;
   if (d.id) return `/assets/products/${d.id}.png`;
   return "";
 }
@@ -151,45 +217,44 @@ function isProductPhoto(src) {
 
 /** Full-bleed official photo frames for every brand that has a photo asset. */
 function brandUsesCover(brand) {
-  return Boolean(brand && OFFICIAL_BRAND_PHOTO[brand]);
+  return Boolean(brandKey(brand) && OFFICIAL_BRAND_PHOTO[brandKey(brand)]);
 }
 
 /**
- * Card/detail image: always use official product photos for every brand.
+ * Card/detail image: official photo for this exact product.
  */
 function productImage(d) {
   if (!d) return "";
-  if (d.brand && OFFICIAL_BRAND_PHOTO[d.brand]) {
-    return OFFICIAL_BRAND_PHOTO[d.brand];
-  }
-  /* Catalog raster photo before SVG logo fallback */
-  if (d.image && isProductPhoto(d.image)) {
-    return String(d.image);
-  }
-  if (d.brand && OFFICIAL_BRAND_COVER[d.brand]) return OFFICIAL_BRAND_COVER[d.brand];
+  const id = String(d.id || "");
+  if (id && OFFICIAL_PRODUCT_PHOTO[id]) return OFFICIAL_PRODUCT_PHOTO[id];
+  const brand = brandKey(d.brand);
+  if (brand && OFFICIAL_BRAND_PHOTO[brand]) return OFFICIAL_BRAND_PHOTO[brand];
+  if (d.image && isProductPhoto(d.image)) return String(d.image);
   if (d.logo && isProductPhoto(d.logo)) return String(d.logo);
   if (d.image) return String(d.image);
   return productLogo(d);
 }
 
-/** Homepage slider: official product photos for every brand. */
+/** Homepage slider: official product photo for this listing. */
 function productSlideImage(d) {
   if (!d) return "";
-  if (d.brand && OFFICIAL_BRAND_PHOTO_SLIDE[d.brand]) {
-    return OFFICIAL_BRAND_PHOTO_SLIDE[d.brand];
-  }
-  if (d.brand && OFFICIAL_BRAND_PHOTO[d.brand]) {
-    return OFFICIAL_BRAND_PHOTO[d.brand];
-  }
-  if (d.imageSlide && isProductPhoto(d.imageSlide)) {
-    return String(d.imageSlide);
-  }
-  if (d.image && isProductPhoto(d.image)) {
-    return String(d.image);
-  }
-  if (d.brand && OFFICIAL_BRAND_SLIDE[d.brand]) return OFFICIAL_BRAND_SLIDE[d.brand];
+  const id = String(d.id || "");
+  if (id && OFFICIAL_PRODUCT_SLIDE[id]) return OFFICIAL_PRODUCT_SLIDE[id];
+  if (id && OFFICIAL_PRODUCT_PHOTO[id]) return OFFICIAL_PRODUCT_PHOTO[id];
+  const brand = brandKey(d.brand);
+  if (brand && OFFICIAL_BRAND_PHOTO_SLIDE[brand]) return OFFICIAL_BRAND_PHOTO_SLIDE[brand];
+  if (brand && OFFICIAL_BRAND_PHOTO[brand]) return OFFICIAL_BRAND_PHOTO[brand];
   if (d.imageSlide && isProductPhoto(d.imageSlide)) return String(d.imageSlide);
+  if (d.image && isProductPhoto(d.image)) return String(d.image);
   return productImage(d) || productLogo(d);
+}
+
+/* Stamp official photos onto bundled + live catalog arrays immediately */
+try {
+  BUNDLED_DEALS.forEach((d) => applyOfficialPhotos(d));
+  if (Array.isArray(window.DEALS)) window.DEALS.forEach((d) => applyOfficialPhotos(d));
+} catch {
+  /* ignore */
 }
 
 function productBrandColor(d) {
@@ -566,9 +631,10 @@ function toggleWish(id) {
 }
 
 function card(d, highlightQ = "") {
+  applyOfficialPhotos(d);
   const nameHtml = highlightQ ? highlightMatch(d.name, highlightQ) : escapeHtml(d.name);
   const soldOut = isSoldOut(d);
-  const img = productImage(d);
+  const img = productImage(d) || (d.id && OFFICIAL_PRODUCT_PHOTO[d.id]) || "";
   const bg = productBrandColor(d);
   const wished = isWished(d.id);
   const typeLabel = (d.category || "Plan").toUpperCase();
@@ -3637,19 +3703,19 @@ async function loadLiveCatalog(opts = {}) {
                 ? `${stockLeft} in stock`
                 : d.stock || "In stock"
             : d.stock || "In stock";
-        return {
+        return applyOfficialPhotos({
           ...d,
           includes: Array.isArray(d.includes) ? d.includes : [],
           badge: d.badge || null,
           // Live inventory count from /api/catalog (admin Codes / Stock)
           ...(typeof stockLeft === "number" ? { stockLeft } : {}),
           stock: stockLabel,
-        };
+        });
       });
       _catalogLoadedAt = Date.now();
     } else if (BUNDLED_DEALS.length && (!Array.isArray(window.DEALS) || !window.DEALS.length)) {
       // Live API returned no products — keep bundled catalog so the store is never blank
-      window.DEALS = BUNDLED_DEALS.map((d) => ({ ...d }));
+      window.DEALS = BUNDLED_DEALS.map((d) => applyOfficialPhotos({ ...d }));
     }
     if (data.settings) {
       state.settings = data.settings;
