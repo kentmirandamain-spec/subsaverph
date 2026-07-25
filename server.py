@@ -5062,9 +5062,23 @@ def admin_upload_product_image():
     Saves under assets/products/custom/ and optionally updates the deal.
     """
     deal_id = (request.form.get("dealId") or request.args.get("dealId") or "").strip()
-    kind = (request.form.get("kind") or request.args.get("kind") or "image").strip()
-    if kind not in ("image", "imageSlide", "logo"):
-        kind = "image"
+    kind = (request.form.get("kind") or request.args.get("kind") or "imageMobile").strip()
+    # Map legacy kinds + new mobile/desktop kinds
+    kind_map = {
+        "image": "imageMobile",
+        "imageSlide": "imageMobileSlide",
+        "logo": "imageDesktop",
+        "photo": "imageMobile",
+        "mobile": "imageMobile",
+        "desktop": "imageDesktop",
+        "mobileSlide": "imageMobileSlide",
+        "desktopSlide": "imageDesktopSlide",
+        "imageMobile": "imageMobile",
+        "imageMobileSlide": "imageMobileSlide",
+        "imageDesktop": "imageDesktop",
+        "imageDesktopSlide": "imageDesktopSlide",
+    }
+    kind = kind_map.get(kind, "imageMobile")
     apply = (request.form.get("apply") or "1").strip() not in ("0", "false", "no")
 
     f = request.files.get("file") or request.files.get("image") or request.files.get("photo")
@@ -5073,9 +5087,7 @@ def admin_upload_product_image():
 
     filename = str(f.filename or "")
     ext = Path(filename).suffix.lower()
-    allowed = {".png", ".jpg", ".jpeg", ".webp", ".gif"}
-    if kind == "logo":
-        allowed.add(".svg")
+    allowed = {".png", ".jpg", ".jpeg", ".webp", ".gif", ".svg"}
     if ext not in allowed:
         ctype = (f.mimetype or "").lower()
         if "png" in ctype:
@@ -5086,15 +5098,10 @@ def admin_upload_product_image():
             ext = ".webp"
         elif "gif" in ctype:
             ext = ".gif"
-        elif "svg" in ctype and kind == "logo":
+        elif "svg" in ctype:
             ext = ".svg"
         else:
-            return jsonify(
-                {
-                    "error": "Upload a PNG, JPG, WEBP, or GIF image"
-                    + (" (SVG allowed for logo)" if kind == "logo" else "")
-                }
-            ), 400
+            return jsonify({"error": "Upload a PNG, JPG, WEBP, GIF, or SVG image"}), 400
 
     # Safe deal id for filename
     safe_id = re.sub(r"[^a-zA-Z0-9_-]+", "-", deal_id or "product").strip("-").lower() or "product"
@@ -5121,12 +5128,18 @@ def admin_upload_product_image():
             if d.get("id") == deal_id:
                 updated = dict(d)
                 updated[kind] = url
-                # Main image also fills slide when slide empty or was auto-mirrored
-                if kind == "image":
-                    if not (updated.get("imageSlide") or "").strip() or "/custom/" in str(
-                        updated.get("imageSlide") or ""
-                    ):
+                # Keep legacy aliases in sync
+                if kind == "imageMobile":
+                    updated["image"] = url
+                    if not (updated.get("imageMobileSlide") or updated.get("imageSlide") or "").strip():
+                        updated["imageMobileSlide"] = url
                         updated["imageSlide"] = url
+                elif kind == "imageMobileSlide":
+                    updated["imageSlide"] = url
+                elif kind == "imageDesktop":
+                    updated["logo"] = url
+                    if not (updated.get("imageDesktopSlide") or "").strip():
+                        updated["imageDesktopSlide"] = url
                 deals[i] = normalize_deal(updated, deal_id)
                 save_deals(deals)
                 deal_out = deals[i]
@@ -5746,6 +5759,32 @@ def admin_test_invoice():
         return jsonify({"ok": False, "error": f"Test invoice failed: {e}"}), 400
 
 
+def _normalize_image_fit(v, default: str = "cover") -> str:
+    s = str(v or "").strip().lower()
+    return s if s in ("cover", "contain") else default
+
+
+def _normalize_image_pos(v) -> str:
+    s = str(v or "").strip().lower()
+    allowed = {
+        "center",
+        "center center",
+        "left center",
+        "right center",
+        "center top",
+        "center bottom",
+        "left top",
+        "right top",
+        "left bottom",
+        "right bottom",
+    }
+    if not s:
+        return "center center"
+    if s == "center":
+        return "center center"
+    return s if s in allowed else "center center"
+
+
 def normalize_deal(data: dict, deal_id: str) -> dict:
     includes = data.get("includes") or []
     if isinstance(includes, str):
@@ -5792,10 +5831,28 @@ def normalize_deal(data: dict, deal_id: str) -> dict:
         "importantNotes": (data.get("importantNotes") or "").strip(),
         "extraDetails": lines(data.get("extraDetails")),
         "active": bool(data.get("active", True)),
-        # Product images (admin can set URL or upload; storefront prefers these)
-        "image": (data.get("image") or "").strip(),
-        "imageSlide": (data.get("imageSlide") or "").strip(),
-        "logo": (data.get("logo") or "").strip(),
+        # Product images — mobile + desktop (admin URL or upload)
+        # Legacy aliases: image ≈ mobile, logo ≈ desktop, imageSlide ≈ mobile slide
+        "imageMobile": str(data.get("imageMobile") or data.get("image") or "").strip(),
+        "imageMobileSlide": str(
+            data.get("imageMobileSlide") or data.get("imageSlide") or ""
+        ).strip(),
+        "imageDesktop": str(data.get("imageDesktop") or data.get("logo") or "").strip(),
+        "imageDesktopSlide": str(data.get("imageDesktopSlide") or "").strip(),
+        "imageMobileFit": _normalize_image_fit(data.get("imageMobileFit"), "cover"),
+        "imageDesktopFit": _normalize_image_fit(data.get("imageDesktopFit"), "contain"),
+        "imageMobilePos": _normalize_image_pos(data.get("imageMobilePos")),
+        "imageDesktopPos": _normalize_image_pos(data.get("imageDesktopPos")),
+        # Legacy fields kept in sync for older storefront code
+        "image": str(data.get("imageMobile") or data.get("image") or "").strip(),
+        "imageSlide": str(
+            data.get("imageMobileSlide")
+            or data.get("imageSlide")
+            or data.get("imageMobile")
+            or data.get("image")
+            or ""
+        ).strip(),
+        "logo": str(data.get("imageDesktop") or data.get("logo") or "").strip(),
         "imageBg": (data.get("imageBg") or "").strip(),
         "brandColor": (data.get("brandColor") or "").strip(),
     }

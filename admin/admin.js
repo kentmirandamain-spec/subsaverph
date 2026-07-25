@@ -345,8 +345,9 @@ function dealsView() {
 
   const rows = list
     .map((d) => {
-      const thumb = d.image
-        ? `<img class="deal-thumb" src="${escapeAttr(d.image)}" alt="" width="40" height="40" loading="lazy" />`
+      const thumbSrc = d.imageMobile || d.image || d.imageDesktop || d.logo || "";
+      const thumb = thumbSrc
+        ? `<img class="deal-thumb" src="${escapeAttr(thumbSrc)}" alt="" width="40" height="40" loading="lazy" />`
         : `<span class="deal-thumb deal-thumb-empty">${escapeHtml((d.monogram || "?").slice(0, 2))}</span>`;
       return `
     <tr>
@@ -2218,44 +2219,13 @@ function dealModal(deal) {
         <label>Description<textarea name="description" rows="4">${escapeHtml(deal.description || "")}</textarea></label>
         <label>Fine print (storefront + delivery footer)<textarea name="finePrint" rows="2">${escapeHtml(deal.finePrint || "")}</textarea></label>
 
-        <h3 class="settings-h" style="margin-top:16px">Product image</h3>
+        <h3 class="settings-h" style="margin-top:16px">Product images — mobile &amp; desktop</h3>
         <p class="muted" style="margin-top:0">
-          Set your own photo for this product on the storefront (mobile cards, detail, slider).
-          Paste an image URL or upload a file. Leave empty to use the default brand photo.
+          Set separate images for phone and computer. Upload a file or paste a URL.
+          Leave a field empty to use the default brand art. Fit: <strong>contain</strong> shows the full logo;
+          <strong>cover</strong> fills the frame (may crop edges).
         </p>
-        <div class="product-image-admin">
-          <div class="product-image-preview-wrap" id="productImagePreviewWrap">
-            ${
-              deal.image
-                ? `<img class="product-image-preview" id="productImagePreview" src="${escapeAttr(deal.image)}" alt="Product preview" />`
-                : `<div class="product-image-preview placeholder" id="productImagePreview">No image yet</div>`
-            }
-          </div>
-          <div class="product-image-fields">
-            <label>Product photo URL
-              <input name="image" id="dealImageUrl" type="url" placeholder="https://… or /assets/products/…" value="${escapeAttr(deal.image || "")}" />
-            </label>
-            <div class="qr-upload-row product-image-upload-row">
-              <label class="qr-upload-label">Upload photo from your device
-                <input type="file" id="uploadProductImage" accept="image/png,image/jpeg,image/webp,image/gif" />
-              </label>
-              <button type="button" class="btn ghost" id="btnUploadProductImage">Upload photo</button>
-            </div>
-            <label>Slide image URL <span class="muted">(optional — homepage slider)</span>
-              <input name="imageSlide" id="dealImageSlideUrl" type="url" placeholder="Same as photo if empty" value="${escapeAttr(deal.imageSlide || "")}" />
-            </label>
-            <label>Logo URL <span class="muted">(optional — desktop logo layer)</span>
-              <input name="logo" id="dealLogoUrl" type="url" placeholder="/assets/products/logos/…" value="${escapeAttr(deal.logo || "")}" />
-            </label>
-            <div class="qr-upload-row product-image-upload-row">
-              <label class="qr-upload-label">Upload logo from your device
-                <input type="file" id="uploadProductLogo" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" />
-              </label>
-              <button type="button" class="btn ghost" id="btnUploadProductLogo">Upload logo</button>
-            </div>
-            <button type="button" class="btn ghost" id="btnClearProductImages">Clear custom images</button>
-          </div>
-        </div>
+        ${productImageEditorHTML(deal)}
 
         <h3 class="settings-h" style="margin-top:16px">After purchase delivery (shown on success page + email)</h3>
         <p class="muted" style="margin-top:0">Buyers receive <strong>login credentials</strong> plus the sections below after payment succeeds. Edit these carefully — this is what customers keep.</p>
@@ -2289,10 +2259,150 @@ function dealModal(deal) {
     </div>`;
 }
 
+function productImageEditorHTML(deal) {
+  const mobile = deal.imageMobile || deal.image || "";
+  const mobileSlide = deal.imageMobileSlide || deal.imageSlide || "";
+  const desktop = deal.imageDesktop || deal.logo || "";
+  const desktopSlide = deal.imageDesktopSlide || "";
+  const mFit = deal.imageMobileFit === "contain" ? "contain" : "cover";
+  const dFit = deal.imageDesktopFit === "cover" ? "cover" : "contain";
+  const mPos = deal.imageMobilePos || "center center";
+  const dPos = deal.imageDesktopPos || "center center";
+  const brandColor = deal.brandColor || "";
+  const posOpts = [
+    ["center center", "Center"],
+    ["left center", "Left"],
+    ["right center", "Right"],
+    ["center top", "Top"],
+    ["center bottom", "Bottom"],
+  ];
+  const posSelect = (name, val) =>
+    posOpts
+      .map(
+        ([v, lab]) =>
+          `<option value="${v}" ${val === v ? "selected" : ""}>${lab}</option>`
+      )
+      .join("");
+  const preview = (id, src, label) =>
+    src
+      ? `<img class="product-image-preview" id="${id}" src="${escapeAttr(src)}" alt="${escapeAttr(label)}" style="object-fit:${escapeAttr(
+          id.includes("Desktop") ? dFit : mFit
+        )};object-position:${escapeAttr(id.includes("Desktop") ? dPos : mPos)}" />`
+      : `<div class="product-image-preview placeholder" id="${id}">No image</div>`;
+
+  return `
+    <div class="product-image-admin-grid">
+      <section class="product-image-panel" data-device="mobile">
+        <header class="product-image-panel-head">
+          <strong>📱 Mobile</strong>
+          <span class="muted">Cards, detail, phone slider</span>
+        </header>
+        <div class="product-image-admin">
+          <div class="product-image-preview-wrap" id="previewMobileWrap" style="background:${escapeAttr(brandColor || "#0a0e16")}">
+            ${preview("previewMobile", mobile, "Mobile")}
+          </div>
+          <div class="product-image-fields">
+            <label>Mobile card / detail image URL
+              <input name="imageMobile" id="dealImageMobile" type="url" placeholder="https://… or /assets/…" value="${escapeAttr(mobile)}" />
+            </label>
+            <div class="qr-upload-row product-image-upload-row">
+              <label class="qr-upload-label">Upload mobile image
+                <input type="file" id="uploadImageMobile" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" />
+              </label>
+              <button type="button" class="btn ghost" id="btnUploadImageMobile" data-kind="imageMobile" data-file="#uploadImageMobile" data-input="#dealImageMobile" data-preview="previewMobile">Upload</button>
+            </div>
+            <label>Mobile slider image <span class="muted">(optional)</span>
+              <input name="imageMobileSlide" id="dealImageMobileSlide" type="url" placeholder="Uses mobile image if empty" value="${escapeAttr(mobileSlide)}" />
+            </label>
+            <div class="qr-upload-row product-image-upload-row">
+              <label class="qr-upload-label">Upload mobile slider
+                <input type="file" id="uploadImageMobileSlide" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" />
+              </label>
+              <button type="button" class="btn ghost" data-kind="imageMobileSlide" data-file="#uploadImageMobileSlide" data-input="#dealImageMobileSlide" data-preview="">Upload</button>
+            </div>
+            <div class="grid2">
+              <label>Mobile fit
+                <select name="imageMobileFit" id="dealImageMobileFit">
+                  <option value="cover" ${mFit === "cover" ? "selected" : ""}>Cover (fill frame)</option>
+                  <option value="contain" ${mFit === "contain" ? "selected" : ""}>Contain (full logo)</option>
+                </select>
+              </label>
+              <label>Mobile position
+                <select name="imageMobilePos" id="dealImageMobilePos">${posSelect("imageMobilePos", mPos)}</select>
+              </label>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="product-image-panel" data-device="desktop">
+        <header class="product-image-panel-head">
+          <strong>🖥️ Desktop</strong>
+          <span class="muted">Cards, detail, desktop slider</span>
+        </header>
+        <div class="product-image-admin">
+          <div class="product-image-preview-wrap" id="previewDesktopWrap" style="background:${escapeAttr(brandColor || "#0a0e16")}">
+            ${preview("previewDesktop", desktop, "Desktop")}
+          </div>
+          <div class="product-image-fields">
+            <label>Desktop card / detail image URL
+              <input name="imageDesktop" id="dealImageDesktop" type="url" placeholder="https://… or /assets/…" value="${escapeAttr(desktop)}" />
+            </label>
+            <div class="qr-upload-row product-image-upload-row">
+              <label class="qr-upload-label">Upload desktop image
+                <input type="file" id="uploadImageDesktop" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" />
+              </label>
+              <button type="button" class="btn ghost" data-kind="imageDesktop" data-file="#uploadImageDesktop" data-input="#dealImageDesktop" data-preview="previewDesktop">Upload</button>
+            </div>
+            <label>Desktop slider image <span class="muted">(optional)</span>
+              <input name="imageDesktopSlide" id="dealImageDesktopSlide" type="url" placeholder="Uses desktop image if empty" value="${escapeAttr(desktopSlide)}" />
+            </label>
+            <div class="qr-upload-row product-image-upload-row">
+              <label class="qr-upload-label">Upload desktop slider
+                <input type="file" id="uploadImageDesktopSlide" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" />
+              </label>
+              <button type="button" class="btn ghost" data-kind="imageDesktopSlide" data-file="#uploadImageDesktopSlide" data-input="#dealImageDesktopSlide" data-preview="">Upload</button>
+            </div>
+            <div class="grid2">
+              <label>Desktop fit
+                <select name="imageDesktopFit" id="dealImageDesktopFit">
+                  <option value="contain" ${dFit === "contain" ? "selected" : ""}>Contain (full logo)</option>
+                  <option value="cover" ${dFit === "cover" ? "selected" : ""}>Cover (fill frame)</option>
+                </select>
+              </label>
+              <label>Desktop position
+                <select name="imageDesktopPos" id="dealImageDesktopPos">${posSelect("imageDesktopPos", dPos)}</select>
+              </label>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+    <div class="grid2" style="margin-top:10px">
+      <label>Background color behind image
+        <input name="brandColor" id="dealBrandColor" type="text" placeholder="#00c4cc" value="${escapeAttr(brandColor)}" />
+      </label>
+      <div style="display:flex;align-items:flex-end;gap:8px;padding-bottom:4px">
+        <button type="button" class="btn ghost" id="btnClearProductImages">Clear all custom images</button>
+      </div>
+    </div>
+    <!-- legacy hidden aliases filled on save -->
+    <input type="hidden" name="image" id="dealImageUrl" value="${escapeAttr(mobile)}" />
+    <input type="hidden" name="imageSlide" id="dealImageSlideUrl" value="${escapeAttr(mobileSlide || mobile)}" />
+    <input type="hidden" name="logo" id="dealLogoUrl" value="${escapeAttr(desktop)}" />
+  `;
+}
+
 function formToDeal(fd, existing) {
-  const image = String(fd.get("image") || "").trim();
-  const imageSlide = String(fd.get("imageSlide") || "").trim();
-  const logo = String(fd.get("logo") || "").trim();
+  const imageMobile = String(fd.get("imageMobile") || "").trim();
+  const imageMobileSlide = String(fd.get("imageMobileSlide") || "").trim();
+  const imageDesktop = String(fd.get("imageDesktop") || "").trim();
+  const imageDesktopSlide = String(fd.get("imageDesktopSlide") || "").trim();
+  const imageMobileFit = String(fd.get("imageMobileFit") || "cover").trim();
+  const imageDesktopFit = String(fd.get("imageDesktopFit") || "contain").trim();
+  const imageMobilePos = String(fd.get("imageMobilePos") || "center center").trim();
+  const imageDesktopPos = String(fd.get("imageDesktopPos") || "center center").trim();
+  const brandColor = String(fd.get("brandColor") || existing?.brandColor || "").trim();
   return {
     id: String(fd.get("id") || existing?.id || "").trim(),
     name: fd.get("name"),
@@ -2320,11 +2430,20 @@ function formToDeal(fd, existing) {
     rating: fd.get("rating"),
     reviews: fd.get("reviews"),
     active: fd.get("active") === "on",
-    image,
-    imageSlide: imageSlide || image,
-    logo,
+    imageMobile,
+    imageMobileSlide: imageMobileSlide || imageMobile,
+    imageDesktop,
+    imageDesktopSlide: imageDesktopSlide || imageDesktop,
+    imageMobileFit,
+    imageDesktopFit,
+    imageMobilePos,
+    imageDesktopPos,
+    // Legacy aliases
+    image: imageMobile,
+    imageSlide: imageMobileSlide || imageMobile,
+    logo: imageDesktop,
     imageBg: existing?.imageBg || "",
-    brandColor: existing?.brandColor || "",
+    brandColor,
   };
 }
 
@@ -2860,24 +2979,78 @@ function bindShell() {
     }
   });
 
-  function refreshProductImagePreview(url) {
-    const wrap = $("#productImagePreviewWrap");
-    if (!wrap) return;
+  function setPreview(previewId, url, fit, pos) {
+    if (!previewId) return;
+    const el = document.getElementById(previewId);
+    if (!el) return;
     const src = String(url || "").trim();
-    if (src) {
-      wrap.innerHTML = `<img class="product-image-preview" id="productImagePreview" src="${escapeAttr(src)}" alt="Product preview" />`;
+    const wrap = el.parentElement;
+    if (!src) {
+      el.outerHTML = `<div class="product-image-preview placeholder" id="${previewId}">No image</div>`;
+      return;
+    }
+    if (el.tagName === "IMG") {
+      el.src = src;
+      el.style.objectFit = fit || "cover";
+      el.style.objectPosition = pos || "center center";
     } else {
-      wrap.innerHTML = `<div class="product-image-preview placeholder" id="productImagePreview">No image yet</div>`;
+      const img = document.createElement("img");
+      img.className = "product-image-preview";
+      img.id = previewId;
+      img.src = src;
+      img.alt = "Preview";
+      img.style.objectFit = fit || "cover";
+      img.style.objectPosition = pos || "center center";
+      el.replaceWith(img);
+    }
+    if (wrap && $("#dealBrandColor")?.value) {
+      wrap.style.background = $("#dealBrandColor").value;
     }
   }
 
-  $("#dealImageUrl")?.addEventListener("input", (e) => {
-    refreshProductImagePreview(e.target.value);
-    if (state.editing) state.editing.image = e.target.value;
+  function syncLegacyHidden() {
+    const m = $("#dealImageMobile")?.value || "";
+    const ms = $("#dealImageMobileSlide")?.value || "";
+    const d = $("#dealImageDesktop")?.value || "";
+    if ($("#dealImageUrl")) $("#dealImageUrl").value = m;
+    if ($("#dealImageSlideUrl")) $("#dealImageSlideUrl").value = ms || m;
+    if ($("#dealLogoUrl")) $("#dealLogoUrl").value = d;
+  }
+
+  const previewBindings = [
+    ["#dealImageMobile", "previewMobile", () => $("#dealImageMobileFit")?.value || "cover", () => $("#dealImageMobilePos")?.value || "center center"],
+    ["#dealImageDesktop", "previewDesktop", () => $("#dealImageDesktopFit")?.value || "contain", () => $("#dealImageDesktopPos")?.value || "center center"],
+  ];
+  previewBindings.forEach(([sel, pid, fitFn, posFn]) => {
+    $(sel)?.addEventListener("input", (e) => {
+      setPreview(pid, e.target.value, fitFn(), posFn());
+      syncLegacyHidden();
+      if (state.editing) {
+        if (sel.includes("Mobile")) state.editing.imageMobile = e.target.value;
+        if (sel.includes("Desktop")) state.editing.imageDesktop = e.target.value;
+      }
+    });
+  });
+  ["#dealImageMobileFit", "#dealImageMobilePos"].forEach((sel) => {
+    $(sel)?.addEventListener("change", () => {
+      setPreview("previewMobile", $("#dealImageMobile")?.value, $("#dealImageMobileFit")?.value, $("#dealImageMobilePos")?.value);
+    });
+  });
+  ["#dealImageDesktopFit", "#dealImageDesktopPos"].forEach((sel) => {
+    $(sel)?.addEventListener("change", () => {
+      setPreview("previewDesktop", $("#dealImageDesktop")?.value, $("#dealImageDesktopFit")?.value, $("#dealImageDesktopPos")?.value);
+    });
+  });
+  $("#dealBrandColor")?.addEventListener("input", (e) => {
+    const c = e.target.value || "#0a0e16";
+    const mw = $("#previewMobileWrap");
+    const dw = $("#previewDesktopWrap");
+    if (mw) mw.style.background = c;
+    if (dw) dw.style.background = c;
   });
 
-  async function uploadProductAsset(kind, fileInputId, btn) {
-    const input = $(fileInputId);
+  async function uploadProductAsset(kind, fileInputSel, urlInputSel, previewId, btn) {
+    const input = $(fileInputSel);
     const file = input?.files?.[0];
     if (!file) {
       toast("Choose an image file first", true);
@@ -2897,7 +3070,6 @@ function bindShell() {
       body.append("dealId", dealId);
       body.append("kind", kind);
       body.append("file", file);
-      // Apply to deals.json only when product already exists
       body.append("apply", state.editing?._isNew ? "0" : "1");
       const res = await fetch("/api/admin/upload-product-image", {
         method: "POST",
@@ -2913,30 +3085,41 @@ function bindShell() {
       }
       if (!res.ok) throw new Error(data.error || `Upload failed (${res.status})`);
       const url = data.url || "";
-      if (kind === "image") {
-        const el = $("#dealImageUrl");
-        if (el) el.value = url;
-        const slide = $("#dealImageSlideUrl");
-        if (slide && !String(slide.value || "").trim()) slide.value = url;
-        if (state.editing) {
-          state.editing.image = url;
-          if (!state.editing.imageSlide) state.editing.imageSlide = url;
+      const urlInput = $(urlInputSel);
+      if (urlInput) urlInput.value = url;
+      if (state.editing) state.editing[kind] = url;
+      // Auto-fill slide if empty
+      if (kind === "imageMobile") {
+        const slide = $("#dealImageMobileSlide");
+        if (slide && !String(slide.value || "").trim()) {
+          slide.value = url;
+          if (state.editing) state.editing.imageMobileSlide = url;
         }
-        refreshProductImagePreview(url);
-      } else if (kind === "logo") {
-        const el = $("#dealLogoUrl");
-        if (el) el.value = url;
-        if (state.editing) state.editing.logo = url;
-      } else if (kind === "imageSlide") {
-        const el = $("#dealImageSlideUrl");
-        if (el) el.value = url;
-        if (state.editing) state.editing.imageSlide = url;
+        setPreview("previewMobile", url, $("#dealImageMobileFit")?.value, $("#dealImageMobilePos")?.value);
       }
+      if (kind === "imageDesktop") {
+        const slide = $("#dealImageDesktopSlide");
+        if (slide && !String(slide.value || "").trim()) {
+          slide.value = url;
+          if (state.editing) state.editing.imageDesktopSlide = url;
+        }
+        setPreview("previewDesktop", url, $("#dealImageDesktopFit")?.value, $("#dealImageDesktopPos")?.value);
+      }
+      if (previewId) {
+        const isDesk = kind.toLowerCase().includes("desktop");
+        setPreview(
+          previewId,
+          url,
+          isDesk ? $("#dealImageDesktopFit")?.value : $("#dealImageMobileFit")?.value,
+          isDesk ? $("#dealImageDesktopPos")?.value : $("#dealImageMobilePos")?.value
+        );
+      }
+      syncLegacyHidden();
       if (data.deal && Array.isArray(state.deals)) {
         const i = state.deals.findIndex((d) => d.id === data.deal.id);
         if (i >= 0) state.deals[i] = data.deal;
       }
-      toast(kind === "logo" ? "Logo uploaded" : "Product photo uploaded");
+      toast("Image uploaded — save product to keep all settings");
     } catch (err) {
       toast(err.message || "Upload failed", true);
     } finally {
@@ -2944,28 +3127,42 @@ function bindShell() {
     }
   }
 
-  $("#btnUploadProductImage")?.addEventListener("click", (e) => {
-    e.preventDefault();
-    uploadProductAsset("image", "#uploadProductImage", e.currentTarget);
+  $$("[data-kind][data-file]").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      const kind = btn.getAttribute("data-kind");
+      const fileSel = btn.getAttribute("data-file");
+      const inputSel = btn.getAttribute("data-input");
+      const previewId = btn.getAttribute("data-preview") || "";
+      uploadProductAsset(kind, fileSel, inputSel, previewId, btn);
+    });
   });
-  $("#btnUploadProductLogo")?.addEventListener("click", (e) => {
-    e.preventDefault();
-    uploadProductAsset("logo", "#uploadProductLogo", e.currentTarget);
-  });
+
   $("#btnClearProductImages")?.addEventListener("click", (e) => {
     e.preventDefault();
-    const img = $("#dealImageUrl");
-    const slide = $("#dealImageSlideUrl");
-    const logo = $("#dealLogoUrl");
-    if (img) img.value = "";
-    if (slide) slide.value = "";
-    if (logo) logo.value = "";
+    [
+      "#dealImageMobile",
+      "#dealImageMobileSlide",
+      "#dealImageDesktop",
+      "#dealImageDesktopSlide",
+      "#dealImageUrl",
+      "#dealImageSlideUrl",
+      "#dealLogoUrl",
+    ].forEach((sel) => {
+      const el = $(sel);
+      if (el) el.value = "";
+    });
     if (state.editing) {
+      state.editing.imageMobile = "";
+      state.editing.imageMobileSlide = "";
+      state.editing.imageDesktop = "";
+      state.editing.imageDesktopSlide = "";
       state.editing.image = "";
       state.editing.imageSlide = "";
       state.editing.logo = "";
     }
-    refreshProductImagePreview("");
+    setPreview("previewMobile", "", "cover", "center center");
+    setPreview("previewDesktop", "", "contain", "center center");
     toast("Cleared — save product to apply on storefront");
   });
 

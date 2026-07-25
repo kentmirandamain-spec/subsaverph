@@ -209,33 +209,59 @@ function brandKey(brand) {
   return b;
 }
 
-/** Stamp official photo fields onto a deal (catalog data only; display still splits mobile/desktop). */
+/** Fill missing image fields with brand defaults — never overwrite admin custom images. */
 function applyOfficialPhotos(d) {
   if (!d || typeof d !== "object") return d;
   const id = String(d.id || "");
   const brand = brandKey(d.brand);
-  const photo =
-    (id && OFFICIAL_PRODUCT_PHOTO[id]) ||
-    (brand && OFFICIAL_BRAND_PHOTO[brand]) ||
-    "";
-  const slide =
+  const defPhoto =
+    (id && OFFICIAL_PRODUCT_PHOTO[id]) || (brand && OFFICIAL_BRAND_PHOTO[brand]) || "";
+  const defSlide =
     (id && OFFICIAL_PRODUCT_SLIDE[id]) ||
     (brand && OFFICIAL_BRAND_PHOTO_SLIDE[brand]) ||
-    photo ||
+    defPhoto ||
     "";
-  if (photo) d.image = photo;
-  if (slide) d.imageSlide = slide;
+  const defLogo = (brand && OFFICIAL_BRAND_LOGO[brand]) || "";
+  // Normalize aliases from admin dual fields
+  if (!d.imageMobile && d.image) d.imageMobile = d.image;
+  if (!d.imageDesktop && d.logo) d.imageDesktop = d.logo;
+  if (!d.imageMobileSlide && d.imageSlide) d.imageMobileSlide = d.imageSlide;
+  // Only fill empties
+  if (!d.imageMobile && defPhoto) d.imageMobile = defPhoto;
+  if (!d.image && (d.imageMobile || defPhoto)) d.image = d.imageMobile || defPhoto;
+  if (!d.imageMobileSlide && (d.imageMobile || defSlide)) {
+    d.imageMobileSlide = d.imageMobile || defSlide;
+  }
+  if (!d.imageSlide && (d.imageMobileSlide || d.image || defSlide)) {
+    d.imageSlide = d.imageMobileSlide || d.image || defSlide;
+  }
+  if (!d.imageDesktop && defLogo) d.imageDesktop = defLogo;
+  if (!d.logo && (d.imageDesktop || defLogo)) d.logo = d.imageDesktop || defLogo;
+  if (!d.imageDesktopSlide && (d.imageDesktop || d.logo)) {
+    d.imageDesktopSlide = d.imageDesktop || d.logo;
+  }
+  if (!d.imageMobileFit) d.imageMobileFit = "cover";
+  if (!d.imageDesktopFit) d.imageDesktopFit = "contain";
+  if (!d.imageMobilePos) d.imageMobilePos = "center center";
+  if (!d.imageDesktopPos) d.imageDesktopPos = "center center";
   return d;
 }
 
-/** Official brand logo path — desktop product media. */
+function isMediaUrl(src) {
+  if (!src) return false;
+  const s = String(src).trim();
+  if (!s) return false;
+  if (/^https?:\/\//i.test(s) || s.startsWith("/")) return true;
+  return isProductPhoto(s) || /\.svg(\?|$)/i.test(s);
+}
+
+/** Desktop media (cards / detail / logo layer). Admin imageDesktop wins. */
 function productLogo(d) {
   if (!d) return "";
-  const brand = brandKey(d.brand);
-  /* Admin custom uploads / external URLs always win */
+  if (d.imageDesktop && isMediaUrl(d.imageDesktop)) return String(d.imageDesktop);
   const logo = d.logo ? String(d.logo) : "";
   if (logo && (/\/custom\//i.test(logo) || /^https?:\/\//i.test(logo))) return logo;
-  /* Known brands: official map (Canva uses full wordmark PNG, not circular SVG) */
+  const brand = brandKey(d.brand);
   if (brand && OFFICIAL_BRAND_LOGO[brand]) return OFFICIAL_BRAND_LOGO[brand];
   if (d.brand && OFFICIAL_BRAND_LOGO[d.brand]) return OFFICIAL_BRAND_LOGO[d.brand];
   if (logo) return logo;
@@ -258,11 +284,11 @@ function brandUsesCover(brand) {
   return Boolean(isMobileView() && brandKey(brand) && OFFICIAL_BRAND_PHOTO[brandKey(brand)]);
 }
 
-/** Always return the product photo URL (for mobile CSS layer). Admin custom image wins. */
+/** Mobile card / detail photo. Admin imageMobile wins. */
 function productPhotoSrc(d) {
   if (!d) return "";
-  /* Admin-uploaded / custom catalog image always preferred */
-  if (d.image && isProductPhoto(d.image)) return String(d.image);
+  if (d.imageMobile && isMediaUrl(d.imageMobile)) return String(d.imageMobile);
+  if (d.image && isMediaUrl(d.image)) return String(d.image);
   const id = String(d.id || "");
   if (id && OFFICIAL_PRODUCT_PHOTO[id]) return OFFICIAL_PRODUCT_PHOTO[id];
   const brand = brandKey(d.brand);
@@ -270,17 +296,32 @@ function productPhotoSrc(d) {
   return "";
 }
 
-/** Slide photo: admin imageSlide / image, then defaults. */
+/** Mobile homepage slider image. */
 function productPhotoSlideSrc(d) {
   if (!d) return "";
-  if (d.imageSlide && isProductPhoto(d.imageSlide)) return String(d.imageSlide);
-  if (d.image && isProductPhoto(d.image)) return String(d.image);
-  const id = String(d.id || "");
-  if (id && OFFICIAL_PRODUCT_SLIDE[id]) return OFFICIAL_PRODUCT_SLIDE[id];
-  if (id && OFFICIAL_PRODUCT_PHOTO[id]) return OFFICIAL_PRODUCT_PHOTO[id];
-  const brand = brandKey(d.brand);
-  if (brand && OFFICIAL_BRAND_PHOTO_SLIDE[brand]) return OFFICIAL_BRAND_PHOTO_SLIDE[brand];
+  if (d.imageMobileSlide && isMediaUrl(d.imageMobileSlide)) return String(d.imageMobileSlide);
+  if (d.imageSlide && isMediaUrl(d.imageSlide)) return String(d.imageSlide);
   return productPhotoSrc(d);
+}
+
+/** Desktop homepage slider image. */
+function productDesktopSlideSrc(d) {
+  if (!d) return "";
+  if (d.imageDesktopSlide && isMediaUrl(d.imageDesktopSlide)) return String(d.imageDesktopSlide);
+  return productLogo(d);
+}
+
+function productMobileFit(d) {
+  return d?.imageMobileFit === "contain" ? "contain" : "cover";
+}
+function productDesktopFit(d) {
+  return d?.imageDesktopFit === "cover" ? "cover" : "contain";
+}
+function productMobilePos(d) {
+  return String(d?.imageMobilePos || "center center");
+}
+function productDesktopPos(d) {
+  return String(d?.imageDesktopPos || "center center");
 }
 
 /**
@@ -291,24 +332,16 @@ function productImage(d) {
   if (!d) return "";
   const photo = productPhotoSrc(d);
   if (isMobileView() && photo) return photo;
-  const brand = brandKey(d.brand);
-  if (brand && OFFICIAL_BRAND_COVER[brand]) return OFFICIAL_BRAND_COVER[brand];
-  if (brand && OFFICIAL_BRAND_LOGO[brand]) return OFFICIAL_BRAND_LOGO[brand];
-  if (d.logo) return String(d.logo);
   return productLogo(d) || photo;
 }
 
 /**
- * Homepage slider (JS path): photo on mobile, logo on desktop.
+ * Homepage slider (JS path): photo on mobile, desktop image on desktop.
  */
 function productSlideImage(d) {
   if (!d) return "";
-  const photo = productPhotoSlideSrc(d);
-  if (isMobileView() && photo) return photo;
-  const brand = brandKey(d.brand);
-  if (brand && OFFICIAL_BRAND_SLIDE[brand]) return OFFICIAL_BRAND_SLIDE[brand];
-  if (brand && OFFICIAL_BRAND_LOGO[brand]) return OFFICIAL_BRAND_LOGO[brand];
-  return productImage(d) || productLogo(d) || photo;
+  if (isMobileView()) return productPhotoSlideSrc(d) || productPhotoSrc(d);
+  return productDesktopSlideSrc(d) || productLogo(d);
 }
 
 /* Keep catalog image fields as official photos (mobile); desktop UI ignores them for media. */
@@ -693,19 +726,23 @@ function toggleWish(id) {
 }
 
 function card(d, highlightQ = "") {
+  applyOfficialPhotos(d);
   const nameHtml = highlightQ ? highlightMatch(d.name, highlightQ) : escapeHtml(d.name);
   const soldOut = isSoldOut(d);
   const photoSrc = productPhotoSrc(d) || "";
   const logoSrc = productLogo(d) || "";
   const bg = productBrandColor(d);
+  const mFit = productMobileFit(d);
+  const dFit = productDesktopFit(d);
+  const mPos = productMobilePos(d);
+  const dPos = productDesktopPos(d);
   const wished = isWished(d.id);
   const typeLabel = (d.category || "Plan").toUpperCase();
   const brandLabel = d.brand === "xAI" ? "SuperGrok" : d.brand || "";
   /*
    * Dual media layers (CSS-switched):
-   * - .product-media-photo → official photo, visible ≤900px
-   * - .product-media-logo  → brand logo, visible ≥901px
-   * This does not depend on isMobileView() so real phones always get photos.
+   * - .product-media-photo → mobile image (admin imageMobile)
+   * - .product-media-logo  → desktop image (admin imageDesktop)
    */
   const hasPhoto = Boolean(photoSrc);
   const hasLogo = Boolean(logoSrc);
@@ -718,17 +755,17 @@ function card(d, highlightQ = "") {
     hasPhoto || hasLogo
       ? `${
           hasPhoto
-            ? `<img class="product-img product-card-img product-media-photo product-cover-img" src="${escapeAttr(photoSrc)}" alt="${escapeAttr(d.brand || d.name)}" loading="lazy" decoding="async" width="600" height="400" />`
+            ? `<img class="product-img product-card-img product-media-photo product-cover-img" src="${escapeAttr(photoSrc)}" alt="${escapeAttr(d.brand || d.name)}" loading="lazy" decoding="async" width="600" height="400" style="object-fit:${escapeAttr(mFit)};object-position:${escapeAttr(mPos)}" />`
             : ""
         }${
           hasLogo
-            ? `<img class="product-img product-card-img product-media-logo product-logo-img product-logo-img--fit" src="${escapeAttr(logoSrc)}" alt="${escapeAttr(d.brand || d.name)}" loading="lazy" decoding="async" width="600" height="400" />`
+            ? `<img class="product-img product-card-img product-media-logo product-logo-img product-logo-img--fit" src="${escapeAttr(logoSrc)}" alt="${escapeAttr(d.brand || d.name)}" loading="lazy" decoding="async" width="600" height="400" style="object-fit:${escapeAttr(dFit)};object-position:${escapeAttr(dPos)}" />`
             : ""
         }`
       : `<span class="product-monogram">${escapeHtml(d.monogram || "")}</span>`;
   return `
-    <article class="card product-card ${soldOut ? "sold-out" : ""} product-card--dual-media${hasPhoto ? " product-card--cover product-card--has-photo" : " product-card--logo-fit"}" data-product-id="${escapeAttr(d.id)}" data-brand="${escapeAttr(d.brand || "")}">
-      <a class="product-card-media product-card-media--dual${hasPhoto ? " product-card-media--cover has-product-photo" : " card-media--logo product-card-media--logo-fit"}" href="#/deal/${d.id}" style="--brand-bg:${escapeAttr(bg)}">
+    <article class="card product-card ${soldOut ? "sold-out" : ""} product-card--dual-media${hasPhoto ? " product-card--cover product-card--has-photo" : " product-card--logo-fit"}" data-product-id="${escapeAttr(d.id)}" data-brand="${escapeAttr(d.brand || "")}" data-mobile-fit="${escapeAttr(mFit)}" data-desktop-fit="${escapeAttr(dFit)}">
+      <a class="product-card-media product-card-media--dual${hasPhoto ? " product-card-media--cover has-product-photo" : " card-media--logo product-card-media--logo-fit"}" href="#/deal/${d.id}" style="--brand-bg:${escapeAttr(bg)};--mobile-fit:${escapeAttr(mFit)};--desktop-fit:${escapeAttr(dFit)};--mobile-pos:${escapeAttr(mPos)};--desktop-pos:${escapeAttr(dPos)}">
         ${mediaImgs}
         ${
           soldOut
@@ -1207,9 +1244,14 @@ function viewHome() {
     slides.length > 0
       ? slides
           .map((d, i) => {
+            applyOfficialPhotos(d);
             const photoSrc = productPhotoSlideSrc(d) || productPhotoSrc(d) || "";
-            const logoSrc = productLogo(d) || "";
+            const logoSrc = productDesktopSlideSrc(d) || productLogo(d) || "";
             const brandLabel = d.brand === "xAI" ? "SuperGrok" : d.brand || "";
+            const mFit = productMobileFit(d);
+            const dFit = productDesktopFit(d);
+            const mPos = productMobilePos(d);
+            const dPos = productDesktopPos(d);
             const coverClass =
               d.brand === "Canva"
                 ? " product-slide--cover product-slide--canva product-slide--dual"
@@ -1217,17 +1259,17 @@ function viewHome() {
                   ? " product-slide--cover product-slide--capcut product-slide--dual"
                   : " product-slide--cover product-slide--dual";
             return `
-            <article class="product-slide${i === 0 ? " is-active" : ""}${coverClass}" data-slide-index="${i}" data-brand="${escapeAttr(d.brand || "")}" ${i === 0 ? "" : "hidden"} style="--brand-bg:${escapeAttr(productBrandColor(d))}">
+            <article class="product-slide${i === 0 ? " is-active" : ""}${coverClass}" data-slide-index="${i}" data-brand="${escapeAttr(d.brand || "")}" ${i === 0 ? "" : "hidden"} style="--brand-bg:${escapeAttr(productBrandColor(d))};--mobile-fit:${escapeAttr(mFit)};--desktop-fit:${escapeAttr(dFit)}">
               <a class="product-slide-link product-slide-link--logo" href="#/deal/${escapeAttr(d.id)}" tabindex="${i === 0 ? "0" : "-1"}">
                 <div class="product-slide-logo-wrap product-slide-logo-wrap--dual">
                   ${
                     photoSrc
-                      ? `<img class="product-img product-slide-img product-media-photo product-cover-img${d.brand === "Canva" ? " product-cover-img--canva" : ""}" src="${escapeAttr(photoSrc)}" alt="${escapeAttr(brandLabel || d.name)}" width="1280" height="800" loading="${i === 0 ? "eager" : "lazy"}" />`
+                      ? `<img class="product-img product-slide-img product-media-photo product-cover-img${d.brand === "Canva" ? " product-cover-img--canva" : ""}" src="${escapeAttr(photoSrc)}" alt="${escapeAttr(brandLabel || d.name)}" width="1280" height="800" loading="${i === 0 ? "eager" : "lazy"}" style="object-fit:${escapeAttr(mFit)};object-position:${escapeAttr(mPos)}" />`
                       : ""
                   }
                   ${
                     logoSrc
-                      ? `<img class="product-img product-slide-img product-media-logo product-logo-img product-logo-img--fit" src="${escapeAttr(logoSrc)}" alt="${escapeAttr(brandLabel || d.name)}" width="1280" height="800" loading="${i === 0 ? "eager" : "lazy"}" />`
+                      ? `<img class="product-img product-slide-img product-media-logo product-logo-img product-logo-img--fit" src="${escapeAttr(logoSrc)}" alt="${escapeAttr(brandLabel || d.name)}" width="1280" height="800" loading="${i === 0 ? "eager" : "lazy"}" style="object-fit:${escapeAttr(dFit)};object-position:${escapeAttr(dPos)}" />`
                       : ""
                   }
                 </div>
@@ -1379,20 +1421,25 @@ function viewDeal() {
           <div class="detail-panel">
             ${
               (() => {
+                applyOfficialPhotos(d);
                 const photoSrc = productPhotoSrc(d) || "";
                 const logoSrc = productLogo(d) || "";
+                const mFit = productMobileFit(d);
+                const dFit = productDesktopFit(d);
+                const mPos = productMobilePos(d);
+                const dPos = productDesktopPos(d);
                 if (!photoSrc && !logoSrc) {
                   return `<div class="mono-box lg">${escapeHtml(d.monogram)}</div>`;
                 }
                 return `<div class="detail-product-img-wrap detail-product-img-wrap--dual detail-product-img-wrap--cover" style="--brand-bg:${escapeAttr(productBrandColor(d))}">
                     ${
                       photoSrc
-                        ? `<img class="product-img detail-product-img product-media-photo product-cover-img" src="${escapeAttr(photoSrc)}" alt="${escapeAttr(d.brand || d.name)}" width="640" height="400" loading="eager" />`
+                        ? `<img class="product-img detail-product-img product-media-photo product-cover-img" src="${escapeAttr(photoSrc)}" alt="${escapeAttr(d.brand || d.name)}" width="640" height="400" loading="eager" style="object-fit:${escapeAttr(mFit)};object-position:${escapeAttr(mPos)}" />`
                         : ""
                     }
                     ${
                       logoSrc
-                        ? `<img class="product-img detail-product-img product-media-logo product-logo-img product-logo-img--fit" src="${escapeAttr(logoSrc)}" alt="${escapeAttr(d.brand || d.name)}" width="640" height="400" loading="eager" />`
+                        ? `<img class="product-img detail-product-img product-media-logo product-logo-img product-logo-img--fit" src="${escapeAttr(logoSrc)}" alt="${escapeAttr(d.brand || d.name)}" width="640" height="400" loading="eager" style="object-fit:${escapeAttr(dFit)};object-position:${escapeAttr(dPos)}" />`
                         : ""
                     }
                   </div>`;
