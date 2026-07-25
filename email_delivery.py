@@ -1005,32 +1005,52 @@ def send_sms(to_number: str, body: str) -> dict[str, Any]:
     if not to or not text:
         return {"ok": False, "provider": None, "detail": "Missing phone or message"}
 
-    # 1) Semaphore (popular in PH): https://semaphore.co
+    # 1) Semaphore (PH SMS): https://semaphore.co/docs
+    # POST application/x-www-form-urlencoded → /api/v4/messages
     sem_key = (os.environ.get("SEMAPHORE_API_KEY") or "").strip()
     if sem_key:
-        sender = (os.environ.get("SEMAPHORE_SENDER") or "SubSaverPH").strip()[:11]
-        # Semaphore expects local 09… or international without +
+        sender = (os.environ.get("SEMAPHORE_SENDER") or os.environ.get("SEMAPHORE_SENDERNAME") or "").strip()[:11]
+        # Semaphore prefers PH local 09… (also accepts 63…)
         number = to.lstrip("+")
         if number.startswith("63") and len(number) >= 12:
             number = "0" + number[2:]
+        form: dict[str, str] = {
+            "apikey": sem_key,
+            "number": number,
+            "message": text[:800],
+        }
+        if sender:
+            form["sendername"] = sender
         try:
-            payload = json.dumps(
-                {"apikey": sem_key, "number": number, "message": text[:800], "sendername": sender}
-            ).encode("utf-8")
+            payload = urllib.parse.urlencode(form).encode("utf-8")
             req = urllib.request.Request(
                 "https://api.semaphore.co/api/v4/messages",
                 data=payload,
                 method="POST",
-                headers={"Content-Type": "application/json", "Accept": "application/json"},
+                headers={
+                    "Content-Type": "application/x-www-form-urlencoded",
+                    "Accept": "application/json",
+                    "User-Agent": "SubSaverPH/1.0 (+https://subsaverph.com; Semaphore SMS)",
+                },
             )
             with urllib.request.urlopen(req, timeout=25) as resp:
-                raw = resp.read().decode("utf-8", errors="replace")[:400]
-            return {"ok": True, "provider": "semaphore", "detail": raw, "to": to}
+                raw = resp.read().decode("utf-8", errors="replace")[:500]
+            # Semaphore returns a JSON array of message objects on success
+            low = (raw or "").lower()
+            if "error" in low and "message_id" not in low:
+                return {"ok": False, "provider": "semaphore", "detail": raw, "to": to, "number": number}
+            return {"ok": True, "provider": "semaphore", "detail": raw, "to": to, "number": number}
         except urllib.error.HTTPError as e:
-            err = e.read().decode("utf-8", errors="replace")[:300]
-            return {"ok": False, "provider": "semaphore", "detail": f"HTTP {e.code}: {err}", "to": to}
+            err = e.read().decode("utf-8", errors="replace")[:400]
+            return {
+                "ok": False,
+                "provider": "semaphore",
+                "detail": f"HTTP {e.code}: {err}",
+                "to": to,
+                "number": number,
+            }
         except Exception as e:
-            return {"ok": False, "provider": "semaphore", "detail": str(e), "to": to}
+            return {"ok": False, "provider": "semaphore", "detail": str(e), "to": to, "number": number}
 
     # 2) Twilio REST
     sid = (os.environ.get("TWILIO_ACCOUNT_SID") or os.environ.get("TWILIO_SID") or "").strip()

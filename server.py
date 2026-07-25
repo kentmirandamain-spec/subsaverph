@@ -1053,11 +1053,18 @@ def health():
         mail_from = _from_header() if mail_ok else None
         sms_ok = sms_configured()
         mobile_ok = bool(owner_mobile())
+        if (os.environ.get("SEMAPHORE_API_KEY") or "").strip():
+            sms_provider = "semaphore"
+        elif (os.environ.get("TWILIO_ACCOUNT_SID") or os.environ.get("TWILIO_SID") or "").strip():
+            sms_provider = "twilio"
+        else:
+            sms_provider = None
     except Exception:
         mail_ok = False
         mail_from = None
         sms_ok = False
         mobile_ok = False
+        sms_provider = None
     outbound = get_outbound_ip()
     # Stock snapshot (helps diagnose SOLD OUT vs admin inventory)
     stock_summary = {}
@@ -1077,6 +1084,7 @@ def health():
             "mailFrom": mail_from,
             "ownerMobileConfigured": mobile_ok,
             "smsConfigured": sms_ok,
+            "smsProvider": sms_provider if sms_ok else None,
             "stripeConfigured": stripe_configured(),
             "paymongoConfigured": paymongo_configured(),
             "xenditConfigured": xendit_configured(),
@@ -4838,6 +4846,43 @@ def admin_resend_order_email(order_id: str):
             },
         }
     )
+
+
+@app.post("/api/admin/test-sms")
+@require_admin
+def admin_test_sms():
+    """
+    Send a test SMS to owner mobile (or body.to) via Semaphore/Twilio.
+    Body: { to?: "0917…", message?: "…" }
+    """
+    try:
+        from email_delivery import owner_mobile, send_sms, sms_configured
+    except Exception as e:
+        return jsonify({"error": f"SMS module error: {e}"}), 500
+
+    data = request.get_json(silent=True) or {}
+    to = (data.get("to") or data.get("number") or owner_mobile() or "").strip()
+    msg = (
+        (data.get("message") or data.get("body") or "").strip()
+        or "SubSaverPH test SMS — e-wallet alerts are working."
+    )
+    if not to:
+        return jsonify(
+            {
+                "error": "No mobile number. Set Admin → Owner mobile or OWNER_MOBILE, or pass {\"to\":\"0917…\"}.",
+            }
+        ), 400
+    if not sms_configured() and not (os.environ.get("SEMAPHORE_API_KEY") or "").strip():
+        return jsonify(
+            {
+                "error": "SMS not configured. Set SEMAPHORE_API_KEY on Render (see SEMAPHORE-SETUP.md).",
+            }
+        ), 400
+
+    result = send_sms(to, msg)
+    if result.get("ok"):
+        return jsonify({"ok": True, "sms": result})
+    return jsonify({"ok": False, "error": result.get("detail") or "SMS failed", "sms": result}), 400
 
 
 @app.post("/api/admin/test-invoice")

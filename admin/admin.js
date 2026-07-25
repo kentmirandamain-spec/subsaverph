@@ -1098,7 +1098,8 @@ function settingsView() {
         <label>Owner mobile (SMS alert when customer pays with e-wallet — PH format OK: 09xxxxxxxxx or +639…)
           <input name="ownerMobile" type="tel" value="${escapeAttr(s.ownerMobile || "")}" placeholder="09171234567" autocomplete="tel" />
         </label>
-        <p class="muted" style="margin-top:0">Support form messages go here first. E-wallet payments also email this inbox and SMS your mobile (set <code>SEMAPHORE_API_KEY</code> or Twilio on Render). Order invoice copies may use <code>ORDER_NOTIFY_EMAIL</code>.</p>
+        <p class="muted" style="margin-top:0">Support form messages go here first. E-wallet payments also email this inbox and SMS your mobile via <strong>Semaphore</strong> (set <code>SEMAPHORE_API_KEY</code> + optional <code>SEMAPHORE_SENDER</code> on Render — see SEMAPHORE-SETUP.md). Order invoice copies may use <code>ORDER_NOTIFY_EMAIL</code>.</p>
+        <p class="muted">After Semaphore is on Render: use Admin API <code>POST /api/admin/test-sms</code> to send yourself a test text.</p>
         <label>Website URL
           <input name="websiteUrl" value="${escapeAttr(s.websiteUrl || "")}" />
         </label>
@@ -1120,6 +1121,7 @@ function settingsView() {
 
 function testInvoicePanel(opts = {}) {
   const support = (state.settings && state.settings.supportEmail) || "";
+  const ownerMobile = (state.settings && state.settings.ownerMobile) || "";
   const dealOpts = (state.deals || [])
     .map(
       (d) =>
@@ -1155,10 +1157,23 @@ function testInvoicePanel(opts = {}) {
 }
 
 function emailTestView() {
+  const ownerMobile = (state.settings && state.settings.ownerMobile) || "";
   return `
     <div class="top"><h1>Test order email</h1></div>
     <p class="muted" style="margin-top:0">Use this to confirm buyers receive username, password, and product details after payment.</p>
-    ${testInvoicePanel()}`;
+    ${testInvoicePanel()}
+    <form class="panel" id="testSmsForm" style="max-width:560px;margin-top:20px">
+      <h3 class="settings-h" style="margin-top:0">Test Semaphore SMS</h3>
+      <p class="muted">Sends a short SMS to your phone (merchant e-wallet alerts). Needs <code>SEMAPHORE_API_KEY</code> on Render.</p>
+      <label>Mobile number
+        <input name="to" type="tel" required placeholder="09171234567" value="${escapeAttr(ownerMobile)}" autocomplete="tel" />
+      </label>
+      <label>Message (optional)
+        <input name="message" type="text" placeholder="SubSaverPH test SMS — e-wallet alerts are working." />
+      </label>
+      <button class="btn" type="submit">Send test SMS</button>
+      <p class="muted" style="margin-top:10px;font-size:0.85rem">See SEMAPHORE-SETUP.md for API key + sender name setup.</p>
+    </form>`;
 }
 
 function accountView() {
@@ -2853,6 +2868,34 @@ function bindShell() {
         if (b.dataset.mode === "preview") b.textContent = "Preview only (no send)";
         else b.textContent = "Send test invoice";
       });
+    }
+  });
+
+  $("#testSmsForm")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const btn = e.target.querySelector('button[type="submit"]');
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = "Sending…";
+    }
+    try {
+      const data = await api("/api/admin/test-sms", {
+        method: "POST",
+        body: JSON.stringify({
+          to: fd.get("to"),
+          message: fd.get("message") || "",
+        }),
+      });
+      const prov = data.sms?.provider || "sms";
+      toast(`Test SMS sent via ${prov} → ${data.sms?.to || fd.get("to")}`);
+    } catch (err) {
+      toast(err.message, true);
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = "Send test SMS";
+      }
     }
   });
 }

@@ -29,3 +29,10 @@ services:
         sync: false
       - key: XAI_MODEL
         value: "grok-4.5"
+      # Semaphore SMS (set real values in Render Dashboard → Environment)
+      - key: SEMAPHORE_API_KEY
+        sync: false
+      - key: SEMAPHORE_SENDER
+        sync: false
+      - key: OWNER_MOBILE
+        sync: false
