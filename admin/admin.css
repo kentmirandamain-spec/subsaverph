@@ -1,4 +1,4 @@
-/* SubSaverPH Admin — G2G-style seller dashboard + Orbit cockpit background */
+/* SubSaverPH Admin — host dashboard + Orbit cockpit background */
 
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
 
@@ -196,7 +196,7 @@ textarea { min-height: 90px; resize: vertical; }
 
 .muted { color: var(--mute); font-size: 0.88rem; }
 
-/* ---------- G2G-style shell: top bar + side nav ---------- */
+/* ---------- Shell: top bar + side nav ---------- */
 .shell {
   display: grid;
   grid-template-columns: var(--side-w) 1fr;
@@ -358,7 +358,7 @@ textarea { min-height: 90px; resize: vertical; }
   text-transform: none;
 }
 
-/* ---------- G2G-style KPI cards ---------- */
+/* ---------- KPI cards ---------- */
 .dash-kpis {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -403,7 +403,7 @@ textarea { min-height: 90px; resize: vertical; }
 .kpi-card.kpi-warn .kpi-value { color: var(--warn); }
 .kpi-card.kpi-danger .kpi-value { color: var(--danger); }
 
-/* Order status strip (G2G pipeline) */
+/* Order status strip (pipeline) */
 .order-pipeline {
   display: grid;
   grid-template-columns: repeat(4, 1fr);

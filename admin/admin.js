@@ -29,7 +29,7 @@ const state = {
   orderSearch: "",
   /** Search within period invoices / products */
   monthSearch: "",
-  /** G2G-style order pipeline filter on orders tab */
+  /** Order pipeline filter on orders tab */
   orderPipeFilter: "all",
 };
 
@@ -188,7 +188,7 @@ function shell(content) {
         </button>
         <a href="/" target="_blank" rel="noopener"><span class="side-ico">↗</span> View live site</a>
         <button type="button" id="logoutBtn"><span class="side-ico">⎋</span> Log out</button>
-        <p class="side-foot">G2G-style seller console · Orbit theme</p>
+        <p class="side-foot">SubSaverPH host console</p>
       </aside>
       <main class="main">
         ${state.msg ? `<p class="ok">${escapeHtml(state.msg)}</p>` : ""}
@@ -258,7 +258,7 @@ function dashboardView() {
     <div class="top">
       <div>
         <h1>Seller dashboard</h1>
-        <p class="subtitle">G2G-style overview · sales, pending delivery, inventory</p>
+        <p class="subtitle">Overview · sales, pending delivery, inventory</p>
       </div>
       <div class="row-actions">
         <button type="button" class="btn" data-tab="orders">Open orders</button>
@@ -1892,7 +1892,7 @@ function ordersView() {
     list = periodOrders;
   }
 
-  // G2G-style pipeline filter from dashboard cards
+  // Pipeline filter from dashboard cards
   const pipe = state.orderPipeFilter || "all";
   if (pipe === "preparing") {
     list = list.filter(
@@ -1951,7 +1951,7 @@ function ordersView() {
       } else if (isPaid) {
         actions = `
           <button type="button" class="btn solid btn-sm" data-resend-email="${escapeAttr(o.id)}">Resend invoice email</button>
-          <button type="button" class="btn ghost btn-sm" data-copy-g2g="${escapeAttr(o.id)}" style="margin-left:4px">Copy delivery</button>
+          <button type="button" class="btn ghost btn-sm" data-copy-delivery="${escapeAttr(o.id)}" style="margin-left:4px">Copy delivery</button>
           <button type="button" class="btn ghost btn-sm" data-order-status="refunded" data-order-id="${escapeAttr(o.id)}" style="margin-left:4px">Mark refunded</button>`;
       } else if (isRefunded) {
         actions = `<button type="button" class="btn ghost btn-sm" data-order-status="paid" data-order-id="${escapeAttr(o.id)}">Undo refund</button>`;
@@ -1999,7 +1999,7 @@ function ordersView() {
     <div class="top">
       <div>
         <h1>Orders / Sales</h1>
-        <p class="subtitle">${pipeNote || "G2G-style order list · PHP P&L"}</p>
+        <p class="subtitle">${pipeNote || "Order list · PHP P&L"}</p>
       </div>
       ${
         pipe !== "all"
@@ -2420,8 +2420,8 @@ function bindShell() {
     });
   });
 
-  /** Build G2G-style paste text after buyer paid (for chat / manual delivery). */
-  function buildG2gDeliveryText(o) {
+  /** Build paste text after buyer paid (for chat / manual delivery). */
+  function buildDeliveryText(o) {
     const wallet =
       (o.payTo && o.payTo.wallet) ||
       (o.method === "manual_maya"
@@ -2433,7 +2433,7 @@ function bindShell() {
       o.amountFormatted ||
       (o.amountPhp != null ? `₱${Number(o.amountPhp).toFixed(2)}` : money(orderLineTotal(o)));
     const lines = [
-      "=== SubSaverPH / G2G delivery ===",
+      "=== SubSaverPH delivery ===",
       `Order ID: ${o.id || "—"}`,
       `Status: ${o.status || "—"}`,
       `Buyer: ${o.name || "—"} <${o.email || "—"}>`,
@@ -2480,18 +2480,18 @@ function bindShell() {
     return lines.join("\n");
   }
 
-  $$("[data-copy-g2g]").forEach((btn) => {
+  $$("[data-copy-delivery]").forEach((btn) => {
     btn.addEventListener("click", async () => {
-      const id = btn.dataset.copyG2g;
+      const id = btn.dataset.copyDelivery;
       const o = (state.orders || []).find((x) => String(x.id) === String(id));
       if (!o) {
         toast("Order not found", true);
         return;
       }
-      const text = buildG2gDeliveryText(o);
+      const text = buildDeliveryText(o);
       try {
         await navigator.clipboard.writeText(text);
-        toast("G2G delivery text copied — paste into chat");
+        toast("Delivery text copied — paste into chat");
       } catch {
         // Fallback select
         const ta = document.createElement("textarea");
@@ -2500,7 +2500,7 @@ function bindShell() {
         ta.select();
         document.execCommand("copy");
         ta.remove();
-        toast("G2G delivery text copied");
+        toast("Delivery text copied");
       }
     });
   });
