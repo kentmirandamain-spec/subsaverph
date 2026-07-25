@@ -11201,34 +11201,81 @@ html[data-theme="light"] .hero-cat-box:hover {
     align-items: center !important;
   }
 
-  /* Product cards */
+  /* Product cards — proper store layout (left-aligned text, not centered) */
   .product-card,
-  .card,
-  .product-card-body,
-  .card-body {
-    text-align: center !important;
+  .card.product-card,
+  .deals-grid .product-card,
+  .grid.deals-grid .product-card,
+  .grid.search-grid .product-card,
+  .home-deals-inner .product-card,
+  #view-all-deals .product-card {
+    text-align: left !important;
   }
-  .product-card-meta {
-    justify-content: center !important;
+  .product-card-body,
+  .card-body,
+  .deals-grid .product-card-body,
+  .home-deals-inner .product-card-body,
+  #view-all-deals .product-card-body {
+    text-align: left !important;
+    align-items: stretch !important;
+  }
+  .product-card-meta,
+  .deals-grid .product-card-meta,
+  .home-deals-inner .product-card-meta {
+    justify-content: space-between !important;
+    align-items: center !important;
+    text-align: left !important;
   }
   .product-card-title,
   .listing-game,
+  .deals-grid .product-card-title,
+  .deals-grid .listing-game,
+  .home-deals-inner .product-card-title,
+  .home-deals-inner .listing-game,
+  #view-all-deals .product-card-title,
+  #view-all-deals .listing-game {
+    text-align: left !important;
+    justify-content: flex-start !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
   .listing-price,
-  .listing-footer {
-    text-align: center !important;
-    justify-content: center !important;
+  .listing-footer,
+  .deals-grid .listing-price,
+  .deals-grid .listing-footer,
+  .home-deals-inner .listing-price,
+  .home-deals-inner .listing-footer,
+  #view-all-deals .listing-price,
+  #view-all-deals .listing-footer {
+    text-align: left !important;
+    justify-content: flex-start !important;
+    align-items: flex-start !important;
   }
   .listing-footer {
+    flex-direction: row !important;
+    align-items: flex-end !important;
+    justify-content: space-between !important;
+  }
+  .listing-price {
     flex-direction: column !important;
-    align-items: center !important;
+    align-items: flex-start !important;
   }
-  .card-actions-row {
-    justify-content: center !important;
+  .price-compare,
+  .price-now,
+  .price-code {
+    text-align: left !important;
+  }
+  .card-actions-row,
+  .deals-grid .card-actions-row,
+  .home-deals-inner .card-actions-row,
+  #view-all-deals .card-actions-row {
+    justify-content: flex-start !important;
+    align-items: stretch !important;
   }
   .product-card-media,
   .card-media--logo {
-    margin-left: auto;
-    margin-right: auto;
+    margin-left: 0;
+    margin-right: 0;
   }
 
   /* Deals filters */
