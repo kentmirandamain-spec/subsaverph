@@ -5053,6 +5053,96 @@ def admin_update_settings():
     return jsonify({"ok": True, "settings": current})
 
 
+@app.post("/api/admin/upload-product-image")
+@require_admin
+def admin_upload_product_image():
+    """
+    Upload a custom product image (or logo/slide).
+    multipart: file + dealId=... + kind=image|imageSlide|logo
+    Saves under assets/products/custom/ and optionally updates the deal.
+    """
+    deal_id = (request.form.get("dealId") or request.args.get("dealId") or "").strip()
+    kind = (request.form.get("kind") or request.args.get("kind") or "image").strip()
+    if kind not in ("image", "imageSlide", "logo"):
+        kind = "image"
+    apply = (request.form.get("apply") or "1").strip() not in ("0", "false", "no")
+
+    f = request.files.get("file") or request.files.get("image") or request.files.get("photo")
+    if not f or not getattr(f, "filename", None):
+        return jsonify({"error": "No image file uploaded"}), 400
+
+    filename = str(f.filename or "")
+    ext = Path(filename).suffix.lower()
+    allowed = {".png", ".jpg", ".jpeg", ".webp", ".gif"}
+    if kind == "logo":
+        allowed.add(".svg")
+    if ext not in allowed:
+        ctype = (f.mimetype or "").lower()
+        if "png" in ctype:
+            ext = ".png"
+        elif "jpeg" in ctype or "jpg" in ctype:
+            ext = ".jpg"
+        elif "webp" in ctype:
+            ext = ".webp"
+        elif "gif" in ctype:
+            ext = ".gif"
+        elif "svg" in ctype and kind == "logo":
+            ext = ".svg"
+        else:
+            return jsonify(
+                {
+                    "error": "Upload a PNG, JPG, WEBP, or GIF image"
+                    + (" (SVG allowed for logo)" if kind == "logo" else "")
+                }
+            ), 400
+
+    # Safe deal id for filename
+    safe_id = re.sub(r"[^a-zA-Z0-9_-]+", "-", deal_id or "product").strip("-").lower() or "product"
+    safe_id = safe_id[:64]
+    out_dir = ROOT / "assets" / "products" / "custom"
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    # Stable name per deal+kind so re-upload replaces cleanly
+    out_name = f"{safe_id}-{kind}{ext}"
+    out_path = out_dir / out_name
+    for old in out_dir.glob(f"{safe_id}-{kind}.*"):
+        try:
+            if old.resolve() != out_path.resolve():
+                old.unlink()
+        except Exception:
+            pass
+    f.save(str(out_path))
+
+    url = f"/assets/products/custom/{out_name}?v={uuid.uuid4().hex[:8]}"
+    deal_out = None
+    if apply and deal_id:
+        deals = load_deals(include_inactive=True)
+        for i, d in enumerate(deals):
+            if d.get("id") == deal_id:
+                updated = dict(d)
+                updated[kind] = url
+                # Main image also fills slide when slide empty or was auto-mirrored
+                if kind == "image":
+                    if not (updated.get("imageSlide") or "").strip() or "/custom/" in str(
+                        updated.get("imageSlide") or ""
+                    ):
+                        updated["imageSlide"] = url
+                deals[i] = normalize_deal(updated, deal_id)
+                save_deals(deals)
+                deal_out = deals[i]
+                break
+
+    return jsonify(
+        {
+            "ok": True,
+            "url": url,
+            "kind": kind,
+            "dealId": deal_id or None,
+            "deal": deal_out,
+        }
+    )
+
+
 @app.post("/api/admin/upload-qr")
 @require_admin
 def admin_upload_qr():
@@ -5702,6 +5792,12 @@ def normalize_deal(data: dict, deal_id: str) -> dict:
         "importantNotes": (data.get("importantNotes") or "").strip(),
         "extraDetails": lines(data.get("extraDetails")),
         "active": bool(data.get("active", True)),
+        # Product images (admin can set URL or upload; storefront prefers these)
+        "image": (data.get("image") or "").strip(),
+        "imageSlide": (data.get("imageSlide") or "").strip(),
+        "logo": (data.get("logo") or "").strip(),
+        "imageBg": (data.get("imageBg") or "").strip(),
+        "brandColor": (data.get("brandColor") or "").strip(),
     }
 
 

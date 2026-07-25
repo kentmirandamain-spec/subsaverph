@@ -344,10 +344,13 @@ function dealsView() {
       );
 
   const rows = list
-    .map(
-      (d) => `
+    .map((d) => {
+      const thumb = d.image
+        ? `<img class="deal-thumb" src="${escapeAttr(d.image)}" alt="" width="40" height="40" loading="lazy" />`
+        : `<span class="deal-thumb deal-thumb-empty">${escapeHtml((d.monogram || "?").slice(0, 2))}</span>`;
+      return `
     <tr>
-      <td><strong>${escapeHtml(d.name)}</strong><div class="muted">${escapeHtml(d.id)}</div></td>
+      <td class="deal-name-cell">${thumb}<div><strong>${escapeHtml(d.name)}</strong><div class="muted">${escapeHtml(d.id)}</div></div></td>
       <td>${escapeHtml(d.brand)}</td>
       <td>${escapeHtml(String(d.price))} ${escapeHtml(d.priceBase || "USD")}</td>
       <td>${escapeHtml(String(d.original))} ${escapeHtml(d.priceBase || "USD")}</td>
@@ -356,8 +359,8 @@ function dealsView() {
         <button class="btn ghost" data-edit="${escapeHtml(d.id)}">Edit</button>
         <button class="btn danger" data-del="${escapeHtml(d.id)}">Delete</button>
       </td>
-    </tr>`
-    )
+    </tr>`;
+    })
     .join("");
 
   return `
@@ -365,7 +368,7 @@ function dealsView() {
       <h1>Products / deals</h1>
       <button class="btn" id="addDeal">+ Add product</button>
     </div>
-    <p class="muted">Changes save immediately to the live storefront at /</p>
+    <p class="muted">Changes save immediately to the live storefront at /. Edit a product to upload or paste your own image.</p>
     <div class="panel" style="margin-bottom:12px">
       <label style="margin:0">Search products
         <input id="adminProductSearch" type="search" placeholder="Name, brand, category…" value="${escapeAttr(state.productFilter || "")}" />
@@ -2215,6 +2218,45 @@ function dealModal(deal) {
         <label>Description<textarea name="description" rows="4">${escapeHtml(deal.description || "")}</textarea></label>
         <label>Fine print (storefront + delivery footer)<textarea name="finePrint" rows="2">${escapeHtml(deal.finePrint || "")}</textarea></label>
 
+        <h3 class="settings-h" style="margin-top:16px">Product image</h3>
+        <p class="muted" style="margin-top:0">
+          Set your own photo for this product on the storefront (mobile cards, detail, slider).
+          Paste an image URL or upload a file. Leave empty to use the default brand photo.
+        </p>
+        <div class="product-image-admin">
+          <div class="product-image-preview-wrap" id="productImagePreviewWrap">
+            ${
+              deal.image
+                ? `<img class="product-image-preview" id="productImagePreview" src="${escapeAttr(deal.image)}" alt="Product preview" />`
+                : `<div class="product-image-preview placeholder" id="productImagePreview">No image yet</div>`
+            }
+          </div>
+          <div class="product-image-fields">
+            <label>Product photo URL
+              <input name="image" id="dealImageUrl" type="url" placeholder="https://… or /assets/products/…" value="${escapeAttr(deal.image || "")}" />
+            </label>
+            <div class="qr-upload-row product-image-upload-row">
+              <label class="qr-upload-label">Upload photo from your device
+                <input type="file" id="uploadProductImage" accept="image/png,image/jpeg,image/webp,image/gif" />
+              </label>
+              <button type="button" class="btn ghost" id="btnUploadProductImage">Upload photo</button>
+            </div>
+            <label>Slide image URL <span class="muted">(optional — homepage slider)</span>
+              <input name="imageSlide" id="dealImageSlideUrl" type="url" placeholder="Same as photo if empty" value="${escapeAttr(deal.imageSlide || "")}" />
+            </label>
+            <label>Logo URL <span class="muted">(optional — desktop logo layer)</span>
+              <input name="logo" id="dealLogoUrl" type="url" placeholder="/assets/products/logos/…" value="${escapeAttr(deal.logo || "")}" />
+            </label>
+            <div class="qr-upload-row product-image-upload-row">
+              <label class="qr-upload-label">Upload logo from your device
+                <input type="file" id="uploadProductLogo" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" />
+              </label>
+              <button type="button" class="btn ghost" id="btnUploadProductLogo">Upload logo</button>
+            </div>
+            <button type="button" class="btn ghost" id="btnClearProductImages">Clear custom images</button>
+          </div>
+        </div>
+
         <h3 class="settings-h" style="margin-top:16px">After purchase delivery (shown on success page + email)</h3>
         <p class="muted" style="margin-top:0">Buyers receive <strong>login credentials</strong> plus the sections below after payment succeeds. Edit these carefully — this is what customers keep.</p>
         <label>Features included (one per line)
@@ -2248,8 +2290,11 @@ function dealModal(deal) {
 }
 
 function formToDeal(fd, existing) {
+  const image = String(fd.get("image") || "").trim();
+  const imageSlide = String(fd.get("imageSlide") || "").trim();
+  const logo = String(fd.get("logo") || "").trim();
   return {
-    id: (fd.get("id") || existing?.id || "").trim(),
+    id: String(fd.get("id") || existing?.id || "").trim(),
     name: fd.get("name"),
     brand: fd.get("brand"),
     category: fd.get("category"),
@@ -2275,6 +2320,11 @@ function formToDeal(fd, existing) {
     rating: fd.get("rating"),
     reviews: fd.get("reviews"),
     active: fd.get("active") === "on",
+    image,
+    imageSlide: imageSlide || image,
+    logo,
+    imageBg: existing?.imageBg || "",
+    brandColor: existing?.brandColor || "",
   };
 }
 
@@ -2808,6 +2858,115 @@ function bindShell() {
     } catch (err) {
       toast(err.message, true);
     }
+  });
+
+  function refreshProductImagePreview(url) {
+    const wrap = $("#productImagePreviewWrap");
+    if (!wrap) return;
+    const src = String(url || "").trim();
+    if (src) {
+      wrap.innerHTML = `<img class="product-image-preview" id="productImagePreview" src="${escapeAttr(src)}" alt="Product preview" />`;
+    } else {
+      wrap.innerHTML = `<div class="product-image-preview placeholder" id="productImagePreview">No image yet</div>`;
+    }
+  }
+
+  $("#dealImageUrl")?.addEventListener("input", (e) => {
+    refreshProductImagePreview(e.target.value);
+    if (state.editing) state.editing.image = e.target.value;
+  });
+
+  async function uploadProductAsset(kind, fileInputId, btn) {
+    const input = $(fileInputId);
+    const file = input?.files?.[0];
+    if (!file) {
+      toast("Choose an image file first", true);
+      return;
+    }
+    const dealId =
+      (state.editing?.id || $("#dealForm input[name='id']")?.value || "").trim() ||
+      String($("#dealForm input[name='name']")?.value || "product")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "")
+        .slice(0, 48) ||
+      "product";
+    if (btn) btn.disabled = true;
+    try {
+      const body = new FormData();
+      body.append("dealId", dealId);
+      body.append("kind", kind);
+      body.append("file", file);
+      // Apply to deals.json only when product already exists
+      body.append("apply", state.editing?._isNew ? "0" : "1");
+      const res = await fetch("/api/admin/upload-product-image", {
+        method: "POST",
+        credentials: "same-origin",
+        body,
+      });
+      const raw = await res.text();
+      let data = {};
+      try {
+        data = raw ? JSON.parse(raw) : {};
+      } catch {
+        data = {};
+      }
+      if (!res.ok) throw new Error(data.error || `Upload failed (${res.status})`);
+      const url = data.url || "";
+      if (kind === "image") {
+        const el = $("#dealImageUrl");
+        if (el) el.value = url;
+        const slide = $("#dealImageSlideUrl");
+        if (slide && !String(slide.value || "").trim()) slide.value = url;
+        if (state.editing) {
+          state.editing.image = url;
+          if (!state.editing.imageSlide) state.editing.imageSlide = url;
+        }
+        refreshProductImagePreview(url);
+      } else if (kind === "logo") {
+        const el = $("#dealLogoUrl");
+        if (el) el.value = url;
+        if (state.editing) state.editing.logo = url;
+      } else if (kind === "imageSlide") {
+        const el = $("#dealImageSlideUrl");
+        if (el) el.value = url;
+        if (state.editing) state.editing.imageSlide = url;
+      }
+      if (data.deal && Array.isArray(state.deals)) {
+        const i = state.deals.findIndex((d) => d.id === data.deal.id);
+        if (i >= 0) state.deals[i] = data.deal;
+      }
+      toast(kind === "logo" ? "Logo uploaded" : "Product photo uploaded");
+    } catch (err) {
+      toast(err.message || "Upload failed", true);
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  $("#btnUploadProductImage")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    uploadProductAsset("image", "#uploadProductImage", e.currentTarget);
+  });
+  $("#btnUploadProductLogo")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    uploadProductAsset("logo", "#uploadProductLogo", e.currentTarget);
+  });
+  $("#btnClearProductImages")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    const img = $("#dealImageUrl");
+    const slide = $("#dealImageSlideUrl");
+    const logo = $("#dealLogoUrl");
+    if (img) img.value = "";
+    if (slide) slide.value = "";
+    if (logo) logo.value = "";
+    if (state.editing) {
+      state.editing.image = "";
+      state.editing.imageSlide = "";
+      state.editing.logo = "";
+    }
+    refreshProductImagePreview("");
+    toast("Cleared — save product to apply on storefront");
   });
 
   $("#settingsForm")?.addEventListener("submit", async (e) => {

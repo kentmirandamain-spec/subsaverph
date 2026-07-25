@@ -227,13 +227,13 @@ function applyOfficialPhotos(d) {
   return d;
 }
 
-/** Official brand logo path (SVG mark) — desktop product media. */
+/** Official brand logo path (SVG mark) — desktop product media. Admin logo wins. */
 function productLogo(d) {
   if (!d) return "";
+  if (d.logo) return String(d.logo);
   const brand = brandKey(d.brand);
   if (brand && OFFICIAL_BRAND_LOGO[brand]) return OFFICIAL_BRAND_LOGO[brand];
   if (d.brand && OFFICIAL_BRAND_LOGO[d.brand]) return OFFICIAL_BRAND_LOGO[d.brand];
-  if (d.logo) return String(d.logo);
   const key = String(d.brand || "").toLowerCase().replace(/\s+/g, "");
   if (key) return `/assets/products/logos/brand-${key === "xai" ? "xai" : key}-fixed.svg?v=official3`;
   if (d.id) return `/assets/products/${d.id}.png`;
@@ -253,20 +253,23 @@ function brandUsesCover(brand) {
   return Boolean(isMobileView() && brandKey(brand) && OFFICIAL_BRAND_PHOTO[brandKey(brand)]);
 }
 
-/** Always return the official product photo URL (for mobile CSS layer). */
+/** Always return the product photo URL (for mobile CSS layer). Admin custom image wins. */
 function productPhotoSrc(d) {
   if (!d) return "";
+  /* Admin-uploaded / custom catalog image always preferred */
+  if (d.image && isProductPhoto(d.image)) return String(d.image);
   const id = String(d.id || "");
   if (id && OFFICIAL_PRODUCT_PHOTO[id]) return OFFICIAL_PRODUCT_PHOTO[id];
   const brand = brandKey(d.brand);
   if (brand && OFFICIAL_BRAND_PHOTO[brand]) return OFFICIAL_BRAND_PHOTO[brand];
-  if (d.image && isProductPhoto(d.image)) return String(d.image);
   return "";
 }
 
-/** Always return the official slide photo URL. */
+/** Slide photo: admin imageSlide / image, then defaults. */
 function productPhotoSlideSrc(d) {
   if (!d) return "";
+  if (d.imageSlide && isProductPhoto(d.imageSlide)) return String(d.imageSlide);
+  if (d.image && isProductPhoto(d.image)) return String(d.image);
   const id = String(d.id || "");
   if (id && OFFICIAL_PRODUCT_SLIDE[id]) return OFFICIAL_PRODUCT_SLIDE[id];
   if (id && OFFICIAL_PRODUCT_PHOTO[id]) return OFFICIAL_PRODUCT_PHOTO[id];
