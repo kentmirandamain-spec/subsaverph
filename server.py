@@ -5843,6 +5843,18 @@ def normalize_deal(data: dict, deal_id: str) -> dict:
         "imageDesktopFit": _normalize_image_fit(data.get("imageDesktopFit"), "contain"),
         "imageMobilePos": _normalize_image_pos(data.get("imageMobilePos")),
         "imageDesktopPos": _normalize_image_pos(data.get("imageDesktopPos")),
+        "imageMobileSlideFit": _normalize_image_fit(
+            data.get("imageMobileSlideFit") or data.get("imageMobileFit"), "cover"
+        ),
+        "imageDesktopSlideFit": _normalize_image_fit(
+            data.get("imageDesktopSlideFit") or data.get("imageDesktopFit"), "contain"
+        ),
+        "imageMobileSlidePos": _normalize_image_pos(
+            data.get("imageMobileSlidePos") or data.get("imageMobilePos")
+        ),
+        "imageDesktopSlidePos": _normalize_image_pos(
+            data.get("imageDesktopSlidePos") or data.get("imageDesktopPos")
+        ),
         # Legacy fields kept in sync for older storefront code
         "image": str(data.get("imageMobile") or data.get("image") or "").strip(),
         "imageSlide": str(

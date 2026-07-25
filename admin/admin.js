@@ -169,6 +169,9 @@ function shell(content) {
         <button type="button" data-tab="deals" class="${state.tab === "deals" ? "active" : ""}">
           <span class="side-ico">◈</span> Listings
         </button>
+        <button type="button" data-tab="slides" class="${state.tab === "slides" ? "active" : ""}">
+          <span class="side-ico">▭</span> Homepage slides
+        </button>
         <button type="button" data-tab="stock" class="${state.tab === "stock" ? "active" : ""}">
           <span class="side-ico">◎</span> Inventory
         </button>
@@ -2259,6 +2262,148 @@ function dealModal(deal) {
     </div>`;
 }
 
+function brandSlideOrder() {
+  return ["xAI", "Canva", "CapCut", "Netflix", "YouTube", "Duolingo", "Spotify"];
+}
+
+/** One featured product per brand (same order as homepage slider). */
+function featuredDealsForSlides() {
+  const order = brandSlideOrder();
+  const deals = state.deals || [];
+  const out = [];
+  const seen = new Set();
+  for (const brand of order) {
+    const d = deals.find((x) => x.brand === brand && x.active !== false) || deals.find((x) => x.brand === brand);
+    if (d) {
+      out.push(d);
+      seen.add(brand);
+    }
+  }
+  for (const d of deals) {
+    if (d.brand && !seen.has(d.brand)) {
+      out.push(d);
+      seen.add(d.brand);
+    }
+  }
+  return out;
+}
+
+function slidesView() {
+  const featured = featuredDealsForSlides();
+  const cards = featured
+    .map((d) => {
+      const mobileSlide = d.imageMobileSlide || d.imageSlide || d.imageMobile || d.image || "";
+      const desktopSlide = d.imageDesktopSlide || d.imageDesktop || d.logo || "";
+      const bg = d.brandColor || "#0a0e16";
+      const mFit = d.imageMobileSlideFit || d.imageMobileFit || "cover";
+      const dFit = d.imageDesktopSlideFit || d.imageDesktopFit || "contain";
+      const mPos = d.imageMobileSlidePos || d.imageMobilePos || "center center";
+      const dPos = d.imageDesktopSlidePos || d.imageDesktopPos || "center center";
+      return `
+      <article class="slide-edit-card panel" data-slide-deal="${escapeAttr(d.id)}">
+        <div class="slide-edit-head">
+          <div>
+            <strong>${escapeHtml(d.brand || "Brand")}</strong>
+            <div class="muted">${escapeHtml(d.name)} · <code>${escapeHtml(d.id)}</code></div>
+          </div>
+          <button type="button" class="btn" data-save-slide="${escapeAttr(d.id)}">Save slide</button>
+        </div>
+        <div class="slide-edit-grid">
+          <div class="slide-edit-col">
+            <div class="slide-edit-label">📱 Mobile homepage slide</div>
+            <div class="slide-preview-wide" style="background:${escapeAttr(bg)}">
+              ${
+                mobileSlide
+                  ? `<img src="${escapeAttr(mobileSlide)}" alt="" style="object-fit:${escapeAttr(mFit)};object-position:${escapeAttr(mPos)}" data-slide-preview-mobile="${escapeAttr(d.id)}" />`
+                  : `<span class="muted">No mobile slide image</span>`
+              }
+            </div>
+            <label>Image URL
+              <input type="url" data-field="imageMobileSlide" data-deal="${escapeAttr(d.id)}" value="${escapeAttr(mobileSlide)}" placeholder="https://… or /assets/…" />
+            </label>
+            <div class="qr-upload-row">
+              <label class="qr-upload-label">Upload
+                <input type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" data-slide-file-mobile="${escapeAttr(d.id)}" />
+              </label>
+              <button type="button" class="btn ghost" data-slide-upload-mobile="${escapeAttr(d.id)}">Upload mobile slide</button>
+            </div>
+            <div class="grid2">
+              <label>Fit
+                <select data-field="imageMobileSlideFit" data-deal="${escapeAttr(d.id)}">
+                  <option value="cover" ${mFit === "cover" ? "selected" : ""}>Cover</option>
+                  <option value="contain" ${mFit === "contain" ? "selected" : ""}>Contain</option>
+                </select>
+              </label>
+              <label>Position
+                <select data-field="imageMobileSlidePos" data-deal="${escapeAttr(d.id)}">
+                  <option value="center center" ${mPos === "center center" ? "selected" : ""}>Center</option>
+                  <option value="left center" ${mPos === "left center" ? "selected" : ""}>Left</option>
+                  <option value="right center" ${mPos === "right center" ? "selected" : ""}>Right</option>
+                  <option value="center top" ${mPos === "center top" ? "selected" : ""}>Top</option>
+                  <option value="center bottom" ${mPos === "center bottom" ? "selected" : ""}>Bottom</option>
+                </select>
+              </label>
+            </div>
+          </div>
+          <div class="slide-edit-col">
+            <div class="slide-edit-label">🖥️ Desktop homepage slide</div>
+            <div class="slide-preview-wide" style="background:${escapeAttr(bg)}">
+              ${
+                desktopSlide
+                  ? `<img src="${escapeAttr(desktopSlide)}" alt="" style="object-fit:${escapeAttr(dFit)};object-position:${escapeAttr(dPos)}" data-slide-preview-desktop="${escapeAttr(d.id)}" />`
+                  : `<span class="muted">No desktop slide image</span>`
+              }
+            </div>
+            <label>Image URL
+              <input type="url" data-field="imageDesktopSlide" data-deal="${escapeAttr(d.id)}" value="${escapeAttr(desktopSlide)}" placeholder="https://… or /assets/…" />
+            </label>
+            <div class="qr-upload-row">
+              <label class="qr-upload-label">Upload
+                <input type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" data-slide-file-desktop="${escapeAttr(d.id)}" />
+              </label>
+              <button type="button" class="btn ghost" data-slide-upload-desktop="${escapeAttr(d.id)}">Upload desktop slide</button>
+            </div>
+            <div class="grid2">
+              <label>Fit
+                <select data-field="imageDesktopSlideFit" data-deal="${escapeAttr(d.id)}">
+                  <option value="contain" ${dFit === "contain" ? "selected" : ""}>Contain</option>
+                  <option value="cover" ${dFit === "cover" ? "selected" : ""}>Cover</option>
+                </select>
+              </label>
+              <label>Position
+                <select data-field="imageDesktopSlidePos" data-deal="${escapeAttr(d.id)}">
+                  <option value="center center" ${dPos === "center center" ? "selected" : ""}>Center</option>
+                  <option value="left center" ${dPos === "left center" ? "selected" : ""}>Left</option>
+                  <option value="right center" ${dPos === "right center" ? "selected" : ""}>Right</option>
+                  <option value="center top" ${dPos === "center top" ? "selected" : ""}>Top</option>
+                  <option value="center bottom" ${dPos === "center bottom" ? "selected" : ""}>Bottom</option>
+                </select>
+              </label>
+            </div>
+          </div>
+        </div>
+        <div class="slide-edit-foot">
+          <label>Background color
+            <input type="text" data-field="brandColor" data-deal="${escapeAttr(d.id)}" value="${escapeAttr(d.brandColor || "")}" placeholder="#00c4cc" style="max-width:140px" />
+          </label>
+          <button type="button" class="btn ghost" data-clear-slide="${escapeAttr(d.id)}">Clear slide images</button>
+          <a class="btn ghost" href="/#/" target="_blank" rel="noopener">Preview homepage</a>
+        </div>
+      </article>`;
+    })
+    .join("");
+
+  return `
+    <div class="top">
+      <h1>Homepage slides</h1>
+      <a class="btn ghost" href="/" target="_blank" rel="noopener">Open live homepage</a>
+    </div>
+    <p class="muted">Edit the images shown in the homepage carousel (one slide per brand). Changes apply after you click <strong>Save slide</strong>. Mobile and desktop can use different images, fit, and position.</p>
+    <div class="slides-edit-list">
+      ${cards || `<div class="panel muted">No products yet — add listings first.</div>`}
+    </div>`;
+}
+
 function productImageEditorHTML(deal) {
   const mobile = deal.imageMobile || deal.image || "";
   const mobileSlide = deal.imageMobileSlide || deal.imageSlide || "";
@@ -2268,6 +2413,10 @@ function productImageEditorHTML(deal) {
   const dFit = deal.imageDesktopFit === "cover" ? "cover" : "contain";
   const mPos = deal.imageMobilePos || "center center";
   const dPos = deal.imageDesktopPos || "center center";
+  const msFit = deal.imageMobileSlideFit || mFit;
+  const dsFit = deal.imageDesktopSlideFit || dFit;
+  const msPos = deal.imageMobileSlidePos || mPos;
+  const dsPos = deal.imageDesktopSlidePos || dPos;
   const brandColor = deal.brandColor || "";
   const posOpts = [
     ["center center", "Center"],
@@ -2276,18 +2425,13 @@ function productImageEditorHTML(deal) {
     ["center top", "Top"],
     ["center bottom", "Bottom"],
   ];
-  const posSelect = (name, val) =>
+  const posSelect = (val) =>
     posOpts
-      .map(
-        ([v, lab]) =>
-          `<option value="${v}" ${val === v ? "selected" : ""}>${lab}</option>`
-      )
+      .map(([v, lab]) => `<option value="${v}" ${val === v ? "selected" : ""}>${lab}</option>`)
       .join("");
-  const preview = (id, src, label) =>
+  const preview = (id, src, fit, pos, label) =>
     src
-      ? `<img class="product-image-preview" id="${id}" src="${escapeAttr(src)}" alt="${escapeAttr(label)}" style="object-fit:${escapeAttr(
-          id.includes("Desktop") ? dFit : mFit
-        )};object-position:${escapeAttr(id.includes("Desktop") ? dPos : mPos)}" />`
+      ? `<img class="product-image-preview" id="${id}" src="${escapeAttr(src)}" alt="${escapeAttr(label)}" style="object-fit:${escapeAttr(fit)};object-position:${escapeAttr(pos)}" />`
       : `<div class="product-image-preview placeholder" id="${id}">No image</div>`;
 
   return `
@@ -2295,11 +2439,11 @@ function productImageEditorHTML(deal) {
       <section class="product-image-panel" data-device="mobile">
         <header class="product-image-panel-head">
           <strong>📱 Mobile</strong>
-          <span class="muted">Cards, detail, phone slider</span>
+          <span class="muted">Cards &amp; detail</span>
         </header>
         <div class="product-image-admin">
           <div class="product-image-preview-wrap" id="previewMobileWrap" style="background:${escapeAttr(brandColor || "#0a0e16")}">
-            ${preview("previewMobile", mobile, "Mobile")}
+            ${preview("previewMobile", mobile, mFit, mPos, "Mobile")}
           </div>
           <div class="product-image-fields">
             <label>Mobile card / detail image URL
@@ -2309,16 +2453,7 @@ function productImageEditorHTML(deal) {
               <label class="qr-upload-label">Upload mobile image
                 <input type="file" id="uploadImageMobile" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" />
               </label>
-              <button type="button" class="btn ghost" id="btnUploadImageMobile" data-kind="imageMobile" data-file="#uploadImageMobile" data-input="#dealImageMobile" data-preview="previewMobile">Upload</button>
-            </div>
-            <label>Mobile slider image <span class="muted">(optional)</span>
-              <input name="imageMobileSlide" id="dealImageMobileSlide" type="url" placeholder="Uses mobile image if empty" value="${escapeAttr(mobileSlide)}" />
-            </label>
-            <div class="qr-upload-row product-image-upload-row">
-              <label class="qr-upload-label">Upload mobile slider
-                <input type="file" id="uploadImageMobileSlide" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" />
-              </label>
-              <button type="button" class="btn ghost" data-kind="imageMobileSlide" data-file="#uploadImageMobileSlide" data-input="#dealImageMobileSlide" data-preview="">Upload</button>
+              <button type="button" class="btn ghost" data-kind="imageMobile" data-file="#uploadImageMobile" data-input="#dealImageMobile" data-preview="previewMobile">Upload</button>
             </div>
             <div class="grid2">
               <label>Mobile fit
@@ -2328,7 +2463,35 @@ function productImageEditorHTML(deal) {
                 </select>
               </label>
               <label>Mobile position
-                <select name="imageMobilePos" id="dealImageMobilePos">${posSelect("imageMobilePos", mPos)}</select>
+                <select name="imageMobilePos" id="dealImageMobilePos">${posSelect(mPos)}</select>
+              </label>
+            </div>
+          </div>
+        </div>
+        <div class="product-image-admin" style="border-top:1px solid var(--line);border-radius:0;margin:0">
+          <div class="product-image-preview-wrap slide-preview-box" id="previewMobileSlideWrap" style="background:${escapeAttr(brandColor || "#0a0e16")};aspect-ratio:16/10;max-width:100%">
+            ${preview("previewMobileSlide", mobileSlide || mobile, msFit, msPos, "Mobile slide")}
+          </div>
+          <div class="product-image-fields">
+            <strong style="font-size:0.85rem">Homepage slider (mobile)</strong>
+            <label>Mobile slide image URL
+              <input name="imageMobileSlide" id="dealImageMobileSlide" type="url" placeholder="Uses mobile card image if empty" value="${escapeAttr(mobileSlide)}" />
+            </label>
+            <div class="qr-upload-row product-image-upload-row">
+              <label class="qr-upload-label">Upload mobile slide
+                <input type="file" id="uploadImageMobileSlide" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" />
+              </label>
+              <button type="button" class="btn ghost" data-kind="imageMobileSlide" data-file="#uploadImageMobileSlide" data-input="#dealImageMobileSlide" data-preview="previewMobileSlide">Upload</button>
+            </div>
+            <div class="grid2">
+              <label>Slide fit
+                <select name="imageMobileSlideFit" id="dealImageMobileSlideFit">
+                  <option value="cover" ${msFit === "cover" ? "selected" : ""}>Cover</option>
+                  <option value="contain" ${msFit === "contain" ? "selected" : ""}>Contain</option>
+                </select>
+              </label>
+              <label>Slide position
+                <select name="imageMobileSlidePos" id="dealImageMobileSlidePos">${posSelect(msPos)}</select>
               </label>
             </div>
           </div>
@@ -2338,11 +2501,11 @@ function productImageEditorHTML(deal) {
       <section class="product-image-panel" data-device="desktop">
         <header class="product-image-panel-head">
           <strong>🖥️ Desktop</strong>
-          <span class="muted">Cards, detail, desktop slider</span>
+          <span class="muted">Cards &amp; detail</span>
         </header>
         <div class="product-image-admin">
           <div class="product-image-preview-wrap" id="previewDesktopWrap" style="background:${escapeAttr(brandColor || "#0a0e16")}">
-            ${preview("previewDesktop", desktop, "Desktop")}
+            ${preview("previewDesktop", desktop, dFit, dPos, "Desktop")}
           </div>
           <div class="product-image-fields">
             <label>Desktop card / detail image URL
@@ -2354,15 +2517,6 @@ function productImageEditorHTML(deal) {
               </label>
               <button type="button" class="btn ghost" data-kind="imageDesktop" data-file="#uploadImageDesktop" data-input="#dealImageDesktop" data-preview="previewDesktop">Upload</button>
             </div>
-            <label>Desktop slider image <span class="muted">(optional)</span>
-              <input name="imageDesktopSlide" id="dealImageDesktopSlide" type="url" placeholder="Uses desktop image if empty" value="${escapeAttr(desktopSlide)}" />
-            </label>
-            <div class="qr-upload-row product-image-upload-row">
-              <label class="qr-upload-label">Upload desktop slider
-                <input type="file" id="uploadImageDesktopSlide" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" />
-              </label>
-              <button type="button" class="btn ghost" data-kind="imageDesktopSlide" data-file="#uploadImageDesktopSlide" data-input="#dealImageDesktopSlide" data-preview="">Upload</button>
-            </div>
             <div class="grid2">
               <label>Desktop fit
                 <select name="imageDesktopFit" id="dealImageDesktopFit">
@@ -2371,7 +2525,35 @@ function productImageEditorHTML(deal) {
                 </select>
               </label>
               <label>Desktop position
-                <select name="imageDesktopPos" id="dealImageDesktopPos">${posSelect("imageDesktopPos", dPos)}</select>
+                <select name="imageDesktopPos" id="dealImageDesktopPos">${posSelect(dPos)}</select>
+              </label>
+            </div>
+          </div>
+        </div>
+        <div class="product-image-admin" style="border-top:1px solid var(--line);border-radius:0;margin:0">
+          <div class="product-image-preview-wrap slide-preview-box" id="previewDesktopSlideWrap" style="background:${escapeAttr(brandColor || "#0a0e16")};aspect-ratio:16/10;max-width:100%">
+            ${preview("previewDesktopSlide", desktopSlide || desktop, dsFit, dsPos, "Desktop slide")}
+          </div>
+          <div class="product-image-fields">
+            <strong style="font-size:0.85rem">Homepage slider (desktop)</strong>
+            <label>Desktop slide image URL
+              <input name="imageDesktopSlide" id="dealImageDesktopSlide" type="url" placeholder="Uses desktop card image if empty" value="${escapeAttr(desktopSlide)}" />
+            </label>
+            <div class="qr-upload-row product-image-upload-row">
+              <label class="qr-upload-label">Upload desktop slide
+                <input type="file" id="uploadImageDesktopSlide" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" />
+              </label>
+              <button type="button" class="btn ghost" data-kind="imageDesktopSlide" data-file="#uploadImageDesktopSlide" data-input="#dealImageDesktopSlide" data-preview="previewDesktopSlide">Upload</button>
+            </div>
+            <div class="grid2">
+              <label>Slide fit
+                <select name="imageDesktopSlideFit" id="dealImageDesktopSlideFit">
+                  <option value="contain" ${dsFit === "contain" ? "selected" : ""}>Contain</option>
+                  <option value="cover" ${dsFit === "cover" ? "selected" : ""}>Cover</option>
+                </select>
+              </label>
+              <label>Slide position
+                <select name="imageDesktopSlidePos" id="dealImageDesktopSlidePos">${posSelect(dsPos)}</select>
               </label>
             </div>
           </div>
@@ -2386,7 +2568,6 @@ function productImageEditorHTML(deal) {
         <button type="button" class="btn ghost" id="btnClearProductImages">Clear all custom images</button>
       </div>
     </div>
-    <!-- legacy hidden aliases filled on save -->
     <input type="hidden" name="image" id="dealImageUrl" value="${escapeAttr(mobile)}" />
     <input type="hidden" name="imageSlide" id="dealImageSlideUrl" value="${escapeAttr(mobileSlide || mobile)}" />
     <input type="hidden" name="logo" id="dealLogoUrl" value="${escapeAttr(desktop)}" />
@@ -2402,6 +2583,10 @@ function formToDeal(fd, existing) {
   const imageDesktopFit = String(fd.get("imageDesktopFit") || "contain").trim();
   const imageMobilePos = String(fd.get("imageMobilePos") || "center center").trim();
   const imageDesktopPos = String(fd.get("imageDesktopPos") || "center center").trim();
+  const imageMobileSlideFit = String(fd.get("imageMobileSlideFit") || imageMobileFit || "cover").trim();
+  const imageDesktopSlideFit = String(fd.get("imageDesktopSlideFit") || imageDesktopFit || "contain").trim();
+  const imageMobileSlidePos = String(fd.get("imageMobileSlidePos") || imageMobilePos || "center center").trim();
+  const imageDesktopSlidePos = String(fd.get("imageDesktopSlidePos") || imageDesktopPos || "center center").trim();
   const brandColor = String(fd.get("brandColor") || existing?.brandColor || "").trim();
   return {
     id: String(fd.get("id") || existing?.id || "").trim(),
@@ -2431,13 +2616,17 @@ function formToDeal(fd, existing) {
     reviews: fd.get("reviews"),
     active: fd.get("active") === "on",
     imageMobile,
-    imageMobileSlide: imageMobileSlide || imageMobile,
+    imageMobileSlide,
     imageDesktop,
-    imageDesktopSlide: imageDesktopSlide || imageDesktop,
+    imageDesktopSlide,
     imageMobileFit,
     imageDesktopFit,
     imageMobilePos,
     imageDesktopPos,
+    imageMobileSlideFit,
+    imageDesktopSlideFit,
+    imageMobileSlidePos,
+    imageDesktopSlidePos,
     // Legacy aliases
     image: imageMobile,
     imageSlide: imageMobileSlide || imageMobile,
@@ -2479,6 +2668,7 @@ function render() {
   else if (state.tab === "stock") content = stockView();
   else if (state.tab === "orders") content = ordersView();
   else if (state.tab === "support") content = supportInboxView();
+  else if (state.tab === "slides") content = slidesView();
   else content = dealsView();
 
   app.innerHTML = shell(content);
@@ -3163,7 +3353,243 @@ function bindShell() {
     }
     setPreview("previewMobile", "", "cover", "center center");
     setPreview("previewDesktop", "", "contain", "center center");
+    setPreview("previewMobileSlide", "", "cover", "center center");
+    setPreview("previewDesktopSlide", "", "contain", "center center");
     toast("Cleared — save product to apply on storefront");
+  });
+
+  // Live preview for slide fields inside product modal
+  ["#dealImageMobileSlide", "#dealImageMobileSlideFit", "#dealImageMobileSlidePos"].forEach((sel) => {
+    $(sel)?.addEventListener("input", () => {
+      setPreview(
+        "previewMobileSlide",
+        $("#dealImageMobileSlide")?.value || $("#dealImageMobile")?.value,
+        $("#dealImageMobileSlideFit")?.value || "cover",
+        $("#dealImageMobileSlidePos")?.value || "center center"
+      );
+    });
+    $(sel)?.addEventListener("change", () => {
+      setPreview(
+        "previewMobileSlide",
+        $("#dealImageMobileSlide")?.value || $("#dealImageMobile")?.value,
+        $("#dealImageMobileSlideFit")?.value || "cover",
+        $("#dealImageMobileSlidePos")?.value || "center center"
+      );
+    });
+  });
+  ["#dealImageDesktopSlide", "#dealImageDesktopSlideFit", "#dealImageDesktopSlidePos"].forEach((sel) => {
+    $(sel)?.addEventListener("input", () => {
+      setPreview(
+        "previewDesktopSlide",
+        $("#dealImageDesktopSlide")?.value || $("#dealImageDesktop")?.value,
+        $("#dealImageDesktopSlideFit")?.value || "contain",
+        $("#dealImageDesktopSlidePos")?.value || "center center"
+      );
+    });
+    $(sel)?.addEventListener("change", () => {
+      setPreview(
+        "previewDesktopSlide",
+        $("#dealImageDesktopSlide")?.value || $("#dealImageDesktop")?.value,
+        $("#dealImageDesktopSlideFit")?.value || "contain",
+        $("#dealImageDesktopSlidePos")?.value || "center center"
+      );
+    });
+  });
+
+  // —— Homepage slides tab ——
+  function slideCard(dealId) {
+    return document.querySelector(`.slide-edit-card[data-slide-deal="${CSS.escape(dealId)}"]`);
+  }
+  function readSlideFields(dealId) {
+    const card = slideCard(dealId);
+    if (!card) return {};
+    const out = {};
+    card.querySelectorAll("[data-field][data-deal]").forEach((el) => {
+      if (el.getAttribute("data-deal") === dealId) {
+        out[el.getAttribute("data-field")] = String(el.value || "").trim();
+      }
+    });
+    return out;
+  }
+  function refreshSlidePreview(dealId, which) {
+    const card = slideCard(dealId);
+    if (!card) return;
+    const fields = readSlideFields(dealId);
+    const isMobile = which === "mobile";
+    const url = isMobile
+      ? fields.imageMobileSlide
+      : fields.imageDesktopSlide;
+    const fit = isMobile
+      ? fields.imageMobileSlideFit || "cover"
+      : fields.imageDesktopSlideFit || "contain";
+    const pos = isMobile
+      ? fields.imageMobileSlidePos || "center center"
+      : fields.imageDesktopSlidePos || "center center";
+    const bg = fields.brandColor || "#0a0e16";
+    const box = card.querySelectorAll(".slide-preview-wide")[isMobile ? 0 : 1];
+    if (!box) return;
+    box.style.background = bg;
+    if (url) {
+      box.innerHTML = `<img src="${escapeAttr(url)}" alt="" style="object-fit:${escapeAttr(fit)};object-position:${escapeAttr(pos)}" data-slide-preview-${isMobile ? "mobile" : "desktop"}="${escapeAttr(dealId)}" />`;
+    } else {
+      box.innerHTML = `<span class="muted">No ${isMobile ? "mobile" : "desktop"} slide image</span>`;
+    }
+  }
+
+  $$("[data-field][data-deal]").forEach((el) => {
+    const handler = () => {
+      const dealId = el.getAttribute("data-deal");
+      const field = el.getAttribute("data-field");
+      if (field === "brandColor" || field.includes("Mobile")) refreshSlidePreview(dealId, "mobile");
+      if (field === "brandColor" || field.includes("Desktop")) refreshSlidePreview(dealId, "desktop");
+    };
+    el.addEventListener("input", handler);
+    el.addEventListener("change", handler);
+  });
+
+  $$("[data-save-slide]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const dealId = btn.getAttribute("data-save-slide");
+      const deal = (state.deals || []).find((d) => d.id === dealId);
+      if (!deal) return toast("Product not found", true);
+      const patch = readSlideFields(dealId);
+      const payload = {
+        ...deal,
+        imageMobileSlide: patch.imageMobileSlide || "",
+        imageDesktopSlide: patch.imageDesktopSlide || "",
+        imageMobileSlideFit: patch.imageMobileSlideFit || "cover",
+        imageDesktopSlideFit: patch.imageDesktopSlideFit || "contain",
+        imageMobileSlidePos: patch.imageMobileSlidePos || "center center",
+        imageDesktopSlidePos: patch.imageDesktopSlidePos || "center center",
+        brandColor: patch.brandColor || deal.brandColor || "",
+        // keep card images
+        imageMobile: deal.imageMobile || deal.image || "",
+        imageDesktop: deal.imageDesktop || deal.logo || "",
+        image: deal.imageMobile || deal.image || "",
+        imageSlide: patch.imageMobileSlide || deal.imageSlide || "",
+        logo: deal.imageDesktop || deal.logo || "",
+      };
+      btn.disabled = true;
+      try {
+        const data = await api(`/api/admin/deals/${encodeURIComponent(dealId)}`, {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
+        if (data.deal) {
+          const i = state.deals.findIndex((d) => d.id === dealId);
+          if (i >= 0) state.deals[i] = data.deal;
+        }
+        toast(`Saved slide for ${deal.brand || deal.name}`);
+      } catch (err) {
+        toast(err.message || "Save failed", true);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  });
+
+  $$("[data-clear-slide]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const dealId = btn.getAttribute("data-clear-slide");
+      const card = slideCard(dealId);
+      if (!card) return;
+      card.querySelectorAll('[data-field="imageMobileSlide"], [data-field="imageDesktopSlide"]').forEach((el) => {
+        el.value = "";
+      });
+      refreshSlidePreview(dealId, "mobile");
+      refreshSlidePreview(dealId, "desktop");
+      toast("Cleared — click Save slide to apply");
+    });
+  });
+
+  $$("[data-slide-upload-mobile]").forEach((btn) => {
+    btn.addEventListener("click", async (e) => {
+      e.preventDefault();
+      const dealId = btn.getAttribute("data-slide-upload-mobile");
+      const fileInput = document.querySelector(`[data-slide-file-mobile="${CSS.escape(dealId)}"]`);
+      const file = fileInput?.files?.[0];
+      if (!file) return toast("Choose a file first", true);
+      btn.disabled = true;
+      try {
+        const body = new FormData();
+        body.append("dealId", dealId);
+        body.append("kind", "imageMobileSlide");
+        body.append("file", file);
+        body.append("apply", "1");
+        const res = await fetch("/api/admin/upload-product-image", {
+          method: "POST",
+          credentials: "same-origin",
+          body,
+        });
+        const raw = await res.text();
+        let data = {};
+        try {
+          data = raw ? JSON.parse(raw) : {};
+        } catch {
+          data = {};
+        }
+        if (!res.ok) throw new Error(data.error || `Upload failed (${res.status})`);
+        const url = data.url || "";
+        const card = slideCard(dealId);
+        const input = card?.querySelector('[data-field="imageMobileSlide"]');
+        if (input) input.value = url;
+        if (data.deal) {
+          const i = state.deals.findIndex((d) => d.id === dealId);
+          if (i >= 0) state.deals[i] = { ...state.deals[i], ...data.deal };
+        }
+        refreshSlidePreview(dealId, "mobile");
+        toast("Mobile slide uploaded — click Save slide to lock fit/position");
+      } catch (err) {
+        toast(err.message || "Upload failed", true);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  });
+
+  $$("[data-slide-upload-desktop]").forEach((btn) => {
+    btn.addEventListener("click", async (e) => {
+      e.preventDefault();
+      const dealId = btn.getAttribute("data-slide-upload-desktop");
+      const fileInput = document.querySelector(`[data-slide-file-desktop="${CSS.escape(dealId)}"]`);
+      const file = fileInput?.files?.[0];
+      if (!file) return toast("Choose a file first", true);
+      btn.disabled = true;
+      try {
+        const body = new FormData();
+        body.append("dealId", dealId);
+        body.append("kind", "imageDesktopSlide");
+        body.append("file", file);
+        body.append("apply", "1");
+        const res = await fetch("/api/admin/upload-product-image", {
+          method: "POST",
+          credentials: "same-origin",
+          body,
+        });
+        const raw = await res.text();
+        let data = {};
+        try {
+          data = raw ? JSON.parse(raw) : {};
+        } catch {
+          data = {};
+        }
+        if (!res.ok) throw new Error(data.error || `Upload failed (${res.status})`);
+        const url = data.url || "";
+        const card = slideCard(dealId);
+        const input = card?.querySelector('[data-field="imageDesktopSlide"]');
+        if (input) input.value = url;
+        if (data.deal) {
+          const i = state.deals.findIndex((d) => d.id === dealId);
+          if (i >= 0) state.deals[i] = { ...state.deals[i], ...data.deal };
+        }
+        refreshSlidePreview(dealId, "desktop");
+        toast("Desktop slide uploaded — click Save slide to lock fit/position");
+      } catch (err) {
+        toast(err.message || "Upload failed", true);
+      } finally {
+        btn.disabled = false;
+      }
+    });
   });
 
   $("#settingsForm")?.addEventListener("submit", async (e) => {

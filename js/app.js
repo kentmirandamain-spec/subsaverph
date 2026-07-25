@@ -323,6 +323,24 @@ function productMobilePos(d) {
 function productDesktopPos(d) {
   return String(d?.imageDesktopPos || "center center");
 }
+function productMobileSlideFit(d) {
+  if (d?.imageMobileSlideFit === "contain" || d?.imageMobileSlideFit === "cover") {
+    return d.imageMobileSlideFit;
+  }
+  return productMobileFit(d);
+}
+function productDesktopSlideFit(d) {
+  if (d?.imageDesktopSlideFit === "contain" || d?.imageDesktopSlideFit === "cover") {
+    return d.imageDesktopSlideFit;
+  }
+  return productDesktopFit(d);
+}
+function productMobileSlidePos(d) {
+  return String(d?.imageMobileSlidePos || d?.imageMobilePos || "center center");
+}
+function productDesktopSlidePos(d) {
+  return String(d?.imageDesktopSlidePos || d?.imageDesktopPos || "center center");
+}
 
 /**
  * Card/detail image (JS path): prefer photo on mobile, logo on desktop.
@@ -1248,10 +1266,10 @@ function viewHome() {
             const photoSrc = productPhotoSlideSrc(d) || productPhotoSrc(d) || "";
             const logoSrc = productDesktopSlideSrc(d) || productLogo(d) || "";
             const brandLabel = d.brand === "xAI" ? "SuperGrok" : d.brand || "";
-            const mFit = productMobileFit(d);
-            const dFit = productDesktopFit(d);
-            const mPos = productMobilePos(d);
-            const dPos = productDesktopPos(d);
+            const mFit = productMobileSlideFit(d);
+            const dFit = productDesktopSlideFit(d);
+            const mPos = productMobileSlidePos(d);
+            const dPos = productDesktopSlidePos(d);
             const coverClass =
               d.brand === "Canva"
                 ? " product-slide--cover product-slide--canva product-slide--dual"
