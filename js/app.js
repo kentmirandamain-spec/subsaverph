@@ -98,22 +98,22 @@ const OFFICIAL_BRAND_LOGO = {
  * Desktop uses brand logos (logo-fit), not full product photos.
  */
 const OFFICIAL_BRAND_PHOTO = {
-  xAI: "/assets/products/photo-xai.png?v=officialm3",
-  Canva: "/assets/products/photo-canva.png?v=officialm3",
-  CapCut: "/assets/products/photo-capcut.png?v=officialm3",
-  Netflix: "/assets/products/photo-netflix.png?v=officialm3",
-  YouTube: "/assets/products/photo-youtube.png?v=officialm3",
-  Duolingo: "/assets/products/photo-duolingo.png?v=officialm3",
-  Spotify: "/assets/products/photo-spotify.png?v=officialm3",
+  xAI: "/assets/products/photo-xai.png?v=mobilephotos4",
+  Canva: "/assets/products/photo-canva.png?v=mobilephotos4",
+  CapCut: "/assets/products/photo-capcut.png?v=mobilephotos4",
+  Netflix: "/assets/products/photo-netflix.png?v=mobilephotos4",
+  YouTube: "/assets/products/photo-youtube.png?v=mobilephotos4",
+  Duolingo: "/assets/products/photo-duolingo.png?v=mobilephotos4",
+  Spotify: "/assets/products/photo-spotify.png?v=mobilephotos4",
 };
 const OFFICIAL_BRAND_PHOTO_SLIDE = {
-  xAI: "/assets/products/photo-xai-slide.png?v=officialm3",
-  Canva: "/assets/products/photo-canva-slide.png?v=officialm3",
-  CapCut: "/assets/products/photo-capcut-slide.png?v=officialm3",
-  Netflix: "/assets/products/photo-netflix-slide.png?v=officialm3",
-  YouTube: "/assets/products/photo-youtube-slide.png?v=officialm3",
-  Duolingo: "/assets/products/photo-duolingo-slide.png?v=officialm3",
-  Spotify: "/assets/products/photo-spotify-slide.png?v=officialm3",
+  xAI: "/assets/products/photo-xai-slide.png?v=mobilephotos4",
+  Canva: "/assets/products/photo-canva-slide.png?v=mobilephotos4",
+  CapCut: "/assets/products/photo-capcut-slide.png?v=mobilephotos4",
+  Netflix: "/assets/products/photo-netflix-slide.png?v=mobilephotos4",
+  YouTube: "/assets/products/photo-youtube-slide.png?v=mobilephotos4",
+  Duolingo: "/assets/products/photo-duolingo-slide.png?v=mobilephotos4",
+  Spotify: "/assets/products/photo-spotify-slide.png?v=mobilephotos4",
 };
 /** Per-product official photos (mobile cards / detail / slider). */
 const OFFICIAL_PRODUCT_PHOTO = {
@@ -167,12 +167,28 @@ const OFFICIAL_BRAND_SLIDE = {
 const MOBILE_OFFICIAL_PHOTO = OFFICIAL_BRAND_PHOTO;
 const MOBILE_OFFICIAL_SLIDE = OFFICIAL_BRAND_PHOTO_SLIDE;
 
-/** Match storefront mobile layout (CSS max-width: 900px). */
+/**
+ * Match storefront mobile layout (CSS max-width: 900px).
+ * Also treat real phones/tablets as mobile even if JS width is odd
+ * (desktop-request mode, landscape, foldables).
+ */
 function isMobileView() {
   try {
-    return window.matchMedia("(max-width: 900px)").matches;
+    if (window.matchMedia("(max-width: 900px)").matches) return true;
+    if (window.matchMedia("(max-width: 1024px) and (pointer: coarse)").matches) return true;
+    if (typeof navigator !== "undefined" && /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || "")) {
+      if (window.matchMedia("(max-width: 1200px)").matches) return true;
+    }
+    if (typeof screen !== "undefined" && Math.min(screen.width || 0, screen.height || 0) > 0) {
+      if (Math.min(screen.width, screen.height) <= 900) return true;
+    }
   } catch {
+    /* fall through */
+  }
+  try {
     return typeof window !== "undefined" && window.innerWidth <= 900;
+  } catch {
+    return false;
   }
 }
 
@@ -237,44 +253,54 @@ function brandUsesCover(brand) {
   return Boolean(isMobileView() && brandKey(brand) && OFFICIAL_BRAND_PHOTO[brandKey(brand)]);
 }
 
-/**
- * Card/detail image:
- * - mobile: official product photos
- * - desktop: brand logos (undo photo layout on desktop)
- */
-function productImage(d) {
+/** Always return the official product photo URL (for mobile CSS layer). */
+function productPhotoSrc(d) {
   if (!d) return "";
   const id = String(d.id || "");
+  if (id && OFFICIAL_PRODUCT_PHOTO[id]) return OFFICIAL_PRODUCT_PHOTO[id];
   const brand = brandKey(d.brand);
-  if (isMobileView()) {
-    if (id && OFFICIAL_PRODUCT_PHOTO[id]) return OFFICIAL_PRODUCT_PHOTO[id];
-    if (brand && OFFICIAL_BRAND_PHOTO[brand]) return OFFICIAL_BRAND_PHOTO[brand];
-    if (d.image && isProductPhoto(d.image)) return String(d.image);
-  }
-  if (brand && OFFICIAL_BRAND_COVER[brand]) return OFFICIAL_BRAND_COVER[brand];
-  if (brand && OFFICIAL_BRAND_LOGO[brand]) return OFFICIAL_BRAND_LOGO[brand];
-  if (d.logo) return String(d.logo);
-  return productLogo(d);
+  if (brand && OFFICIAL_BRAND_PHOTO[brand]) return OFFICIAL_BRAND_PHOTO[brand];
+  if (d.image && isProductPhoto(d.image)) return String(d.image);
+  return "";
+}
+
+/** Always return the official slide photo URL. */
+function productPhotoSlideSrc(d) {
+  if (!d) return "";
+  const id = String(d.id || "");
+  if (id && OFFICIAL_PRODUCT_SLIDE[id]) return OFFICIAL_PRODUCT_SLIDE[id];
+  if (id && OFFICIAL_PRODUCT_PHOTO[id]) return OFFICIAL_PRODUCT_PHOTO[id];
+  const brand = brandKey(d.brand);
+  if (brand && OFFICIAL_BRAND_PHOTO_SLIDE[brand]) return OFFICIAL_BRAND_PHOTO_SLIDE[brand];
+  return productPhotoSrc(d);
 }
 
 /**
- * Homepage slider:
- * - mobile: official product photos
- * - desktop: brand logos
+ * Card/detail image (JS path): prefer photo on mobile, logo on desktop.
+ * Cards also render dual <img> layers so CSS can force photos on phones.
+ */
+function productImage(d) {
+  if (!d) return "";
+  const photo = productPhotoSrc(d);
+  if (isMobileView() && photo) return photo;
+  const brand = brandKey(d.brand);
+  if (brand && OFFICIAL_BRAND_COVER[brand]) return OFFICIAL_BRAND_COVER[brand];
+  if (brand && OFFICIAL_BRAND_LOGO[brand]) return OFFICIAL_BRAND_LOGO[brand];
+  if (d.logo) return String(d.logo);
+  return productLogo(d) || photo;
+}
+
+/**
+ * Homepage slider (JS path): photo on mobile, logo on desktop.
  */
 function productSlideImage(d) {
   if (!d) return "";
-  const id = String(d.id || "");
+  const photo = productPhotoSlideSrc(d);
+  if (isMobileView() && photo) return photo;
   const brand = brandKey(d.brand);
-  if (isMobileView()) {
-    if (id && OFFICIAL_PRODUCT_SLIDE[id]) return OFFICIAL_PRODUCT_SLIDE[id];
-    if (id && OFFICIAL_PRODUCT_PHOTO[id]) return OFFICIAL_PRODUCT_PHOTO[id];
-    if (brand && OFFICIAL_BRAND_PHOTO_SLIDE[brand]) return OFFICIAL_BRAND_PHOTO_SLIDE[brand];
-    if (brand && OFFICIAL_BRAND_PHOTO[brand]) return OFFICIAL_BRAND_PHOTO[brand];
-  }
   if (brand && OFFICIAL_BRAND_SLIDE[brand]) return OFFICIAL_BRAND_SLIDE[brand];
   if (brand && OFFICIAL_BRAND_LOGO[brand]) return OFFICIAL_BRAND_LOGO[brand];
-  return productImage(d) || productLogo(d);
+  return productImage(d) || productLogo(d) || photo;
 }
 
 /* Keep catalog image fields as official photos (mobile); desktop UI ignores them for media. */
@@ -661,35 +687,41 @@ function toggleWish(id) {
 function card(d, highlightQ = "") {
   const nameHtml = highlightQ ? highlightMatch(d.name, highlightQ) : escapeHtml(d.name);
   const soldOut = isSoldOut(d);
-  const img = productImage(d) || "";
+  const photoSrc = productPhotoSrc(d) || "";
+  const logoSrc = productLogo(d) || "";
   const bg = productBrandColor(d);
   const wished = isWished(d.id);
   const typeLabel = (d.category || "Plan").toUpperCase();
   const brandLabel = d.brand === "xAI" ? "SuperGrok" : d.brand || "";
-  /* Mobile: full-bleed official photos. Desktop: logo-fit (restored). */
-  const mobile = isMobileView();
-  const photo = mobile && isProductPhoto(img);
-  const fillFrame =
-    brandUsesCover(d.brand) ||
-    (photo &&
-      (/m-orig-/i.test(img) ||
-        /photo-(xai|canva|capcut|duolingo|netflix|youtube|spotify)/i.test(img) ||
-        /cover-canva|cover-capcut/i.test(img)));
-  const logoFit = !fillFrame;
-  const photoFit = photo && !fillFrame;
+  /*
+   * Dual media layers (CSS-switched):
+   * - .product-media-photo → official photo, visible ≤900px
+   * - .product-media-logo  → brand logo, visible ≥901px
+   * This does not depend on isMobileView() so real phones always get photos.
+   */
+  const hasPhoto = Boolean(photoSrc);
+  const hasLogo = Boolean(logoSrc);
   /* Always show retail + deal price on every card */
   const hasRetail = d.original != null && Number(d.original) > 0;
   const retailHtml = hasRetail
     ? `<span class="price-compare" title="${escapeAttr(t("retail") || "Retail")}">${formatDealPrice(d, "original")}</span>`
     : "";
+  const mediaImgs =
+    hasPhoto || hasLogo
+      ? `${
+          hasPhoto
+            ? `<img class="product-img product-card-img product-media-photo product-cover-img" src="${escapeAttr(photoSrc)}" alt="${escapeAttr(d.brand || d.name)}" loading="lazy" decoding="async" width="600" height="400" />`
+            : ""
+        }${
+          hasLogo
+            ? `<img class="product-img product-card-img product-media-logo product-logo-img product-logo-img--fit" src="${escapeAttr(logoSrc)}" alt="${escapeAttr(d.brand || d.name)}" loading="lazy" decoding="async" width="600" height="400" />`
+            : ""
+        }`
+      : `<span class="product-monogram">${escapeHtml(d.monogram || "")}</span>`;
   return `
-    <article class="card product-card ${soldOut ? "sold-out" : ""}${fillFrame ? " product-card--cover" : ""}${logoFit ? " product-card--logo-fit" : ""}${photoFit ? " product-card--photo" : ""}${photo ? " product-card--has-photo" : ""}" data-product-id="${escapeAttr(d.id)}" data-brand="${escapeAttr(d.brand || "")}">
-      <a class="product-card-media${fillFrame ? " product-card-media--cover" : photoFit ? " product-card-media--photo card-media--logo" : " card-media--logo"}${logoFit ? " product-card-media--logo-fit" : ""}${img ? " has-product-photo" : ""}" href="#/deal/${d.id}" style="--brand-bg:${escapeAttr(bg)}">
-        ${
-          img
-            ? `<img class="product-img product-card-img${fillFrame ? " product-cover-img" : photoFit ? " product-photo-img" : " product-logo-img"}${logoFit ? " product-logo-img--fit" : ""}" src="${escapeAttr(img)}" alt="${escapeAttr(d.brand || d.name)}" loading="lazy" decoding="async" width="600" height="400" onerror="this.onerror=null;this.src='${escapeAttr(productLogo(d) || "")}'" />`
-            : `<span class="product-monogram">${escapeHtml(d.monogram || "")}</span>`
-        }
+    <article class="card product-card ${soldOut ? "sold-out" : ""} product-card--dual-media${hasPhoto ? " product-card--cover product-card--has-photo" : " product-card--logo-fit"}" data-product-id="${escapeAttr(d.id)}" data-brand="${escapeAttr(d.brand || "")}">
+      <a class="product-card-media product-card-media--dual${hasPhoto ? " product-card-media--cover has-product-photo" : " card-media--logo product-card-media--logo-fit"}" href="#/deal/${d.id}" style="--brand-bg:${escapeAttr(bg)}">
+        ${mediaImgs}
         ${
           soldOut
             ? `<span class="product-badge sold-out-badge">${escapeHtml(t("sold_out"))}</span>`
@@ -1167,34 +1199,29 @@ function viewHome() {
     slides.length > 0
       ? slides
           .map((d, i) => {
-            const slideSrc = productSlideImage(d) || "";
+            const photoSrc = productPhotoSlideSrc(d) || productPhotoSrc(d) || "";
+            const logoSrc = productLogo(d) || "";
             const brandLabel = d.brand === "xAI" ? "SuperGrok" : d.brand || "";
-            const isCover =
-              isMobileView() &&
-              (brandUsesCover(d.brand) ||
-                /m-orig-/i.test(slideSrc) ||
-                /photo-(xai|canva|capcut|duolingo|netflix|youtube|spotify)|cover-canva|cover-capcut/i.test(
-                  slideSrc
-                ));
-            const coverClass = isCover
-              ? d.brand === "Canva"
-                ? " product-slide--cover product-slide--canva"
+            const coverClass =
+              d.brand === "Canva"
+                ? " product-slide--cover product-slide--canva product-slide--dual"
                 : d.brand === "CapCut"
-                  ? " product-slide--cover product-slide--capcut"
-                  : " product-slide--cover"
-              : " product-slide--logo-fit";
+                  ? " product-slide--cover product-slide--capcut product-slide--dual"
+                  : " product-slide--cover product-slide--dual";
             return `
             <article class="product-slide${i === 0 ? " is-active" : ""}${coverClass}" data-slide-index="${i}" data-brand="${escapeAttr(d.brand || "")}" ${i === 0 ? "" : "hidden"} style="--brand-bg:${escapeAttr(productBrandColor(d))}">
               <a class="product-slide-link product-slide-link--logo" href="#/deal/${escapeAttr(d.id)}" tabindex="${i === 0 ? "0" : "-1"}">
-                <div class="product-slide-logo-wrap">
-                  <img
-                    class="product-img product-slide-img${isCover ? " product-cover-img" : " product-logo-img product-logo-img--fit"}${d.brand === "Canva" && isCover ? " product-cover-img--canva" : ""}"
-                    src="${escapeAttr(slideSrc)}"
-                    alt="${escapeAttr(brandLabel || d.name)}"
-                    width="1280"
-                    height="800"
-                    loading="${i === 0 ? "eager" : "lazy"}"
-                  />
+                <div class="product-slide-logo-wrap product-slide-logo-wrap--dual">
+                  ${
+                    photoSrc
+                      ? `<img class="product-img product-slide-img product-media-photo product-cover-img${d.brand === "Canva" ? " product-cover-img--canva" : ""}" src="${escapeAttr(photoSrc)}" alt="${escapeAttr(brandLabel || d.name)}" width="1280" height="800" loading="${i === 0 ? "eager" : "lazy"}" />`
+                      : ""
+                  }
+                  ${
+                    logoSrc
+                      ? `<img class="product-img product-slide-img product-media-logo product-logo-img product-logo-img--fit" src="${escapeAttr(logoSrc)}" alt="${escapeAttr(brandLabel || d.name)}" width="1280" height="800" loading="${i === 0 ? "eager" : "lazy"}" />`
+                      : ""
+                  }
                 </div>
                 <div class="product-slide-shade product-slide-shade--logo"></div>
                 <div class="product-slide-brand-tag">${escapeHtml(brandLabel)}</div>
@@ -1343,24 +1370,25 @@ function viewDeal() {
         <div class="detail">
           <div class="detail-panel">
             ${
-              productImage(d)
-                ? (() => {
-                    const src = productImage(d);
-                    const photo = isMobileView() && isProductPhoto(src);
-                    const cover =
-                      photo &&
-                      (brandUsesCover(d.brand) ||
-                        d.brand === "Canva" ||
-                        d.brand === "CapCut" ||
-                        /cover-/i.test(src) ||
-                        /photo-(xai|canva|capcut|duolingo|netflix|youtube|spotify)/i.test(src));
-                    const logoFit = !photo;
-                    const photoFit = photo && !cover;
-                    return `<div class="detail-product-img-wrap${cover ? " detail-product-img-wrap--cover" : photoFit ? " detail-product-img-wrap--photo" : " detail-product-img-wrap--logo"}${logoFit ? " detail-product-img-wrap--logo-fit" : ""}" style="--brand-bg:${escapeAttr(productBrandColor(d))}">
-                    <img class="product-img detail-product-img${cover ? " product-cover-img" : photoFit ? " product-photo-img" : " product-logo-img"}${logoFit ? " product-logo-img--fit" : ""}" src="${escapeAttr(src)}" alt="${escapeAttr(d.brand || d.name)}" width="640" height="400" loading="eager" onerror="this.onerror=null;this.src='${escapeAttr(productLogo(d) || "")}'" />
+              (() => {
+                const photoSrc = productPhotoSrc(d) || "";
+                const logoSrc = productLogo(d) || "";
+                if (!photoSrc && !logoSrc) {
+                  return `<div class="mono-box lg">${escapeHtml(d.monogram)}</div>`;
+                }
+                return `<div class="detail-product-img-wrap detail-product-img-wrap--dual detail-product-img-wrap--cover" style="--brand-bg:${escapeAttr(productBrandColor(d))}">
+                    ${
+                      photoSrc
+                        ? `<img class="product-img detail-product-img product-media-photo product-cover-img" src="${escapeAttr(photoSrc)}" alt="${escapeAttr(d.brand || d.name)}" width="640" height="400" loading="eager" />`
+                        : ""
+                    }
+                    ${
+                      logoSrc
+                        ? `<img class="product-img detail-product-img product-media-logo product-logo-img product-logo-img--fit" src="${escapeAttr(logoSrc)}" alt="${escapeAttr(d.brand || d.name)}" width="640" height="400" loading="eager" />`
+                        : ""
+                    }
                   </div>`;
-                  })()
-                : `<div class="mono-box lg">${escapeHtml(d.monogram)}</div>`
+              })()
             }
             ${
               soldOut
