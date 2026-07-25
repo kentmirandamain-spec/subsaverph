@@ -343,8 +343,39 @@ function productDesktopSlidePos(d) {
 }
 
 /**
+ * Single responsive image — never stacks mobile+desktop layers.
+ * Uses <picture> so only one image is shown per viewport.
+ */
+function mediaPictureHtml({
+  mobileSrc = "",
+  desktopSrc = "",
+  alt = "",
+  className = "",
+  mFit = "cover",
+  dFit = "contain",
+  mPos = "center center",
+  dPos = "center center",
+  width = 600,
+  height = 400,
+  loading = "lazy",
+}) {
+  const mobile = String(mobileSrc || desktopSrc || "").trim();
+  const desktop = String(desktopSrc || mobileSrc || "").trim();
+  if (!mobile && !desktop) return "";
+  const style = `--m-fit:${escapeAttr(mFit)};--d-fit:${escapeAttr(dFit)};--m-pos:${escapeAttr(mPos)};--d-pos:${escapeAttr(dPos)};object-fit:var(--m-fit,cover);object-position:var(--m-pos,center)`;
+  const imgClass = `product-img product-single-img ${className}`.trim();
+  // Same asset both ways → one img (no duplicate sources)
+  if (!mobileSrc || !desktopSrc || mobile === desktop) {
+    return `<img class="${escapeAttr(imgClass)}" src="${escapeAttr(desktop || mobile)}" alt="${escapeAttr(alt)}" width="${width}" height="${height}" loading="${escapeAttr(loading)}" decoding="async" style="${style}" />`;
+  }
+  return `<picture class="product-media-picture">
+    <source media="(max-width: 900px)" srcset="${escapeAttr(mobile)}" />
+    <img class="${escapeAttr(imgClass)}" src="${escapeAttr(desktop)}" alt="${escapeAttr(alt)}" width="${width}" height="${height}" loading="${escapeAttr(loading)}" decoding="async" style="${style}" />
+  </picture>`;
+}
+
+/**
  * Card/detail image (JS path): prefer photo on mobile, logo on desktop.
- * Cards also render dual <img> layers so CSS can force photos on phones.
  */
 function productImage(d) {
   if (!d) return "";
@@ -757,33 +788,30 @@ function card(d, highlightQ = "") {
   const wished = isWished(d.id);
   const typeLabel = (d.category || "Plan").toUpperCase();
   const brandLabel = d.brand === "xAI" ? "SuperGrok" : d.brand || "";
-  /*
-   * Dual media layers (CSS-switched):
-   * - .product-media-photo → mobile image (admin imageMobile)
-   * - .product-media-logo  → desktop image (admin imageDesktop)
-   */
-  const hasPhoto = Boolean(photoSrc);
-  const hasLogo = Boolean(logoSrc);
+  const hasMedia = Boolean(photoSrc || logoSrc);
   /* Always show retail + deal price on every card */
   const hasRetail = d.original != null && Number(d.original) > 0;
   const retailHtml = hasRetail
     ? `<span class="price-compare" title="${escapeAttr(t("retail") || "Retail")}">${formatDealPrice(d, "original")}</span>`
     : "";
-  const mediaImgs =
-    hasPhoto || hasLogo
-      ? `${
-          hasPhoto
-            ? `<img class="product-img product-card-img product-media-photo product-cover-img" src="${escapeAttr(photoSrc)}" alt="${escapeAttr(d.brand || d.name)}" loading="lazy" decoding="async" width="600" height="400" style="object-fit:${escapeAttr(mFit)};object-position:${escapeAttr(mPos)}" />`
-            : ""
-        }${
-          hasLogo
-            ? `<img class="product-img product-card-img product-media-logo product-logo-img product-logo-img--fit" src="${escapeAttr(logoSrc)}" alt="${escapeAttr(d.brand || d.name)}" loading="lazy" decoding="async" width="600" height="400" style="object-fit:${escapeAttr(dFit)};object-position:${escapeAttr(dPos)}" />`
-            : ""
-        }`
-      : `<span class="product-monogram">${escapeHtml(d.monogram || "")}</span>`;
+  const mediaImgs = hasMedia
+    ? mediaPictureHtml({
+        mobileSrc: photoSrc,
+        desktopSrc: logoSrc,
+        alt: d.brand || d.name,
+        className: "product-card-img product-cover-img",
+        mFit,
+        dFit,
+        mPos,
+        dPos,
+        width: 600,
+        height: 400,
+        loading: "lazy",
+      })
+    : `<span class="product-monogram">${escapeHtml(d.monogram || "")}</span>`;
   return `
-    <article class="card product-card ${soldOut ? "sold-out" : ""} product-card--dual-media${hasPhoto ? " product-card--cover product-card--has-photo" : " product-card--logo-fit"}" data-product-id="${escapeAttr(d.id)}" data-brand="${escapeAttr(d.brand || "")}" data-mobile-fit="${escapeAttr(mFit)}" data-desktop-fit="${escapeAttr(dFit)}">
-      <a class="product-card-media product-card-media--dual${hasPhoto ? " product-card-media--cover has-product-photo" : " card-media--logo product-card-media--logo-fit"}" href="#/deal/${d.id}" style="--brand-bg:${escapeAttr(bg)};--mobile-fit:${escapeAttr(mFit)};--desktop-fit:${escapeAttr(dFit)};--mobile-pos:${escapeAttr(mPos)};--desktop-pos:${escapeAttr(dPos)}">
+    <article class="card product-card ${soldOut ? "sold-out" : ""} product-card--single-media${hasMedia ? " product-card--has-photo" : " product-card--logo-fit"}" data-product-id="${escapeAttr(d.id)}" data-brand="${escapeAttr(d.brand || "")}">
+      <a class="product-card-media product-card-media--single${hasMedia ? " has-product-photo" : " card-media--logo"}" href="#/deal/${d.id}" style="--brand-bg:${escapeAttr(bg)};--m-fit:${escapeAttr(mFit)};--d-fit:${escapeAttr(dFit)};--m-pos:${escapeAttr(mPos)};--d-pos:${escapeAttr(dPos)}">
         ${mediaImgs}
         ${
           soldOut
@@ -1272,24 +1300,28 @@ function viewHome() {
             const dPos = productDesktopSlidePos(d);
             const coverClass =
               d.brand === "Canva"
-                ? " product-slide--cover product-slide--canva product-slide--dual"
+                ? " product-slide--cover product-slide--canva product-slide--single"
                 : d.brand === "CapCut"
-                  ? " product-slide--cover product-slide--capcut product-slide--dual"
-                  : " product-slide--cover product-slide--dual";
+                  ? " product-slide--cover product-slide--capcut product-slide--single"
+                  : " product-slide--cover product-slide--single";
+            const slideMedia = mediaPictureHtml({
+              mobileSrc: photoSrc,
+              desktopSrc: logoSrc,
+              alt: brandLabel || d.name,
+              className: `product-slide-img product-cover-img${d.brand === "Canva" ? " product-cover-img--canva" : ""}`,
+              mFit,
+              dFit,
+              mPos,
+              dPos,
+              width: 1280,
+              height: 800,
+              loading: i === 0 ? "eager" : "lazy",
+            });
             return `
-            <article class="product-slide${i === 0 ? " is-active" : ""}${coverClass}" data-slide-index="${i}" data-brand="${escapeAttr(d.brand || "")}" ${i === 0 ? "" : "hidden"} style="--brand-bg:${escapeAttr(productBrandColor(d))};--mobile-fit:${escapeAttr(mFit)};--desktop-fit:${escapeAttr(dFit)}">
+            <article class="product-slide${i === 0 ? " is-active" : ""}${coverClass}" data-slide-index="${i}" data-brand="${escapeAttr(d.brand || "")}" ${i === 0 ? "" : "hidden"} style="--brand-bg:${escapeAttr(productBrandColor(d))};--m-fit:${escapeAttr(mFit)};--d-fit:${escapeAttr(dFit)};--m-pos:${escapeAttr(mPos)};--d-pos:${escapeAttr(dPos)}">
               <a class="product-slide-link product-slide-link--logo" href="#/deal/${escapeAttr(d.id)}" tabindex="${i === 0 ? "0" : "-1"}">
-                <div class="product-slide-logo-wrap product-slide-logo-wrap--dual">
-                  ${
-                    photoSrc
-                      ? `<img class="product-img product-slide-img product-media-photo product-cover-img${d.brand === "Canva" ? " product-cover-img--canva" : ""}" src="${escapeAttr(photoSrc)}" alt="${escapeAttr(brandLabel || d.name)}" width="1280" height="800" loading="${i === 0 ? "eager" : "lazy"}" style="object-fit:${escapeAttr(mFit)};object-position:${escapeAttr(mPos)}" />`
-                      : ""
-                  }
-                  ${
-                    logoSrc
-                      ? `<img class="product-img product-slide-img product-media-logo product-logo-img product-logo-img--fit" src="${escapeAttr(logoSrc)}" alt="${escapeAttr(brandLabel || d.name)}" width="1280" height="800" loading="${i === 0 ? "eager" : "lazy"}" style="object-fit:${escapeAttr(dFit)};object-position:${escapeAttr(dPos)}" />`
-                      : ""
-                  }
+                <div class="product-slide-logo-wrap product-slide-logo-wrap--single">
+                  ${slideMedia}
                 </div>
                 <div class="product-slide-shade product-slide-shade--logo"></div>
                 <div class="product-slide-brand-tag">${escapeHtml(brandLabel)}</div>
@@ -1449,17 +1481,20 @@ function viewDeal() {
                 if (!photoSrc && !logoSrc) {
                   return `<div class="mono-box lg">${escapeHtml(d.monogram)}</div>`;
                 }
-                return `<div class="detail-product-img-wrap detail-product-img-wrap--dual detail-product-img-wrap--cover" style="--brand-bg:${escapeAttr(productBrandColor(d))}">
-                    ${
-                      photoSrc
-                        ? `<img class="product-img detail-product-img product-media-photo product-cover-img" src="${escapeAttr(photoSrc)}" alt="${escapeAttr(d.brand || d.name)}" width="640" height="400" loading="eager" style="object-fit:${escapeAttr(mFit)};object-position:${escapeAttr(mPos)}" />`
-                        : ""
-                    }
-                    ${
-                      logoSrc
-                        ? `<img class="product-img detail-product-img product-media-logo product-logo-img product-logo-img--fit" src="${escapeAttr(logoSrc)}" alt="${escapeAttr(d.brand || d.name)}" width="640" height="400" loading="eager" style="object-fit:${escapeAttr(dFit)};object-position:${escapeAttr(dPos)}" />`
-                        : ""
-                    }
+                return `<div class="detail-product-img-wrap detail-product-img-wrap--single detail-product-img-wrap--cover" style="--brand-bg:${escapeAttr(productBrandColor(d))};--m-fit:${escapeAttr(mFit)};--d-fit:${escapeAttr(dFit)};--m-pos:${escapeAttr(mPos)};--d-pos:${escapeAttr(dPos)}">
+                    ${mediaPictureHtml({
+                      mobileSrc: photoSrc,
+                      desktopSrc: logoSrc,
+                      alt: d.brand || d.name,
+                      className: "detail-product-img product-cover-img",
+                      mFit,
+                      dFit,
+                      mPos,
+                      dPos,
+                      width: 640,
+                      height: 400,
+                      loading: "eager",
+                    })}
                   </div>`;
               })()
             }

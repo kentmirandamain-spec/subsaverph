@@ -2292,8 +2292,10 @@ function slidesView() {
   const featured = featuredDealsForSlides();
   const cards = featured
     .map((d) => {
-      const mobileSlide = d.imageMobileSlide || d.imageSlide || d.imageMobile || d.image || "";
-      const desktopSlide = d.imageDesktopSlide || d.imageDesktop || d.logo || "";
+      const mobileSlide = d.imageMobileSlide || d.imageSlide || "";
+      const desktopSlide = d.imageDesktopSlide || "";
+      const mobileFallback = d.imageMobile || d.image || "";
+      const desktopFallback = d.imageDesktop || d.logo || "";
       const bg = d.brandColor || "#0a0e16";
       const mFit = d.imageMobileSlideFit || d.imageMobileFit || "cover";
       const dFit = d.imageDesktopSlideFit || d.imageDesktopFit || "contain";
@@ -2315,11 +2317,13 @@ function slidesView() {
               ${
                 mobileSlide
                   ? `<img src="${escapeAttr(mobileSlide)}" alt="" style="object-fit:${escapeAttr(mFit)};object-position:${escapeAttr(mPos)}" data-slide-preview-mobile="${escapeAttr(d.id)}" />`
-                  : `<span class="muted">No mobile slide image</span>`
+                  : mobileFallback
+                    ? `<div class="slide-fallback-note"><span class="muted">Uses card image</span><img src="${escapeAttr(mobileFallback)}" alt="" style="object-fit:${escapeAttr(mFit)};object-position:${escapeAttr(mPos)};opacity:0.55" /></div>`
+                    : `<span class="muted">No mobile slide image</span>`
               }
             </div>
             <label>Image URL
-              <input type="url" data-field="imageMobileSlide" data-deal="${escapeAttr(d.id)}" value="${escapeAttr(mobileSlide)}" placeholder="https://… or /assets/…" />
+              <input type="url" data-field="imageMobileSlide" data-deal="${escapeAttr(d.id)}" value="${escapeAttr(mobileSlide)}" placeholder="Leave empty to use card image" />
             </label>
             <div class="qr-upload-row">
               <label class="qr-upload-label">Upload
@@ -2351,11 +2355,13 @@ function slidesView() {
               ${
                 desktopSlide
                   ? `<img src="${escapeAttr(desktopSlide)}" alt="" style="object-fit:${escapeAttr(dFit)};object-position:${escapeAttr(dPos)}" data-slide-preview-desktop="${escapeAttr(d.id)}" />`
-                  : `<span class="muted">No desktop slide image</span>`
+                  : desktopFallback
+                    ? `<div class="slide-fallback-note"><span class="muted">Uses card image</span><img src="${escapeAttr(desktopFallback)}" alt="" style="object-fit:${escapeAttr(dFit)};object-position:${escapeAttr(dPos)};opacity:0.55" /></div>`
+                    : `<span class="muted">No desktop slide image</span>`
               }
             </div>
             <label>Image URL
-              <input type="url" data-field="imageDesktopSlide" data-deal="${escapeAttr(d.id)}" value="${escapeAttr(desktopSlide)}" placeholder="https://… or /assets/…" />
+              <input type="url" data-field="imageDesktopSlide" data-deal="${escapeAttr(d.id)}" value="${escapeAttr(desktopSlide)}" placeholder="Leave empty to use card image" />
             </label>
             <div class="qr-upload-row">
               <label class="qr-upload-label">Upload
@@ -2470,12 +2476,16 @@ function productImageEditorHTML(deal) {
         </div>
         <div class="product-image-admin" style="border-top:1px solid var(--line);border-radius:0;margin:0">
           <div class="product-image-preview-wrap slide-preview-box" id="previewMobileSlideWrap" style="background:${escapeAttr(brandColor || "#0a0e16")};aspect-ratio:16/10;max-width:100%">
-            ${preview("previewMobileSlide", mobileSlide || mobile, msFit, msPos, "Mobile slide")}
+            ${
+              mobileSlide
+                ? preview("previewMobileSlide", mobileSlide, msFit, msPos, "Mobile slide")
+                : `<div class="product-image-preview placeholder" id="previewMobileSlide">Uses card image if empty</div>`
+            }
           </div>
           <div class="product-image-fields">
             <strong style="font-size:0.85rem">Homepage slider (mobile)</strong>
             <label>Mobile slide image URL
-              <input name="imageMobileSlide" id="dealImageMobileSlide" type="url" placeholder="Uses mobile card image if empty" value="${escapeAttr(mobileSlide)}" />
+              <input name="imageMobileSlide" id="dealImageMobileSlide" type="url" placeholder="Leave empty to use card image" value="${escapeAttr(mobileSlide)}" />
             </label>
             <div class="qr-upload-row product-image-upload-row">
               <label class="qr-upload-label">Upload mobile slide
@@ -2532,12 +2542,16 @@ function productImageEditorHTML(deal) {
         </div>
         <div class="product-image-admin" style="border-top:1px solid var(--line);border-radius:0;margin:0">
           <div class="product-image-preview-wrap slide-preview-box" id="previewDesktopSlideWrap" style="background:${escapeAttr(brandColor || "#0a0e16")};aspect-ratio:16/10;max-width:100%">
-            ${preview("previewDesktopSlide", desktopSlide || desktop, dsFit, dsPos, "Desktop slide")}
+            ${
+              desktopSlide
+                ? preview("previewDesktopSlide", desktopSlide, dsFit, dsPos, "Desktop slide")
+                : `<div class="product-image-preview placeholder" id="previewDesktopSlide">Uses card image if empty</div>`
+            }
           </div>
           <div class="product-image-fields">
             <strong style="font-size:0.85rem">Homepage slider (desktop)</strong>
             <label>Desktop slide image URL
-              <input name="imageDesktopSlide" id="dealImageDesktopSlide" type="url" placeholder="Uses desktop card image if empty" value="${escapeAttr(desktopSlide)}" />
+              <input name="imageDesktopSlide" id="dealImageDesktopSlide" type="url" placeholder="Leave empty to use card image" value="${escapeAttr(desktopSlide)}" />
             </label>
             <div class="qr-upload-row product-image-upload-row">
               <label class="qr-upload-label">Upload desktop slide
