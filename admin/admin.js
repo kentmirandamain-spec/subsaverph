@@ -948,7 +948,30 @@ function settingsView() {
         </div>
 
         <div class="settings-sub">
-          <h4 class="settings-sub-h">B · NOWPayments (auto crypto gateway)</h4>
+          <h4 class="settings-sub-h">B · Cryptomus (auto crypto — alternative to NOWPayments)</h4>
+          <p class="muted">Automatic multi-coin checkout (hosted page). Instant codes after payment + webhook.</p>
+          <label>Checkout label (optional)
+            <input name="cryptomusCheckoutLabel" value="${escapeAttr(s.cryptomusCheckoutLabel || "")}" placeholder="Crypto (Cryptomus)" />
+          </label>
+          <label>Checkout description (optional)
+            <input name="cryptomusCheckoutDesc" value="${escapeAttr(s.cryptomusCheckoutDesc || "")}" placeholder="USDT, BTC, ETH · Instant automatic delivery" />
+          </label>
+          <div class="panel" style="margin-top:12px;padding:14px;border:1px solid var(--line);border-radius:10px;background:rgba(0,0,0,0.2)">
+            <p style="margin:0 0 8px;font-weight:700">Set up Cryptomus on Render</p>
+            <ol class="muted" style="margin:0;padding-left:1.2rem;line-height:1.55">
+              <li>Sign up at <a href="https://cryptomus.com/" target="_blank" rel="noopener">cryptomus.com</a></li>
+              <li>Merchant → settings → copy <strong>Merchant UUID</strong> and <strong>Payment API key</strong></li>
+              <li>Render → Environment:
+                <code>CRYPTOMUS_MERCHANT_UUID</code> + <code>CRYPTOMUS_API_KEY</code></li>
+              <li>Webhook / callback URL: <code>https://subsaverph.com/api/webhooks/cryptomus</code></li>
+              <li>Save → Manual Deploy → health should show <code>cryptomusEnabled: true</code></li>
+            </ol>
+            <p class="muted" style="margin:10px 0 0">Do not paste API keys into this form — only on Render.</p>
+          </div>
+        </div>
+
+        <div class="settings-sub">
+          <h4 class="settings-sub-h">C · NOWPayments (auto crypto)</h4>
           <label>Checkout label (optional)
             <input name="cryptoCheckoutLabel" value="${escapeAttr(s.cryptoCheckoutLabel || "")}" placeholder="Crypto (USDT, BTC, ETH…)" />
           </label>

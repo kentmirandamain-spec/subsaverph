@@ -1204,6 +1204,7 @@ def api_catalog():
             "xenditEnabled": xendit_configured(),
             "paypalEnabled": paypal_configured(),
             "cryptoEnabled": crypto_configured(),
+            "cryptomusEnabled": cryptomus_configured(),
             "manualCryptoEnabled": manual_crypto_configured(),
             "liqpayEnabled": liqpay_configured(),
             "manualEwalletEnabled": manual_ewallet_configured(),
@@ -1242,6 +1243,7 @@ def any_live_payment_provider() -> bool:
         or xendit_configured()
         or paypal_configured()
         or crypto_configured()
+        or cryptomus_configured()
         or manual_crypto_configured()
         or liqpay_configured()
         or manual_ewallet_configured()
@@ -1818,9 +1820,33 @@ def paypal_configured() -> bool:
 
 
 def crypto_configured() -> bool:
+    """NOWPayments automatic crypto gateway."""
     return bool(
         (os.environ.get("NOWPAYMENTS_API_KEY") or "").strip().strip('"').strip("'")
     )
+
+
+def cryptomus_credentials() -> tuple[str, str]:
+    """Return (merchant_uuid, api_key) for Cryptomus (auto crypto alternative)."""
+    merchant = (
+        (os.environ.get("CRYPTOMUS_MERCHANT_UUID") or "").strip().strip('"').strip("'")
+        or (os.environ.get("CRYPTOMUS_MERCHANT") or "").strip().strip('"').strip("'")
+    )
+    api_key = (
+        (os.environ.get("CRYPTOMUS_API_KEY") or "").strip().strip('"').strip("'")
+        or (os.environ.get("CRYPTOMUS_PAYMENT_KEY") or "").strip().strip('"').strip("'")
+    )
+    return merchant, api_key
+
+
+def cryptomus_configured() -> bool:
+    """Cryptomus automatic crypto gateway (alternative to NOWPayments)."""
+    merchant, api_key = cryptomus_credentials()
+    return bool(merchant and api_key)
+
+
+def auto_crypto_configured() -> bool:
+    return crypto_configured() or cryptomus_configured()
 
 
 def liqpay_configured() -> bool:
@@ -1993,6 +2019,7 @@ def available_payment_methods() -> list:
     has_xendit = xendit_configured()
     has_paypal = paypal_configured()
     has_crypto = crypto_configured()
+    has_cryptomus = cryptomus_configured()
     has_liqpay = liqpay_configured()
     ewallet_prov = ewallet_provider()
     allow_demo = demo_checkout_allowed()
@@ -2193,11 +2220,12 @@ def available_payment_methods() -> list:
         str(s_crypto.get("cryptoCheckoutDesc") or "").strip()
         or "Crypto · Instant delivery (demo — set NOWPAYMENTS_API_KEY for live)"
     )
+    # NOWPayments automatic crypto
     if has_crypto and show_crypto:
         methods.append(
             {
                 "id": "crypto",
-                "label": crypto_label,
+                "label": crypto_label if not has_cryptomus else f"{crypto_label} (NOWPayments)",
                 "provider": "nowpayments",
                 "desc": crypto_desc_live,
                 "group": "instant",
@@ -2205,7 +2233,31 @@ def available_payment_methods() -> list:
                 "deliveryLabel": "Instant automatic delivery",
             }
         )
-    elif demo_only and show_crypto:
+    # Cryptomus automatic crypto (alternative to NOWPayments)
+    show_cryptomus = _truthy_env("CRYPTOMUS_SHOW")
+    if show_cryptomus is None:
+        show_cryptomus = True
+    if has_cryptomus and show_cryptomus:
+        cm_label = (
+            str(s_crypto.get("cryptomusCheckoutLabel") or "").strip()
+            or ("Crypto (Cryptomus)" if has_crypto else crypto_label)
+        )
+        cm_desc = (
+            str(s_crypto.get("cryptomusCheckoutDesc") or "").strip()
+            or "USDT, BTC, ETH · Instant automatic delivery via Cryptomus"
+        )
+        methods.append(
+            {
+                "id": "crypto_cryptomus",
+                "label": cm_label,
+                "provider": "cryptomus",
+                "desc": cm_desc,
+                "group": "instant",
+                "delivery": "auto",
+                "deliveryLabel": "Instant automatic delivery",
+            }
+        )
+    elif demo_only and show_crypto and not has_crypto and not has_cryptomus:
         methods.append(
             {
                 "id": "crypto",
@@ -2410,6 +2462,10 @@ def api_checkout_start():
     # ---- Crypto (NOWPayments) ----
     if method == "crypto" and provider == "nowpayments":
         return _crypto_checkout(email, name, normalized, cart_meta, base)
+
+    # ---- Crypto auto alternative (Cryptomus) ----
+    if method in ("crypto_cryptomus", "crypto") and provider == "cryptomus":
+        return _cryptomus_checkout(email, name, normalized, cart_meta, base)
 
     # ---- LiqPay ----
     if method == "liqpay" and provider == "liqpay":
@@ -3686,6 +3742,183 @@ def _crypto_checkout(email, name, normalized, cart_meta, base):
     )
 
 
+def _cryptomus_sign(body_dict: dict, api_key: str) -> str:
+    """Cryptomus sign = md5(base64(json) + api_key)."""
+    import base64
+    import hashlib
+
+    raw = json.dumps(body_dict, ensure_ascii=False, separators=(",", ":"))
+    b64 = base64.b64encode(raw.encode("utf-8")).decode("ascii")
+    return hashlib.md5((b64 + api_key).encode("utf-8")).hexdigest()
+
+
+def _cryptomus_http(path: str, body: dict, *, merchant: str, api_key: str, timeout: int = 30):
+    """
+    POST to Cryptomus API. Returns (status_code, parsed_json_or_none, raw_text).
+    Docs: https://doc.cryptomus.com/
+    """
+    import hashlib
+    import base64
+
+    api_base = (os.environ.get("CRYPTOMUS_API_BASE") or "https://api.cryptomus.com/v1").rstrip(
+        "/"
+    )
+    url = f"{api_base}{path if path.startswith('/') else '/' + path}"
+    raw = json.dumps(body, ensure_ascii=False, separators=(",", ":"))
+    sign = hashlib.md5(
+        (base64.b64encode(raw.encode("utf-8")).decode("ascii") + api_key).encode("utf-8")
+    ).hexdigest()
+    headers = {
+        "merchant": merchant,
+        "sign": sign,
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "User-Agent": "SubSaverPH/1.0 (+https://subsaverph.com; Cryptomus client)",
+    }
+    data_bytes = raw.encode("utf-8")
+
+    try:
+        from curl_cffi import requests as cf_requests
+
+        r = cf_requests.post(
+            url, headers=headers, data=data_bytes, timeout=timeout, impersonate="chrome120"
+        )
+        text = r.text or ""
+        try:
+            parsed = r.json() if text else None
+        except Exception:
+            parsed = None
+        return int(r.status_code), parsed, text[:800]
+    except Exception:
+        pass
+
+    try:
+        import urllib.request
+
+        req = urllib.request.Request(url, data=data_bytes, headers=headers, method="POST")
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            text = resp.read().decode("utf-8", errors="replace")
+            try:
+                parsed = json.loads(text) if text else None
+            except Exception:
+                parsed = None
+            return int(resp.status), parsed, text[:800]
+    except Exception as e:
+        err = ""
+        if hasattr(e, "read"):
+            try:
+                err = e.read().decode("utf-8", errors="replace")[:400]  # type: ignore
+            except Exception:
+                pass
+        code = int(getattr(e, "code", 0) or 0)
+        return code or 0, None, err or str(e)
+
+
+def _cryptomus_checkout(email, name, normalized, cart_meta, base):
+    """
+    Automatic crypto checkout via Cryptomus (alternative to NOWPayments).
+    Env: CRYPTOMUS_MERCHANT_UUID + CRYPTOMUS_API_KEY
+    """
+    merchant, api_key = cryptomus_credentials()
+    if not merchant or not api_key:
+        return jsonify(
+            {
+                "error": "Cryptomus not configured. Set CRYPTOMUS_MERCHANT_UUID and CRYPTOMUS_API_KEY on Render.",
+            }
+        ), 503
+
+    price_usd = cart_total_usd(normalized)
+    if price_usd < 0.5:
+        return jsonify(
+            {
+                "error": "Order total too low for crypto (minimum about $0.50 USD).",
+            }
+        ), 400
+
+    ref = f"cm_{uuid.uuid4().hex[:16]}"
+    # Cryptomus amount as string
+    amount_str = f"{round(price_usd, 2):.2f}"
+    currency = (os.environ.get("CRYPTOMUS_CURRENCY") or "USD").strip().upper() or "USD"
+    body = {
+        "amount": amount_str,
+        "currency": currency,
+        "order_id": ref,
+        "url_return": f"{base}/api/checkout/cryptomus/return?ref={ref}",
+        "url_callback": f"{base}/api/webhooks/cryptomus",
+        "is_payment_multiple": False,
+        "lifetime": int(os.environ.get("CRYPTOMUS_LIFETIME") or "3600"),
+        "additional_data": f"SubSaverPH|{email}"[:255],
+    }
+    # Optional: force to_currency e.g. USDT
+    to_currency = (os.environ.get("CRYPTOMUS_TO_CURRENCY") or "").strip().upper()
+    if to_currency:
+        body["to_currency"] = to_currency
+
+    status, inv, raw = _cryptomus_http(
+        "/payment", body, merchant=merchant, api_key=api_key
+    )
+    if status not in (200, 201) or not isinstance(inv, dict):
+        return jsonify(
+            {
+                "error": f"Cryptomus error HTTP {status}: {(raw or '')[:400]}",
+                "hint": "Check CRYPTOMUS_MERCHANT_UUID + CRYPTOMUS_API_KEY and merchant status.",
+            }
+        ), 502
+
+    result = inv.get("result") if isinstance(inv.get("result"), dict) else inv
+    if not isinstance(result, dict):
+        return jsonify({"error": "Invalid Cryptomus response", "raw": inv}), 502
+
+    # Success when state is not error-like
+    if inv.get("state") not in (None, 0, "0") and inv.get("state") != 0:
+        # Cryptomus uses state: 0 = success for API envelope
+        msg = inv.get("message") or inv.get("errors") or raw
+        if inv.get("state") and inv.get("state") != 0:
+            # Some responses only have result
+            pass
+
+    pay_url = (
+        result.get("url")
+        or result.get("payment_url")
+        or result.get("redirect_url")
+        or ""
+    )
+    if not pay_url:
+        return jsonify(
+            {
+                "error": "Cryptomus did not return a payment URL",
+                "raw": inv,
+                "hint": "Verify merchant UUID and payment API key (not payout key).",
+            }
+        ), 502
+
+    uuid_pay = result.get("uuid") or result.get("payment_uuid") or ""
+    pending = read_json(STORE / "pending_payments.json", {})
+    pending[ref] = {
+        "email": email,
+        "name": name,
+        "cart": cart_meta,
+        "method": "crypto_cryptomus",
+        "provider": "cryptomus",
+        "invoiceId": uuid_pay,
+        "currency": currency,
+        "amountUsd": round(price_usd, 2),
+        "createdAt": __import__("datetime").datetime.utcnow().isoformat() + "Z",
+    }
+    write_json(STORE / "pending_payments.json", pending)
+
+    return jsonify(
+        {
+            "ok": True,
+            "provider": "cryptomus",
+            "method": "crypto_cryptomus",
+            "url": pay_url,
+            "ref": ref,
+            "invoiceId": uuid_pay,
+        }
+    )
+
+
 @app.get("/api/checkout/crypto/return")
 def crypto_return():
     """NOWPayments success redirect → success page to verify + fulfill."""
@@ -3700,6 +3933,16 @@ def crypto_return():
 def crypto_cancel():
     base = public_base_url()
     return redirect(f"{base}/#/checkout?cancelled=1")
+
+
+@app.get("/api/checkout/cryptomus/return")
+def cryptomus_return():
+    """Cryptomus success/return redirect → success page."""
+    ref = (request.args.get("ref") or "").strip()
+    base = public_base_url()
+    if not ref:
+        return redirect(f"{base}/#/checkout?cancelled=1")
+    return redirect(f"{base}/#/success?provider=cryptomus&ref={ref}")
 
 
 @app.get("/api/checkout/complete")
@@ -3754,10 +3997,14 @@ def api_checkout_complete():
                     "hint": "Ensure Xendit webhook is set, or wait a few seconds.",
                 }
             ), 402
-    elif provider == "crypto" or pending.get("provider") == "nowpayments":
+    elif provider in ("crypto", "nowpayments") or pending.get("provider") == "nowpayments":
         ok = _crypto_paid(pending)
         if not ok:
             return jsonify({"error": "Crypto payment not confirmed yet"}), 402
+    elif provider in ("cryptomus", "crypto_cryptomus") or pending.get("provider") == "cryptomus":
+        ok = _cryptomus_paid(pending)
+        if not ok:
+            return jsonify({"error": "Cryptomus payment not confirmed yet. Wait a few seconds and refresh."}), 402
     elif provider == "liqpay" or pending.get("provider") == "liqpay":
         # Prefer server_url webhook. Soft trust is OFF by default (set LIQPAY_TRUST_RETURN=1 only for testing).
         if os.environ.get("LIQPAY_TRUST_RETURN", "0") != "1":
@@ -3938,6 +4185,163 @@ def _crypto_paid(pending: dict) -> bool:
                     return True
 
     return trust
+
+
+def _cryptomus_paid(pending: dict) -> bool:
+    """Verify Cryptomus payment is paid/paid_over via info API."""
+    merchant, api_key = cryptomus_credentials()
+    uuid_pay = str(pending.get("invoiceId") or "").strip()
+    order_id = str(pending.get("order_id") or "").strip()  # not stored usually
+    trust = os.environ.get("CRYPTOMUS_TRUST_RETURN", "0") == "1"
+    if not merchant or not api_key:
+        return trust
+
+    # Prefer uuid from invoice create
+    body = {}
+    if uuid_pay:
+        body = {"uuid": uuid_pay}
+    else:
+        # Fallback: look up by our order ref stored as order_id in pending key
+        return trust
+
+    code, data, _raw = _cryptomus_http(
+        "/payment/info", body, merchant=merchant, api_key=api_key
+    )
+    if code != 200 or not isinstance(data, dict):
+        return trust
+    result = data.get("result") if isinstance(data.get("result"), dict) else data
+    if not isinstance(result, dict):
+        return trust
+    status = str(result.get("payment_status") or result.get("status") or "").lower()
+    # paid, paid_over, wrong_amount still delivered sometimes — only count paid*
+    return status in ("paid", "paid_over", "wrong_amount") or trust and status in (
+        "check",
+        "confirm_check",
+    )
+
+
+def _cryptomus_verify_callback(payload: dict) -> tuple[bool, str]:
+    """
+    Verify Cryptomus webhook sign.
+    sign = md5(base64(json without sign) + api_key)
+    """
+    import base64
+    import hashlib
+
+    _, api_key = cryptomus_credentials()
+    if not api_key:
+        return True, "no_secret_configured"
+    if not isinstance(payload, dict):
+        return False, "bad_payload"
+    got = str(payload.get("sign") or "").strip()
+    if not got:
+        return False, "missing_sign"
+    body = {k: v for k, v in payload.items() if k != "sign"}
+    raw = json.dumps(body, ensure_ascii=False, separators=(",", ":"))
+    # Cryptomus docs: encode JSON then base64 then md5 with key
+    b64 = base64.b64encode(raw.encode("utf-8")).decode("ascii")
+    expect = hashlib.md5((b64 + api_key).encode("utf-8")).hexdigest()
+    if expect == got:
+        return True, "ok"
+    # Retry with sorted keys (some implementations sort)
+    try:
+        raw2 = json.dumps(body, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
+        b642 = base64.b64encode(raw2.encode("utf-8")).decode("ascii")
+        expect2 = hashlib.md5((b642 + api_key).encode("utf-8")).hexdigest()
+        if expect2 == got:
+            return True, "ok"
+    except Exception:
+        pass
+    return False, "bad_signature"
+
+
+@app.route("/api/webhooks/cryptomus", methods=["GET", "POST", "HEAD"])
+def cryptomus_webhook():
+    """
+    Cryptomus payment webhook (automatic crypto alternative to NOWPayments).
+    https://doc.cryptomus.com/
+    """
+    if request.method in ("GET", "HEAD"):
+        return (
+            jsonify(
+                {
+                    "ok": True,
+                    "service": "SubSaverPH",
+                    "webhook": "cryptomus",
+                    "message": "Cryptomus webhook ready. Send POST callbacks here.",
+                    "callbackUrl": f"{public_base_url()}/api/webhooks/cryptomus",
+                }
+            ),
+            200,
+        )
+
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        try:
+            payload = json.loads(request.data.decode("utf-8") or "{}")
+        except Exception:
+            payload = {}
+
+    ok_sig, sig_note = _cryptomus_verify_callback(payload if isinstance(payload, dict) else {})
+    if not ok_sig and sig_note == "bad_signature":
+        return jsonify({"ok": False, "error": sig_note}), 401
+
+    status = str(payload.get("status") or payload.get("payment_status") or "").lower()
+    order_id = str(payload.get("order_id") or "").strip()
+    uuid_pay = str(payload.get("uuid") or "").strip()
+
+    if status not in ("paid", "paid_over", "wrong_amount"):
+        return jsonify(
+            {
+                "ok": True,
+                "skipped": status or "empty_status",
+                "order_id": order_id,
+                "uuid": uuid_pay,
+                "sig": sig_note,
+            }
+        )
+
+    ref = order_id
+    if not ref:
+        return jsonify({"ok": True, "skipped": "no_order_id", "uuid": uuid_pay})
+
+    for existing in load_orders():
+        if existing.get("providerRef") == ref:
+            return jsonify({"ok": True, "duplicate": True, "order_id": ref})
+
+    pending_all = read_json(STORE / "pending_payments.json", {})
+    pending = pending_all.get(ref)
+    if not pending:
+        return jsonify(
+            {
+                "ok": True,
+                "skipped": "unknown_order",
+                "order_id": ref,
+                "hint": "No pending checkout for this order_id.",
+            }
+        )
+
+    try:
+        fulfill_order(
+            email=pending.get("email") or "",
+            name=pending.get("name") or "",
+            currency=pending.get("currency") or "USD",
+            items=pending.get("cart") or [],
+            payment_mode_name="cryptomus",
+            method="crypto_cryptomus",
+            provider_ref=ref,
+        )
+        if uuid_pay:
+            # refresh orders to attach uuid if needed
+            pass
+        pending_all.pop(ref, None)
+        write_json(STORE / "pending_payments.json", pending_all)
+    except ValueError as e:
+        return jsonify({"ok": False, "error": str(e)}), 409
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+    return jsonify({"ok": True, "fulfilled": True, "order_id": ref, "sig": sig_note})
 
 
 def _xendit_paid(pending: dict) -> bool:

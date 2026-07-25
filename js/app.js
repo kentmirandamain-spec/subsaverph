@@ -68,6 +68,7 @@ const state = {
   xenditEnabled: false,
   paypalEnabled: false,
   cryptoEnabled: false,
+  cryptomusEnabled: false,
   manualCryptoEnabled: false,
   liqpayEnabled: false,
   manualEwalletEnabled: false,
@@ -1764,6 +1765,7 @@ function paymentMethodsList() {
         // Card/Stripe omitted from fallback — use PayPal for card payments
         { id: "paypal", label: "PayPal", desc: "Instant codes", group: "instant", delivery: "auto" },
         { id: "crypto", label: "Crypto (NOWPayments)", desc: "Instant codes", group: "instant", delivery: "auto" },
+        { id: "crypto_cryptomus", label: "Crypto (Cryptomus)", desc: "Instant codes", group: "instant", delivery: "auto" },
         { id: "manual_crypto", label: "Crypto wallet", desc: "10–30 min", group: "instant", delivery: "manual" },
         { id: "manual_gcash", label: "GCash (QR)", desc: "10–30 min", group: "ewallet", delivery: "manual" },
         { id: "manual_maya", label: "Maya (QR)", desc: "10–30 min", group: "ewallet", delivery: "manual" },
@@ -1791,6 +1793,7 @@ const MANUAL_PAY_METHODS = new Set(["manual_gcash", "manual_maya", "manual_crypt
 const AUTO_DELIVERY_METHODS = new Set([
   "paypal",
   "crypto",
+  "crypto_cryptomus",
   "card",
   "liqpay",
   "demo",
@@ -1831,6 +1834,9 @@ function payButtonLabel(method) {
   if (method === "crypto") {
     return state.cryptoEnabled ? "Continue to crypto pay" : "Pay with crypto (demo)";
   }
+  if (method === "crypto_cryptomus") {
+    return state.cryptomusEnabled ? "Continue to Cryptomus" : "Pay with crypto (demo)";
+  }
   if (method === "liqpay") {
     return state.liqpayEnabled ? "Continue to LiqPay" : "Pay with LiqPay (demo)";
   }
@@ -1845,6 +1851,7 @@ const PAYMENT_LOGOS = {
   paymaya: { src: "/assets/payments/maya.svg?v=paylogo1", alt: "Maya", wide: true },
   paypal: { src: "/assets/payments/paypal.svg?v=paylogo1", alt: "PayPal" },
   crypto: { src: "/assets/payments/bitcoin.svg?v=paylogo1", alt: "Crypto" },
+  crypto_cryptomus: { src: "/assets/payments/bitcoin.svg?v=paylogo1", alt: "Cryptomus" },
   manual_crypto: { src: "/assets/payments/bitcoin.svg?v=paylogo1", alt: "Crypto wallet" },
   card: { src: "/assets/payments/card-mark.svg?v=paylogo1", alt: "Card" },
   stripe: { src: "/assets/payments/stripe.svg?v=paylogo1", alt: "Stripe" },
@@ -3649,6 +3656,7 @@ async function loadLiveCatalog(opts = {}) {
     state.xenditEnabled = !!data.xenditEnabled;
     state.paypalEnabled = !!data.paypalEnabled;
     state.cryptoEnabled = !!data.cryptoEnabled;
+    state.cryptomusEnabled = !!data.cryptomusEnabled;
     state.manualCryptoEnabled = !!data.manualCryptoEnabled;
     state.liqpayEnabled = !!data.liqpayEnabled;
     state.manualEwalletEnabled = !!data.manualEwalletEnabled;
