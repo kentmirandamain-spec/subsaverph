@@ -73,7 +73,7 @@ export function mountChatbot() {
           </span>
           <div class="ssph-chat-brand-text">
             <strong>Help desk</strong>
-            <p class="ssph-chat-sub" id="ssphChatSub"><span class="ssph-chat-dot" aria-hidden="true"></span> Online · store assistant</p>
+            <p class="ssph-chat-sub" id="ssphChatSub"><span class="ssph-chat-dot" aria-hidden="true"></span> Online · Powered by Grok 4.5</p>
           </div>
         </div>
         <div class="ssph-chat-head-actions">
@@ -128,6 +128,7 @@ export function mountChatbot() {
         </div>
         <h3 class="ssph-chat-welcome-title">How can we help?</h3>
         <p class="ssph-chat-welcome-text">Ask about products, prices, payment, login after pay, or refunds.</p>
+        <span class="ssph-chat-powered-by">Powered by Grok 4.5</span>
       </div>
       <div class="ssph-chat-suggestions" role="list">
         <button type="button" data-suggest="Hi, I need help choosing a product">Need help</button>
