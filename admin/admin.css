@@ -581,9 +581,301 @@ textarea { min-height: 90px; resize: vertical; }
   .main { padding: 14px; }
 }
 
-/* Sales / existing utility classes */
+/* Sales / P&L — year & month bars (high-contrast on dark admin) */
 .sales-loss { color: var(--danger) !important; }
 .sales-refund-tag { color: var(--danger); }
+
+.sales-panel {
+  margin-bottom: 18px;
+}
+
+.sales-h {
+  margin: 0 0 6px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: 0.02em;
+}
+
+.sales-year-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 12px;
+  margin: 14px 0 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--line-strong);
+  background: linear-gradient(180deg, rgba(15, 20, 32, 0.95), rgba(11, 15, 24, 0.9));
+}
+
+.sales-year-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--mute);
+  flex-shrink: 0;
+}
+
+.sales-year-btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.sales-year-btn {
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  border: 1px solid var(--line-strong);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text) !important;
+  font-weight: 600;
+  font-size: 0.88rem;
+  padding: 8px 14px;
+  border-radius: 999px;
+  transition: background 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s;
+}
+
+.sales-year-btn:hover {
+  color: #e0f2fe !important;
+  border-color: rgba(56, 189, 248, 0.45);
+  background: var(--accent-soft);
+}
+
+.sales-year-btn.active {
+  color: #041018 !important;
+  background: linear-gradient(135deg, #38bdf8 0%, #818cf8 100%);
+  border-color: transparent;
+  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.35), 0 8px 24px rgba(56, 189, 248, 0.18);
+  font-weight: 700;
+}
+
+.sales-year-panel {
+  margin-top: 4px;
+  padding: 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: rgba(15, 20, 32, 0.75);
+}
+
+.sales-breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.sales-crumb {
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--mute) !important;
+  font-size: 0.86rem;
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: 8px;
+  transition: color 0.15s, background 0.15s, border-color 0.15s;
+}
+
+.sales-crumb:hover {
+  color: var(--text) !important;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.sales-crumb.active {
+  color: #e0f2fe !important;
+  background: var(--accent-soft);
+  border-color: rgba(56, 189, 248, 0.28);
+}
+
+.sales-crumb-sep {
+  color: var(--mute-2);
+  font-size: 0.85rem;
+  user-select: none;
+}
+
+.sales-option-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+}
+
+.sales-option-chip {
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  text-align: left;
+  width: 100%;
+  min-height: 64px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--line-strong);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text) !important;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+}
+
+.sales-option-chip strong {
+  color: var(--text) !important;
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.sales-option-chip .muted,
+.sales-option-chip span {
+  color: var(--mute) !important;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.sales-option-chip:hover {
+  border-color: rgba(56, 189, 248, 0.4);
+  background: var(--accent-soft);
+}
+
+.sales-option-chip.active {
+  border-color: rgba(56, 189, 248, 0.55);
+  background: linear-gradient(145deg, rgba(56, 189, 248, 0.18), rgba(129, 140, 248, 0.12));
+  box-shadow: inset 0 0 0 1px rgba(56, 189, 248, 0.2);
+}
+
+.sales-option-chip.active strong {
+  color: #e0f2fe !important;
+}
+
+.sales-option-chip.active .muted,
+.sales-option-chip.active span {
+  color: #bae6fd !important;
+}
+
+.sales-summary {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 12px;
+}
+
+@media (max-width: 720px) {
+  .sales-summary {
+    grid-template-columns: 1fr;
+  }
+  .sales-option-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.sales-card {
+  padding: 14px 16px;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: rgba(11, 15, 24, 0.9);
+}
+
+.sales-card-wide {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+}
+
+.sales-card-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--mute);
+}
+
+.sales-big {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--accent);
+  line-height: 1.15;
+}
+
+.sales-card-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.88rem;
+  color: var(--mute);
+}
+
+.sales-card-row:last-child {
+  border-bottom: none;
+}
+
+.sales-card-row strong {
+  color: var(--text);
+  font-weight: 650;
+}
+
+.sales-card-row.sales-refund span,
+.sales-card-row.sales-refund strong {
+  color: var(--danger);
+}
+
+.sales-card-row.sales-profit strong {
+  color: var(--ok);
+}
+
+.sales-card-row.sales-profit.sales-loss strong {
+  color: var(--danger);
+}
+
+.sales-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.sales-check-item {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text);
+  cursor: default;
+}
+
+.sales-check-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.sales-check-money {
+  font-size: 0.8rem;
+  color: var(--mute);
+}
+
+.sales-check-money em {
+  font-style: normal;
+  color: var(--ok);
+  font-weight: 600;
+}
+
 .field-where { font-size: 0.78rem; color: var(--mute); margin: 0 0 8px; }
 
 .page-map {
