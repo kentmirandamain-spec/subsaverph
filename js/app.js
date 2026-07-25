@@ -86,7 +86,8 @@ function dealsList() {
  */
 const OFFICIAL_BRAND_LOGO = {
   xAI: "/assets/products/logos/brand-xai-fixed.svg?v=reallogo1",
-  Canva: "/assets/products/logos/brand-canva.png?v=reallogo1",
+  /* Full Canva wordmark (not the circular app-icon SVG) */
+  Canva: "/assets/products/logos/brand-canva.png?v=canvaword1",
   CapCut: "/assets/products/logos/brand-capcut-official.svg?v=reallogo1",
   Netflix: "/assets/products/logos/brand-netflix-fixed.svg?v=reallogo1",
   YouTube: "/assets/products/logos/youtube-full.svg?v=reallogo1",
@@ -147,7 +148,7 @@ const OFFICIAL_PRODUCT_SLIDE = {
 /** Desktop card/slide media: brand logos (pre-photo change). */
 const OFFICIAL_BRAND_COVER = {
   xAI: "/assets/products/logos/brand-xai-fixed.svg?v=reallogo1",
-  Canva: "/assets/products/logos/brand-canva.png?v=reallogo1",
+  Canva: "/assets/products/logos/brand-canva.png?v=canvaword1",
   CapCut: "/assets/products/logos/brand-capcut-official.svg?v=reallogo1",
   YouTube: "/assets/products/logos/youtube-full.svg?v=reallogo1",
   Duolingo: "/assets/products/logos/brand-duolingo-fixed.svg?v=reallogo1",
@@ -156,7 +157,7 @@ const OFFICIAL_BRAND_COVER = {
 };
 const OFFICIAL_BRAND_SLIDE = {
   xAI: "/assets/products/logos/brand-xai-fixed.svg?v=reallogo1",
-  Canva: "/assets/products/logos/brand-canva.png?v=reallogo1",
+  Canva: "/assets/products/logos/brand-canva.png?v=canvaword1",
   CapCut: "/assets/products/logos/brand-capcut-official.svg?v=reallogo1",
   Netflix: "/assets/products/logos/brand-netflix-fixed.svg?v=reallogo1",
   YouTube: "/assets/products/logos/youtube-full.svg?v=reallogo1",
@@ -227,13 +228,17 @@ function applyOfficialPhotos(d) {
   return d;
 }
 
-/** Official brand logo path (SVG mark) — desktop product media. Admin logo wins. */
+/** Official brand logo path — desktop product media. */
 function productLogo(d) {
   if (!d) return "";
-  if (d.logo) return String(d.logo);
   const brand = brandKey(d.brand);
+  /* Admin custom uploads / external URLs always win */
+  const logo = d.logo ? String(d.logo) : "";
+  if (logo && (/\/custom\//i.test(logo) || /^https?:\/\//i.test(logo))) return logo;
+  /* Known brands: official map (Canva uses full wordmark PNG, not circular SVG) */
   if (brand && OFFICIAL_BRAND_LOGO[brand]) return OFFICIAL_BRAND_LOGO[brand];
   if (d.brand && OFFICIAL_BRAND_LOGO[d.brand]) return OFFICIAL_BRAND_LOGO[d.brand];
+  if (logo) return logo;
   const key = String(d.brand || "").toLowerCase().replace(/\s+/g, "");
   if (key) return `/assets/products/logos/brand-${key === "xai" ? "xai" : key}-fixed.svg?v=official3`;
   if (d.id) return `/assets/products/${d.id}.png`;

@@ -1,4 +1,4 @@
-/** SubSaverPH catalog — official product photos per listing */
+/** SubSaverPH catalog */
 window.DEALS = [
   {
     "id": "supergrok-7d",
@@ -119,7 +119,7 @@ window.DEALS = [
     "stockLeft": 2,
     "image": "/assets/products/photo-canva.png?v=officialm3",
     "imageSlide": "/assets/products/photo-canva-slide.png?v=officialm3",
-    "logo": "/assets/products/logos/brand-canva-fixed.svg?v=official3",
+    "logo": "/assets/products/logos/brand-canva.png?v=canvaword1",
     "imageBg": "/assets/products/plate-canva.png",
     "brandColor": "#00c4cc"
   },
@@ -158,7 +158,7 @@ window.DEALS = [
     "stockLeft": 2,
     "image": "/assets/products/photo-canva.png?v=officialm3",
     "imageSlide": "/assets/products/photo-canva-slide.png?v=officialm3",
-    "logo": "/assets/products/logos/brand-canva-fixed.svg?v=official3",
+    "logo": "/assets/products/logos/brand-canva.png?v=canvaword1",
     "imageBg": "/assets/products/plate-canva.png",
     "brandColor": "#00c4cc"
   },
