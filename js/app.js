@@ -94,8 +94,8 @@ const OFFICIAL_BRAND_LOGO = {
   Spotify: "/assets/products/logos/brand-spotify-fixed.svg?v=reallogo1",
 };
 /**
- * Official product photos — every product id + brand.
- * Used on cards, detail pages, and hero slides (mobile + desktop).
+ * Mobile-only: official product photos for every product id + brand.
+ * Desktop uses brand logos (logo-fit), not full product photos.
  */
 const OFFICIAL_BRAND_PHOTO = {
   xAI: "/assets/products/photo-xai.png?v=officialm3",
@@ -115,7 +115,7 @@ const OFFICIAL_BRAND_PHOTO_SLIDE = {
   Duolingo: "/assets/products/photo-duolingo-slide.png?v=officialm3",
   Spotify: "/assets/products/photo-spotify-slide.png?v=officialm3",
 };
-/** Per-product official photos so every listing always has its image. */
+/** Per-product official photos (mobile cards / detail / slider). */
 const OFFICIAL_PRODUCT_PHOTO = {
   "supergrok-7d": OFFICIAL_BRAND_PHOTO.xAI,
   "supergrok-1m": OFFICIAL_BRAND_PHOTO.xAI,
@@ -144,11 +144,28 @@ const OFFICIAL_PRODUCT_SLIDE = {
   "duolingo-super-1m": OFFICIAL_BRAND_PHOTO_SLIDE.Duolingo,
   "spotify-premium-1m": OFFICIAL_BRAND_PHOTO_SLIDE.Spotify,
 };
-/** @deprecated aliases — keep older call sites working */
+/** Desktop card/slide media: brand logos (pre-photo change). */
+const OFFICIAL_BRAND_COVER = {
+  xAI: "/assets/products/logos/brand-xai-fixed.svg?v=reallogo1",
+  Canva: "/assets/products/logos/brand-canva.png?v=reallogo1",
+  CapCut: "/assets/products/logos/brand-capcut-official.svg?v=reallogo1",
+  YouTube: "/assets/products/logos/youtube-full.svg?v=reallogo1",
+  Duolingo: "/assets/products/logos/brand-duolingo-fixed.svg?v=reallogo1",
+  Netflix: "/assets/products/logos/brand-netflix-fixed.svg?v=reallogo1",
+  Spotify: "/assets/products/logos/brand-spotify-fixed.svg?v=reallogo1",
+};
+const OFFICIAL_BRAND_SLIDE = {
+  xAI: "/assets/products/logos/brand-xai-fixed.svg?v=reallogo1",
+  Canva: "/assets/products/logos/brand-canva.png?v=reallogo1",
+  CapCut: "/assets/products/logos/brand-capcut-official.svg?v=reallogo1",
+  Netflix: "/assets/products/logos/brand-netflix-fixed.svg?v=reallogo1",
+  YouTube: "/assets/products/logos/youtube-full.svg?v=reallogo1",
+  Duolingo: "/assets/products/logos/brand-duolingo-fixed.svg?v=reallogo1",
+  Spotify: "/assets/products/logos/brand-spotify-fixed.svg?v=reallogo1",
+};
+/** @deprecated aliases — mobile photo maps */
 const MOBILE_OFFICIAL_PHOTO = OFFICIAL_BRAND_PHOTO;
 const MOBILE_OFFICIAL_SLIDE = OFFICIAL_BRAND_PHOTO_SLIDE;
-const OFFICIAL_BRAND_COVER = OFFICIAL_BRAND_PHOTO;
-const OFFICIAL_BRAND_SLIDE = OFFICIAL_BRAND_PHOTO_SLIDE;
 
 /** Match storefront mobile layout (CSS max-width: 900px). */
 function isMobileView() {
@@ -175,7 +192,7 @@ function brandKey(brand) {
   return b;
 }
 
-/** Stamp official photo fields onto a deal object (mutates + returns). */
+/** Stamp official photo fields onto a deal (catalog data only; display still splits mobile/desktop). */
 function applyOfficialPhotos(d) {
   if (!d || typeof d !== "object") return d;
   const id = String(d.id || "");
@@ -194,7 +211,7 @@ function applyOfficialPhotos(d) {
   return d;
 }
 
-/** Official brand logo path (SVG mark). */
+/** Official brand logo path (SVG mark) — desktop product media. */
 function productLogo(d) {
   if (!d) return "";
   const brand = brandKey(d.brand);
@@ -215,41 +232,52 @@ function isProductPhoto(src) {
   return /\.(png|jpe?g|webp|gif)(\?|$)/i.test(s);
 }
 
-/** Full-bleed official photo frames for every brand that has a photo asset. */
+/** Mobile full-bleed official photos only (desktop stays logo-fit). */
 function brandUsesCover(brand) {
-  return Boolean(brandKey(brand) && OFFICIAL_BRAND_PHOTO[brandKey(brand)]);
+  return Boolean(isMobileView() && brandKey(brand) && OFFICIAL_BRAND_PHOTO[brandKey(brand)]);
 }
 
 /**
- * Card/detail image: official photo for this exact product.
+ * Card/detail image:
+ * - mobile: official product photos
+ * - desktop: brand logos (undo photo layout on desktop)
  */
 function productImage(d) {
   if (!d) return "";
   const id = String(d.id || "");
-  if (id && OFFICIAL_PRODUCT_PHOTO[id]) return OFFICIAL_PRODUCT_PHOTO[id];
   const brand = brandKey(d.brand);
-  if (brand && OFFICIAL_BRAND_PHOTO[brand]) return OFFICIAL_BRAND_PHOTO[brand];
-  if (d.image && isProductPhoto(d.image)) return String(d.image);
-  if (d.logo && isProductPhoto(d.logo)) return String(d.logo);
-  if (d.image) return String(d.image);
+  if (isMobileView()) {
+    if (id && OFFICIAL_PRODUCT_PHOTO[id]) return OFFICIAL_PRODUCT_PHOTO[id];
+    if (brand && OFFICIAL_BRAND_PHOTO[brand]) return OFFICIAL_BRAND_PHOTO[brand];
+    if (d.image && isProductPhoto(d.image)) return String(d.image);
+  }
+  if (brand && OFFICIAL_BRAND_COVER[brand]) return OFFICIAL_BRAND_COVER[brand];
+  if (brand && OFFICIAL_BRAND_LOGO[brand]) return OFFICIAL_BRAND_LOGO[brand];
+  if (d.logo) return String(d.logo);
   return productLogo(d);
 }
 
-/** Homepage slider: official product photo for this listing. */
+/**
+ * Homepage slider:
+ * - mobile: official product photos
+ * - desktop: brand logos
+ */
 function productSlideImage(d) {
   if (!d) return "";
   const id = String(d.id || "");
-  if (id && OFFICIAL_PRODUCT_SLIDE[id]) return OFFICIAL_PRODUCT_SLIDE[id];
-  if (id && OFFICIAL_PRODUCT_PHOTO[id]) return OFFICIAL_PRODUCT_PHOTO[id];
   const brand = brandKey(d.brand);
-  if (brand && OFFICIAL_BRAND_PHOTO_SLIDE[brand]) return OFFICIAL_BRAND_PHOTO_SLIDE[brand];
-  if (brand && OFFICIAL_BRAND_PHOTO[brand]) return OFFICIAL_BRAND_PHOTO[brand];
-  if (d.imageSlide && isProductPhoto(d.imageSlide)) return String(d.imageSlide);
-  if (d.image && isProductPhoto(d.image)) return String(d.image);
+  if (isMobileView()) {
+    if (id && OFFICIAL_PRODUCT_SLIDE[id]) return OFFICIAL_PRODUCT_SLIDE[id];
+    if (id && OFFICIAL_PRODUCT_PHOTO[id]) return OFFICIAL_PRODUCT_PHOTO[id];
+    if (brand && OFFICIAL_BRAND_PHOTO_SLIDE[brand]) return OFFICIAL_BRAND_PHOTO_SLIDE[brand];
+    if (brand && OFFICIAL_BRAND_PHOTO[brand]) return OFFICIAL_BRAND_PHOTO[brand];
+  }
+  if (brand && OFFICIAL_BRAND_SLIDE[brand]) return OFFICIAL_BRAND_SLIDE[brand];
+  if (brand && OFFICIAL_BRAND_LOGO[brand]) return OFFICIAL_BRAND_LOGO[brand];
   return productImage(d) || productLogo(d);
 }
 
-/* Stamp official photos onto bundled + live catalog arrays immediately */
+/* Keep catalog image fields as official photos (mobile); desktop UI ignores them for media. */
 try {
   BUNDLED_DEALS.forEach((d) => applyOfficialPhotos(d));
   if (Array.isArray(window.DEALS)) window.DEALS.forEach((d) => applyOfficialPhotos(d));
@@ -631,23 +659,23 @@ function toggleWish(id) {
 }
 
 function card(d, highlightQ = "") {
-  applyOfficialPhotos(d);
   const nameHtml = highlightQ ? highlightMatch(d.name, highlightQ) : escapeHtml(d.name);
   const soldOut = isSoldOut(d);
-  const img = productImage(d) || (d.id && OFFICIAL_PRODUCT_PHOTO[d.id]) || "";
+  const img = productImage(d) || "";
   const bg = productBrandColor(d);
   const wished = isWished(d.id);
   const typeLabel = (d.category || "Plan").toUpperCase();
   const brandLabel = d.brand === "xAI" ? "SuperGrok" : d.brand || "";
-  /* Full-bleed official photos for all brands */
-  const photo = isProductPhoto(img);
+  /* Mobile: full-bleed official photos. Desktop: logo-fit (restored). */
+  const mobile = isMobileView();
+  const photo = mobile && isProductPhoto(img);
   const fillFrame =
     brandUsesCover(d.brand) ||
     (photo &&
       (/m-orig-/i.test(img) ||
         /photo-(xai|canva|capcut|duolingo|netflix|youtube|spotify)/i.test(img) ||
         /cover-canva|cover-capcut/i.test(img)));
-  const logoFit = !fillFrame && !photo;
+  const logoFit = !fillFrame;
   const photoFit = photo && !fillFrame;
   /* Always show retail + deal price on every card */
   const hasRetail = d.original != null && Number(d.original) > 0;
@@ -1142,11 +1170,12 @@ function viewHome() {
             const slideSrc = productSlideImage(d) || "";
             const brandLabel = d.brand === "xAI" ? "SuperGrok" : d.brand || "";
             const isCover =
-              brandUsesCover(d.brand) ||
-              /m-orig-/i.test(slideSrc) ||
-              /photo-(xai|canva|capcut|duolingo|netflix|youtube|spotify)|cover-canva|cover-capcut/i.test(
-                slideSrc
-              );
+              isMobileView() &&
+              (brandUsesCover(d.brand) ||
+                /m-orig-/i.test(slideSrc) ||
+                /photo-(xai|canva|capcut|duolingo|netflix|youtube|spotify)|cover-canva|cover-capcut/i.test(
+                  slideSrc
+                ));
             const coverClass = isCover
               ? d.brand === "Canva"
                 ? " product-slide--cover product-slide--canva"
@@ -1317,7 +1346,7 @@ function viewDeal() {
               productImage(d)
                 ? (() => {
                     const src = productImage(d);
-                    const photo = isProductPhoto(src);
+                    const photo = isMobileView() && isProductPhoto(src);
                     const cover =
                       photo &&
                       (brandUsesCover(d.brand) ||
