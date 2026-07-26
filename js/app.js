@@ -1103,6 +1103,41 @@ function dealsCatalogBlockHTML() {
           ${searchBarHTML()}
         </div>
 
+        <!-- Categories / Service filters sit directly under search -->
+        <aside class="filters deals-filters deals-filters--under-search" aria-label="Filter deals">
+          <div class="filter-group filter-group--service">
+            <h3 class="filter-group-title">Service</h3>
+            <div class="filter-group-options" role="radiogroup" aria-label="Service">
+              ${(Array.isArray(window.BRANDS) ? window.BRANDS : ["All"])
+                .map((b) => {
+                  const label = b === "All" ? "All services" : b === "xAI" ? "SuperGrok (xAI)" : b;
+                  const icon = serviceFilterIconHtml(b);
+                  return `
+              <label class="radio filter-service-chip${icon ? " filter-service-chip--has-icon" : ""}${b === "xAI" ? " filter-service-chip--grok" : ""}" data-service-brand="${escapeAttr(b)}">
+                <input type="radio" name="brand" value="${escapeAttr(b)}" ${state.brand === b ? "checked" : ""} />
+                ${icon}
+                <span class="filter-service-label">${escapeHtml(label)}</span>
+              </label>`;
+                })
+                .join("")}
+            </div>
+          </div>
+          <div class="filter-group filter-group--category">
+            <h3 class="filter-group-title">Category</h3>
+            <div class="filter-group-options" role="radiogroup" aria-label="Category">
+              ${(Array.isArray(window.CATEGORIES) ? window.CATEGORIES : ["All"])
+                .map(
+                  (cat) => `
+              <label class="radio">
+                <input type="radio" name="cat" value="${cat}" ${state.category === cat ? "checked" : ""} />
+                <span>${cat}</span>
+              </label>`
+                )
+                .join("")}
+            </div>
+          </div>
+        </aside>
+
         <div class="toolbar">
           <div id="pageFxMount"></div>
           <select id="sortSelect" class="field-select" aria-label="Sort">
@@ -1114,39 +1149,6 @@ function dealsCatalogBlockHTML() {
         <p class="rates" data-rates>${ratesNote()}</p>
 
         <div class="layout deals-layout">
-          <aside class="filters deals-filters" aria-label="Filter deals">
-            <div class="filter-group filter-group--service">
-              <h3 class="filter-group-title">Service</h3>
-              <div class="filter-group-options" role="radiogroup" aria-label="Service">
-                ${(Array.isArray(window.BRANDS) ? window.BRANDS : ["All"])
-                  .map((b) => {
-                    const label = b === "All" ? "All services" : b === "xAI" ? "SuperGrok (xAI)" : b;
-                    const icon = serviceFilterIconHtml(b);
-                    return `
-                <label class="radio filter-service-chip${icon ? " filter-service-chip--has-icon" : ""}${b === "xAI" ? " filter-service-chip--grok" : ""}" data-service-brand="${escapeAttr(b)}">
-                  <input type="radio" name="brand" value="${escapeAttr(b)}" ${state.brand === b ? "checked" : ""} />
-                  ${icon}
-                  <span class="filter-service-label">${escapeHtml(label)}</span>
-                </label>`;
-                  })
-                  .join("")}
-              </div>
-            </div>
-            <div class="filter-group filter-group--category">
-              <h3 class="filter-group-title">Category</h3>
-              <div class="filter-group-options" role="radiogroup" aria-label="Category">
-                ${(Array.isArray(window.CATEGORIES) ? window.CATEGORIES : ["All"])
-                  .map(
-                    (cat) => `
-                <label class="radio">
-                  <input type="radio" name="cat" value="${cat}" ${state.category === cat ? "checked" : ""} />
-                  <span>${cat}</span>
-                </label>`
-                  )
-                  .join("")}
-              </div>
-            </div>
-          </aside>
           <div class="deals-results">
             ${
               list.length
@@ -1390,53 +1392,53 @@ function viewHome() {
 
             <div class="hero-search-wrap">
               ${searchBarHTML(t("search_placeholder"))}
-            </div>
-
-            <div class="hero-cats-block hero-cats-block--v4" id="home-categories">
-              <div class="hero-cats-head hero-cats-head--v4">
-                <p class="hero-cats-kicker">
-                  <span class="hero-cats-kicker-line" aria-hidden="true"></span>
-                  ${escapeHtml(t("categories_title") || "Categories")}
-                  <span class="hero-cats-kicker-line" aria-hidden="true"></span>
-                </p>
-                <p class="hero-cats-lead">Pick a lane to shop prepaid plans</p>
-              </div>
-              <div class="hero-cat-board" role="list" aria-label="${escapeAttr(t("categories_title") || "Categories")}">
-                ${categories
-                  .map(
-                    (cat, i) => `
-                  <button type="button" class="hero-cat-box hero-cat-box--${escapeAttr(catTone[cat.key] || "default")}" data-category="${escapeAttr(cat.key)}" role="listitem">
+              <!-- Categories sit directly under the search bar -->
+              <div class="hero-cats-block hero-cats-block--v4 hero-cats-block--under-search" id="home-categories">
+                <div class="hero-cats-head hero-cats-head--v4">
+                  <p class="hero-cats-kicker">
+                    <span class="hero-cats-kicker-line" aria-hidden="true"></span>
+                    ${escapeHtml(t("categories_title") || "Categories")}
+                    <span class="hero-cats-kicker-line" aria-hidden="true"></span>
+                  </p>
+                  <p class="hero-cats-lead">Pick a lane to shop prepaid plans</p>
+                </div>
+                <div class="hero-cat-board" role="list" aria-label="${escapeAttr(t("categories_title") || "Categories")}">
+                  ${categories
+                    .map(
+                      (cat, i) => `
+                    <button type="button" class="hero-cat-box hero-cat-box--${escapeAttr(catTone[cat.key] || "default")}" data-category="${escapeAttr(cat.key)}" role="listitem">
+                      <span class="hero-cat-box-mesh" aria-hidden="true"></span>
+                      <span class="hero-cat-box-num">${String(i + 1).padStart(2, "0")}</span>
+                      <span class="hero-cat-box-icon">${catSvgIcon(cat.key)}</span>
+                      <span class="hero-cat-box-copy">
+                        <span class="hero-cat-box-name">${escapeHtml(cat.label)}</span>
+                        <span class="hero-cat-box-desc">${escapeHtml(catBlurb[cat.key] || cat.label)}</span>
+                      </span>
+                      <span class="hero-cat-box-foot">
+                        <span class="hero-cat-box-count"><strong>${cat.count}</strong> ${escapeHtml(t("meta_plans") || "plans")}</span>
+                        <span class="hero-cat-box-go" aria-hidden="true">
+                          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
+                        </span>
+                      </span>
+                    </button>`
+                    )
+                    .join("")}
+                  <button type="button" class="hero-cat-box hero-cat-box--all" data-category="All" role="listitem">
                     <span class="hero-cat-box-mesh" aria-hidden="true"></span>
-                    <span class="hero-cat-box-num">${String(i + 1).padStart(2, "0")}</span>
-                    <span class="hero-cat-box-icon">${catSvgIcon(cat.key)}</span>
+                    <span class="hero-cat-box-num">${String(categories.length + 1).padStart(2, "0")}</span>
+                    <span class="hero-cat-box-icon">${catSvgIcon("All")}</span>
                     <span class="hero-cat-box-copy">
-                      <span class="hero-cat-box-name">${escapeHtml(cat.label)}</span>
-                      <span class="hero-cat-box-desc">${escapeHtml(catBlurb[cat.key] || cat.label)}</span>
+                      <span class="hero-cat-box-name">${escapeHtml(t("all_deals") || "All deals")}</span>
+                      <span class="hero-cat-box-desc">Browse the full catalog</span>
                     </span>
                     <span class="hero-cat-box-foot">
-                      <span class="hero-cat-box-count"><strong>${cat.count}</strong> ${escapeHtml(t("meta_plans") || "plans")}</span>
+                      <span class="hero-cat-box-count"><strong>${all.length}</strong> ${escapeHtml(t("meta_plans") || "plans")}</span>
                       <span class="hero-cat-box-go" aria-hidden="true">
                         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
                       </span>
                     </span>
-                  </button>`
-                  )
-                  .join("")}
-                <button type="button" class="hero-cat-box hero-cat-box--all" data-category="All" role="listitem">
-                  <span class="hero-cat-box-mesh" aria-hidden="true"></span>
-                  <span class="hero-cat-box-num">${String(categories.length + 1).padStart(2, "0")}</span>
-                  <span class="hero-cat-box-icon">${catSvgIcon("All")}</span>
-                  <span class="hero-cat-box-copy">
-                    <span class="hero-cat-box-name">${escapeHtml(t("all_deals") || "All deals")}</span>
-                    <span class="hero-cat-box-desc">Browse the full catalog</span>
-                  </span>
-                  <span class="hero-cat-box-foot">
-                    <span class="hero-cat-box-count"><strong>${all.length}</strong> ${escapeHtml(t("meta_plans") || "plans")}</span>
-                    <span class="hero-cat-box-go" aria-hidden="true">
-                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
-                    </span>
-                  </span>
-                </button>
+                  </button>
+                </div>
               </div>
             </div>
 
