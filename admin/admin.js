@@ -169,6 +169,9 @@ function shell(content) {
         <button type="button" data-tab="deals" class="${state.tab === "deals" ? "active" : ""}">
           <span class="side-ico">◈</span> Listings
         </button>
+        <button type="button" data-tab="photos" class="${state.tab === "photos" ? "active" : ""}">
+          <span class="side-ico">◫</span> Product photos
+        </button>
         <button type="button" data-tab="slides" class="${state.tab === "slides" ? "active" : ""}">
           <span class="side-ico">▭</span> Homepage slides
         </button>
@@ -372,7 +375,7 @@ function dealsView() {
       <h1>Products / deals</h1>
       <button class="btn" id="addDeal">+ Add product</button>
     </div>
-    <p class="muted">Changes save immediately to the live storefront at /. Edit a product to upload or paste your own image.</p>
+    <p class="muted">Edit products here, or open <strong>Product photos</strong> to change mobile &amp; desktop images for every listing.</p>
     <div class="panel" style="margin-bottom:12px">
       <label style="margin:0">Search products
         <input id="adminProductSearch" type="search" placeholder="Name, brand, category…" value="${escapeAttr(state.productFilter || "")}" />
@@ -2262,8 +2265,156 @@ function dealModal(deal) {
     </div>`;
 }
 
+/** Default official photos (same as storefront) for admin previews. */
+const ADMIN_DEFAULT_PHOTOS = {
+  xAI: "/assets/products/photo-xai.png?v=deskphoto1",
+  Canva: "/assets/products/photo-canva.png?v=deskphoto1",
+  CapCut: "/assets/products/photo-capcut.png?v=deskphoto1",
+  Netflix: "/assets/products/photo-netflix.png?v=deskphoto1",
+  YouTube: "/assets/products/photo-youtube.png?v=deskphoto1",
+  Duolingo: "/assets/products/photo-duolingo.png?v=deskphoto1",
+  Spotify: "/assets/products/photo-spotify.png?v=deskphoto1",
+};
+
+function defaultPhotoForBrand(brand) {
+  return ADMIN_DEFAULT_PHOTOS[brand] || "";
+}
+
 function brandSlideOrder() {
   return ["xAI", "Canva", "CapCut", "Netflix", "YouTube", "Duolingo", "Spotify"];
+}
+
+/**
+ * Dedicated Product photos page — edit mobile & desktop card images for every product.
+ */
+function photosView() {
+  const list = state.deals || [];
+  const cards = list
+    .map((d) => {
+      const def = defaultPhotoForBrand(d.brand);
+      const mobile = d.imageMobile || d.image || "";
+      const desktop = d.imageDesktop || "";
+      const mobileLive = mobile || def;
+      const desktopLive = desktop || def;
+      const bg = d.brandColor || "#0a0e16";
+      const mFit = d.imageMobileFit === "contain" ? "contain" : "cover";
+      const dFit = d.imageDesktopFit === "contain" ? "contain" : "cover";
+      return `
+      <article class="photo-edit-card panel" data-photo-deal="${escapeAttr(d.id)}">
+        <div class="slide-edit-head">
+          <div class="deal-name-cell">
+            ${
+              mobileLive
+                ? `<img class="deal-thumb" src="${escapeAttr(mobileLive)}" alt="" width="40" height="40" />`
+                : `<span class="deal-thumb deal-thumb-empty">${escapeHtml((d.monogram || "?").slice(0, 2))}</span>`
+            }
+            <div>
+              <strong>${escapeHtml(d.name)}</strong>
+              <div class="muted">${escapeHtml(d.brand)} · <code>${escapeHtml(d.id)}</code></div>
+            </div>
+          </div>
+          <button type="button" class="btn" data-save-photos="${escapeAttr(d.id)}">Save photos</button>
+        </div>
+        <div class="slide-edit-grid">
+          <div class="slide-edit-col">
+            <div class="slide-edit-label">📱 Mobile product photo</div>
+            <div class="slide-preview-wide photo-card-preview" style="background:${escapeAttr(bg)};aspect-ratio:1/1;max-width:220px">
+              ${
+                mobileLive
+                  ? `<img src="${escapeAttr(mobileLive)}" alt="" style="object-fit:${escapeAttr(mFit)};object-position:center" data-photo-preview-mobile="${escapeAttr(d.id)}" />`
+                  : `<span class="muted">No image</span>`
+              }
+            </div>
+            ${!mobile && def ? `<p class="muted" style="margin:0;font-size:0.75rem">Showing default · upload or paste URL to override</p>` : ""}
+            <label>Mobile image URL
+              <input type="url" data-photo-field="imageMobile" data-deal="${escapeAttr(d.id)}" value="${escapeAttr(mobile)}" placeholder="${escapeAttr(def || "https://… or /assets/…")}" />
+            </label>
+            <div class="qr-upload-row">
+              <label class="qr-upload-label">Upload mobile
+                <input type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" data-photo-file-mobile="${escapeAttr(d.id)}" />
+              </label>
+              <button type="button" class="btn ghost" data-photo-upload-mobile="${escapeAttr(d.id)}">Upload</button>
+            </div>
+            <div class="grid2">
+              <label>Fit
+                <select data-photo-field="imageMobileFit" data-deal="${escapeAttr(d.id)}">
+                  <option value="cover" ${mFit === "cover" ? "selected" : ""}>Cover</option>
+                  <option value="contain" ${mFit === "contain" ? "selected" : ""}>Contain</option>
+                </select>
+              </label>
+              <label>Position
+                <select data-photo-field="imageMobilePos" data-deal="${escapeAttr(d.id)}">
+                  <option value="center center" ${(d.imageMobilePos || "center center") === "center center" ? "selected" : ""}>Center</option>
+                  <option value="left center" ${d.imageMobilePos === "left center" ? "selected" : ""}>Left</option>
+                  <option value="right center" ${d.imageMobilePos === "right center" ? "selected" : ""}>Right</option>
+                  <option value="center top" ${d.imageMobilePos === "center top" ? "selected" : ""}>Top</option>
+                  <option value="center bottom" ${d.imageMobilePos === "center bottom" ? "selected" : ""}>Bottom</option>
+                </select>
+              </label>
+            </div>
+          </div>
+          <div class="slide-edit-col">
+            <div class="slide-edit-label">🖥️ Desktop product photo</div>
+            <div class="slide-preview-wide photo-card-preview" style="background:${escapeAttr(bg)};aspect-ratio:1/1;max-width:220px">
+              ${
+                desktopLive
+                  ? `<img src="${escapeAttr(desktopLive)}" alt="" style="object-fit:${escapeAttr(dFit)};object-position:center" data-photo-preview-desktop="${escapeAttr(d.id)}" />`
+                  : `<span class="muted">No image</span>`
+              }
+            </div>
+            ${!desktop && def ? `<p class="muted" style="margin:0;font-size:0.75rem">Showing default · upload or paste URL to override</p>` : ""}
+            <label>Desktop image URL
+              <input type="url" data-photo-field="imageDesktop" data-deal="${escapeAttr(d.id)}" value="${escapeAttr(desktop)}" placeholder="${escapeAttr(def || "https://… or /assets/…")}" />
+            </label>
+            <div class="qr-upload-row">
+              <label class="qr-upload-label">Upload desktop
+                <input type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" data-photo-file-desktop="${escapeAttr(d.id)}" />
+              </label>
+              <button type="button" class="btn ghost" data-photo-upload-desktop="${escapeAttr(d.id)}">Upload</button>
+            </div>
+            <div class="grid2">
+              <label>Fit
+                <select data-photo-field="imageDesktopFit" data-deal="${escapeAttr(d.id)}">
+                  <option value="cover" ${dFit === "cover" ? "selected" : ""}>Cover</option>
+                  <option value="contain" ${dFit === "contain" ? "selected" : ""}>Contain</option>
+                </select>
+              </label>
+              <label>Position
+                <select data-photo-field="imageDesktopPos" data-deal="${escapeAttr(d.id)}">
+                  <option value="center center" ${(d.imageDesktopPos || "center center") === "center center" ? "selected" : ""}>Center</option>
+                  <option value="left center" ${d.imageDesktopPos === "left center" ? "selected" : ""}>Left</option>
+                  <option value="right center" ${d.imageDesktopPos === "right center" ? "selected" : ""}>Right</option>
+                  <option value="center top" ${d.imageDesktopPos === "center top" ? "selected" : ""}>Top</option>
+                  <option value="center bottom" ${d.imageDesktopPos === "center bottom" ? "selected" : ""}>Bottom</option>
+                </select>
+              </label>
+            </div>
+          </div>
+        </div>
+        <div class="slide-edit-foot">
+          <label>Background color
+            <input type="text" data-photo-field="brandColor" data-deal="${escapeAttr(d.id)}" value="${escapeAttr(d.brandColor || "")}" placeholder="#00c4cc" style="max-width:140px" />
+          </label>
+          <button type="button" class="btn ghost" data-clear-photos="${escapeAttr(d.id)}">Reset to defaults</button>
+          <button type="button" class="btn ghost" data-edit="${escapeAttr(d.id)}">Full product edit</button>
+        </div>
+      </article>`;
+    })
+    .join("");
+
+  return `
+    <div class="top">
+      <h1>Product photos</h1>
+      <a class="btn ghost" href="/" target="_blank" rel="noopener">View live store</a>
+    </div>
+    <p class="muted">
+      Edit <strong>mobile</strong> and <strong>desktop</strong> photos for each product.
+      Upload a file or paste a URL, set fit/position, then click <strong>Save photos</strong>.
+      Empty fields use the default brand photo.
+    </p>
+    <div class="slides-edit-list">
+      ${cards || `<div class="panel muted">No products yet.</div>`}
+    </div>`;
 }
 
 /** One featured product per brand (same order as homepage slider). */
@@ -2682,6 +2833,7 @@ function render() {
   else if (state.tab === "stock") content = stockView();
   else if (state.tab === "orders") content = ordersView();
   else if (state.tab === "support") content = supportInboxView();
+  else if (state.tab === "photos") content = photosView();
   else if (state.tab === "slides") content = slidesView();
   else content = dealsView();
 
@@ -3603,6 +3755,173 @@ function bindShell() {
       } finally {
         btn.disabled = false;
       }
+    });
+  });
+
+  // —— Product photos tab (mobile + desktop card images) ——
+  function photoCard(dealId) {
+    return document.querySelector(`.photo-edit-card[data-photo-deal="${CSS.escape(dealId)}"]`);
+  }
+  function readPhotoFields(dealId) {
+    const card = photoCard(dealId);
+    if (!card) return {};
+    const out = {};
+    card.querySelectorAll("[data-photo-field][data-deal]").forEach((el) => {
+      if (el.getAttribute("data-deal") === dealId) {
+        out[el.getAttribute("data-photo-field")] = String(el.value || "").trim();
+      }
+    });
+    return out;
+  }
+  function refreshPhotoPreview(dealId, which) {
+    const card = photoCard(dealId);
+    if (!card) return;
+    const fields = readPhotoFields(dealId);
+    const deal = (state.deals || []).find((d) => d.id === dealId);
+    const def = defaultPhotoForBrand(deal?.brand);
+    const isMobile = which === "mobile";
+    const url = (isMobile ? fields.imageMobile : fields.imageDesktop) || def;
+    const fit = isMobile
+      ? fields.imageMobileFit || "cover"
+      : fields.imageDesktopFit || "cover";
+    const pos = isMobile
+      ? fields.imageMobilePos || "center center"
+      : fields.imageDesktopPos || "center center";
+    const bg = fields.brandColor || deal?.brandColor || "#0a0e16";
+    const boxes = card.querySelectorAll(".photo-card-preview");
+    const box = boxes[isMobile ? 0 : 1];
+    if (!box) return;
+    box.style.background = bg;
+    if (url) {
+      box.innerHTML = `<img src="${escapeAttr(url)}" alt="" style="object-fit:${escapeAttr(fit)};object-position:${escapeAttr(pos)}" data-photo-preview-${isMobile ? "mobile" : "desktop"}="${escapeAttr(dealId)}" />`;
+    } else {
+      box.innerHTML = `<span class="muted">No image</span>`;
+    }
+  }
+
+  $$("[data-photo-field][data-deal]").forEach((el) => {
+    const handler = () => {
+      const dealId = el.getAttribute("data-deal");
+      const field = el.getAttribute("data-photo-field") || "";
+      if (field === "brandColor" || field.includes("Mobile")) refreshPhotoPreview(dealId, "mobile");
+      if (field === "brandColor" || field.includes("Desktop")) refreshPhotoPreview(dealId, "desktop");
+    };
+    el.addEventListener("input", handler);
+    el.addEventListener("change", handler);
+  });
+
+  $$("[data-save-photos]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const dealId = btn.getAttribute("data-save-photos");
+      const deal = (state.deals || []).find((d) => d.id === dealId);
+      if (!deal) return toast("Product not found", true);
+      const patch = readPhotoFields(dealId);
+      const payload = {
+        ...deal,
+        imageMobile: patch.imageMobile || "",
+        imageDesktop: patch.imageDesktop || "",
+        imageMobileFit: patch.imageMobileFit || "cover",
+        imageDesktopFit: patch.imageDesktopFit || "cover",
+        imageMobilePos: patch.imageMobilePos || "center center",
+        imageDesktopPos: patch.imageDesktopPos || "center center",
+        brandColor: patch.brandColor || deal.brandColor || "",
+        image: patch.imageMobile || deal.image || "",
+        logo: patch.imageDesktop || deal.logo || "",
+        imageSlide: deal.imageMobileSlide || deal.imageSlide || patch.imageMobile || "",
+        imageMobileSlide: deal.imageMobileSlide || "",
+        imageDesktopSlide: deal.imageDesktopSlide || "",
+      };
+      btn.disabled = true;
+      try {
+        const data = await api(`/api/admin/deals/${encodeURIComponent(dealId)}`, {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
+        if (data.deal) {
+          const i = state.deals.findIndex((d) => d.id === dealId);
+          if (i >= 0) state.deals[i] = data.deal;
+        }
+        toast(`Saved photos for ${deal.name}`);
+        refreshPhotoPreview(dealId, "mobile");
+        refreshPhotoPreview(dealId, "desktop");
+      } catch (err) {
+        toast(err.message || "Save failed", true);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  });
+
+  $$("[data-clear-photos]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const dealId = btn.getAttribute("data-clear-photos");
+      const card = photoCard(dealId);
+      if (!card) return;
+      card.querySelectorAll('[data-photo-field="imageMobile"], [data-photo-field="imageDesktop"]').forEach((el) => {
+        el.value = "";
+      });
+      refreshPhotoPreview(dealId, "mobile");
+      refreshPhotoPreview(dealId, "desktop");
+      toast("Reset to defaults — click Save photos to apply");
+    });
+  });
+
+  async function uploadPhotoField(dealId, kind, fileAttr, fieldName, which, btn) {
+    const fileInput = document.querySelector(`[${fileAttr}="${CSS.escape(dealId)}"]`);
+    const file = fileInput?.files?.[0];
+    if (!file) return toast("Choose a file first", true);
+    btn.disabled = true;
+    try {
+      const body = new FormData();
+      body.append("dealId", dealId);
+      body.append("kind", kind);
+      body.append("file", file);
+      body.append("apply", "1");
+      const res = await fetch("/api/admin/upload-product-image", {
+        method: "POST",
+        credentials: "same-origin",
+        body,
+      });
+      const raw = await res.text();
+      let data = {};
+      try {
+        data = raw ? JSON.parse(raw) : {};
+      } catch {
+        data = {};
+      }
+      if (!res.ok) throw new Error(data.error || `Upload failed (${res.status})`);
+      const url = data.url || "";
+      const card = photoCard(dealId);
+      const input = card?.querySelector(`[data-photo-field="${fieldName}"]`);
+      if (input) input.value = url;
+      if (data.deal) {
+        const i = state.deals.findIndex((d) => d.id === dealId);
+        if (i >= 0) state.deals[i] = { ...state.deals[i], ...data.deal };
+      } else {
+        const i = state.deals.findIndex((d) => d.id === dealId);
+        if (i >= 0) state.deals[i] = { ...state.deals[i], [fieldName]: url };
+      }
+      refreshPhotoPreview(dealId, which);
+      toast(`${which === "mobile" ? "Mobile" : "Desktop"} photo uploaded — click Save photos`);
+    } catch (err) {
+      toast(err.message || "Upload failed", true);
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  $$("[data-photo-upload-mobile]").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      const dealId = btn.getAttribute("data-photo-upload-mobile");
+      uploadPhotoField(dealId, "imageMobile", "data-photo-file-mobile", "imageMobile", "mobile", btn);
+    });
+  });
+  $$("[data-photo-upload-desktop]").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      const dealId = btn.getAttribute("data-photo-upload-desktop");
+      uploadPhotoField(dealId, "imageDesktop", "data-photo-file-desktop", "imageDesktop", "desktop", btn);
     });
   });
 
