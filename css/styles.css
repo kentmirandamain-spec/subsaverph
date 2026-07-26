@@ -3825,22 +3825,36 @@ html[data-theme="light"] .cred-value {
 
   /* Order summary first is set in HTML (.checkout--ordered) */
 
+  /* PHP currency left · compact sort right (same row) */
   .toolbar {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 12px;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
   }
 
-  .toolbar .field-select,
   .toolbar #pageFxMount,
   .toolbar .currency-picker {
-    width: 100%;
-    max-width: 100%;
+    width: auto;
+    max-width: none;
+    flex: 0 0 auto;
   }
 
   .toolbar .fx-btn {
-    width: 100%;
-    justify-content: space-between;
+    width: auto;
+    justify-content: flex-start;
+  }
+
+  .toolbar .field-select,
+  .toolbar #sortSelect {
+    width: auto;
+    max-width: 132px;
+    flex: 0 0 auto;
+    margin-left: auto;
+    font-size: 0.62rem;
+    letter-spacing: 0.04em;
+    padding: 6px 22px 6px 8px;
   }
 }
 
@@ -10751,12 +10765,23 @@ html[data-theme="light"] .hero-cat-box-count strong {
     gap: 6px !important;
   }
   .toolbar {
-    flex-direction: column;
-    align-items: stretch !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+  }
+  .toolbar #pageFxMount {
+    width: auto !important;
+    flex: 0 0 auto !important;
   }
   .toolbar .field-select,
-  .toolbar #pageFxMount {
-    width: 100% !important;
+  .toolbar #sortSelect {
+    width: auto !important;
+    max-width: 132px !important;
+    flex: 0 0 auto !important;
+    margin-left: auto !important;
+    font-size: 0.62rem !important;
+    padding: 6px 22px 6px 8px !important;
   }
 }
 
@@ -11395,9 +11420,9 @@ html[data-theme="light"] .hero-cat-box:hover {
     justify-content: center !important;
   }
 
-  /* Toolbar / search on pages */
+  /* Toolbar / search on pages — PHP left, sort right */
   .toolbar {
-    justify-content: center !important;
+    justify-content: space-between !important;
     align-items: center !important;
   }
   .product-search,
@@ -13170,8 +13195,9 @@ img.product-img.product-media-logo {
     margin-right: auto !important;
   }
 
+  /* Keep checkout FX centered; deals toolbar uses its own left/right layout */
   .checkout-fx-mount,
-  #pageFxMount {
+  .page-checkout #pageFxMount {
     display: flex !important;
     justify-content: center !important;
     width: 100% !important;
@@ -15664,15 +15690,55 @@ html[data-theme="light"] .co-method {
     white-space: nowrap !important;
   }
 
-  /* Toolbar / sort under filters */
+  /* Toolbar: PHP currency left · smaller sort right (opposite ends) */
   .home-deals-inner .toolbar,
-  .page .toolbar {
+  .page .toolbar,
+  .toolbar {
     display: flex !important;
-    flex-direction: column !important;
-    align-items: stretch !important;
-    gap: 10px !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 8px !important;
     width: 100% !important;
     margin-bottom: 8px !important;
+  }
+
+  .home-deals-inner .toolbar #pageFxMount,
+  .page .toolbar #pageFxMount,
+  .toolbar #pageFxMount {
+    display: flex !important;
+    justify-content: flex-start !important;
+    width: auto !important;
+    max-width: none !important;
+    flex: 0 0 auto !important;
+    margin: 0 !important;
+  }
+
+  .home-deals-inner .toolbar .currency-picker,
+  .page .toolbar .currency-picker,
+  .toolbar .currency-picker,
+  .home-deals-inner .toolbar .fx-btn,
+  .page .toolbar .fx-btn,
+  .toolbar .fx-btn {
+    width: auto !important;
+    max-width: none !important;
+  }
+
+  .home-deals-inner .toolbar .field-select,
+  .page .toolbar .field-select,
+  .toolbar .field-select,
+  .home-deals-inner .toolbar #sortSelect,
+  .page .toolbar #sortSelect,
+  .toolbar #sortSelect {
+    width: auto !important;
+    max-width: 128px !important;
+    min-width: 0 !important;
+    flex: 0 0 auto !important;
+    margin-left: auto !important;
+    font-size: 0.6rem !important;
+    letter-spacing: 0.03em !important;
+    padding: 6px 20px 6px 8px !important;
   }
 
   /* Hero categories board — even 2-col alignment */
@@ -16523,5 +16589,51 @@ html[data-theme="light"] .co-method {
     overflow-x: auto !important;
     flex-wrap: nowrap !important;
     touch-action: pan-x pan-y !important;
+  }
+}
+
+/* ============================================================
+   Mobile deals toolbar: PHP left · compact Highest savings right
+   ============================================================ */
+@media (max-width: 900px) {
+  .home-deals-inner .toolbar,
+  .page .toolbar,
+  .deals-layout + .toolbar,
+  .toolbar {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+
+  .toolbar #pageFxMount {
+    display: flex !important;
+    justify-content: flex-start !important;
+    width: auto !important;
+    max-width: none !important;
+    flex: 0 0 auto !important;
+    margin: 0 !important;
+  }
+
+  .toolbar .currency-picker,
+  .toolbar .fx-btn {
+    width: auto !important;
+    max-width: none !important;
+  }
+
+  .toolbar .field-select,
+  .toolbar #sortSelect {
+    width: auto !important;
+    max-width: 124px !important;
+    min-width: 0 !important;
+    flex: 0 0 auto !important;
+    margin-left: auto !important;
+    font-size: 0.58rem !important;
+    letter-spacing: 0.02em !important;
+    padding: 6px 18px 6px 7px !important;
+    background-position: calc(100% - 10px) 50%, calc(100% - 6px) 50% !important;
   }
 }
