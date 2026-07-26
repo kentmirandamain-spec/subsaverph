@@ -287,24 +287,42 @@ function productPhotoSrc(d) {
   return "";
 }
 
-/** Mobile homepage slider image. */
+function isAdminCustomMedia(url) {
+  const s = String(url || "");
+  return /\/custom\//i.test(s) || /^https?:\/\//i.test(s);
+}
+
+/** Mobile homepage slider image — clean centered logos by default. */
 function productPhotoSlideSrc(d) {
   if (!d) return "";
-  if (d.imageMobileSlide && isMediaUrl(d.imageMobileSlide)) return String(d.imageMobileSlide);
-  if (d.imageSlide && isMediaUrl(d.imageSlide)) return String(d.imageSlide);
+  /* Admin custom slide only */
+  if (d.imageMobileSlide && isMediaUrl(d.imageMobileSlide) && isAdminCustomMedia(d.imageMobileSlide)) {
+    return String(d.imageMobileSlide);
+  }
+  if (d.imageSlide && isMediaUrl(d.imageSlide) && isAdminCustomMedia(d.imageSlide)) {
+    return String(d.imageSlide);
+  }
+  const brand = brandKey(d.brand);
+  if (brand && OFFICIAL_BRAND_PHOTO_SLIDE[brand]) return OFFICIAL_BRAND_PHOTO_SLIDE[brand];
+  const id = String(d.id || "");
+  if (id && OFFICIAL_PRODUCT_SLIDE[id]) return OFFICIAL_PRODUCT_SLIDE[id];
   return productPhotoSrc(d);
 }
 
-/** Desktop homepage slider image. */
+/** Desktop homepage slider image — clean centered logos by default. */
 function productDesktopSlideSrc(d) {
   if (!d) return "";
-  if (d.imageDesktopSlide && isMediaUrl(d.imageDesktopSlide)) return String(d.imageDesktopSlide);
-  /* Fall back to desktop card photo, then official slide photo */
-  if (d.imageDesktop && isMediaUrl(d.imageDesktop)) return String(d.imageDesktop);
-  const id = String(d.id || "");
-  if (id && OFFICIAL_PRODUCT_SLIDE[id]) return OFFICIAL_PRODUCT_SLIDE[id];
+  if (d.imageDesktopSlide && isMediaUrl(d.imageDesktopSlide) && isAdminCustomMedia(d.imageDesktopSlide)) {
+    return String(d.imageDesktopSlide);
+  }
+  /* Admin desktop photo if custom */
+  if (d.imageDesktop && isMediaUrl(d.imageDesktop) && isAdminCustomMedia(d.imageDesktop)) {
+    return String(d.imageDesktop);
+  }
   const brand = brandKey(d.brand);
   if (brand && OFFICIAL_BRAND_PHOTO_SLIDE[brand]) return OFFICIAL_BRAND_PHOTO_SLIDE[brand];
+  const id = String(d.id || "");
+  if (id && OFFICIAL_PRODUCT_SLIDE[id]) return OFFICIAL_PRODUCT_SLIDE[id];
   return productLogo(d);
 }
 
@@ -1293,13 +1311,9 @@ function viewHome() {
           .map((d, i) => {
             applyOfficialPhotos(d);
             const brand = brandKey(d.brand);
-            /* Prefer dedicated slide assets; always fall back to full official logo photos */
-            let photoSrc = productPhotoSlideSrc(d) || productPhotoSrc(d) || "";
-            let logoSrc = productDesktopSlideSrc(d) || productLogo(d) || "";
-            if (brand && OFFICIAL_BRAND_PHOTO_SLIDE[brand]) {
-              if (!d.imageMobileSlide && !d.imageSlide) photoSrc = OFFICIAL_BRAND_PHOTO_SLIDE[brand];
-              if (!d.imageDesktopSlide) logoSrc = OFFICIAL_BRAND_PHOTO_SLIDE[brand];
-            }
+            /* Clean slide logos (admin /custom/ or https only overrides) */
+            const photoSrc = productPhotoSlideSrc(d) || "";
+            const logoSrc = productDesktopSlideSrc(d) || photoSrc || "";
             const brandLabel = d.brand === "xAI" ? "SuperGrok" : d.brand || "";
             /* Slides: force contain + center unless admin set cover on slide fields only */
             const mFit = productMobileSlideFit(d);
