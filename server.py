@@ -1077,20 +1077,16 @@ def health():
             "xenditConfigured": xendit_configured(),
             "paypalConfigured": paypal_configured(),
             "paypalMode": paypal_credentials()[2] if paypal_configured() else None,
-            "cryptoConfigured": crypto_configured(),
+            "cryptoConfigured": False,  # NOWPayments removed — use Cryptomus
+            "cryptomusConfigured": cryptomus_configured(),
+            "nowpaymentsRemoved": True,
             "liqpayConfigured": liqpay_configured(),
             "ewalletProvider": ewallet_provider(),
             "stockByProduct": stock_summary,
             "inventoryFile": str(INVENTORY_FILE),
             "supportInboxConfigured": bool(_safe_support_inbox()),
-            # Add this IP in NOWPayments → Settings → Payments → IP addresses
             "outboundIp": outbound,
-            "outboundIpHint": (
-                "Whitelist this IP in NOWPayments dashboard (Settings → Payments → IP addresses). "
-                "On free Render the IP can change after redeploys."
-            ),
-            "nowpaymentsIpnIps": NOWPAYMENTS_IPN_IPS,
-            "nowpaymentsIpnUrl": f"{public_base_url()}/api/webhooks/nowpayments",
+            "cryptomusWebhookUrl": f"{public_base_url()}/api/webhooks/cryptomus",
         }
     )
 
@@ -1203,7 +1199,7 @@ def api_catalog():
             "paymongoEnabled": paymongo_configured(),
             "xenditEnabled": xendit_configured(),
             "paypalEnabled": paypal_configured(),
-            "cryptoEnabled": crypto_configured(),
+            "cryptoEnabled": False,  # NOWPayments removed
             "cryptomusEnabled": cryptomus_configured(),
             "manualCryptoEnabled": manual_crypto_configured(),
             "liqpayEnabled": liqpay_configured(),
@@ -1820,10 +1816,8 @@ def paypal_configured() -> bool:
 
 
 def crypto_configured() -> bool:
-    """NOWPayments automatic crypto gateway."""
-    return bool(
-        (os.environ.get("NOWPAYMENTS_API_KEY") or "").strip().strip('"').strip("'")
-    )
+    """NOWPayments automatic crypto gateway — permanently disabled (use Cryptomus)."""
+    return False
 
 
 def cryptomus_credentials() -> tuple[str, str]:
@@ -2018,7 +2012,6 @@ def available_payment_methods() -> list:
     has_paymongo = paymongo_configured()
     has_xendit = xendit_configured()
     has_paypal = paypal_configured()
-    has_crypto = crypto_configured()
     has_cryptomus = cryptomus_configured()
     has_liqpay = liqpay_configured()
     ewallet_prov = ewallet_provider()
@@ -2200,47 +2193,20 @@ def available_payment_methods() -> list:
             }
         )
 
-    # Crypto — live keys required. Env CRYPTO_SHOW=0 to hide.
-    show_crypto = _truthy_env("CRYPTO_SHOW")
-    if show_crypto is None:
-        show_crypto = True
-    # Optional checkout labels from Admin → Crypto
+    # Crypto auto: Cryptomus only (NOWPayments removed)
     try:
         s_crypto = load_settings() or {}
     except Exception:
         s_crypto = {}
     if not isinstance(s_crypto, dict):
         s_crypto = {}
-    crypto_label = str(s_crypto.get("cryptoCheckoutLabel") or "").strip() or "Crypto"
-    crypto_desc_live = (
-        str(s_crypto.get("cryptoCheckoutDesc") or "").strip()
-        or "USDT, BTC, ETH · Instant automatic delivery"
-    )
-    crypto_desc_demo = (
-        str(s_crypto.get("cryptoCheckoutDesc") or "").strip()
-        or "Crypto · Instant delivery (demo — set NOWPAYMENTS_API_KEY for live)"
-    )
-    # NOWPayments automatic crypto
-    if has_crypto and show_crypto:
-        methods.append(
-            {
-                "id": "crypto",
-                "label": crypto_label if not has_cryptomus else f"{crypto_label} (NOWPayments)",
-                "provider": "nowpayments",
-                "desc": crypto_desc_live,
-                "group": "instant",
-                "delivery": "auto",
-                "deliveryLabel": "Instant automatic delivery",
-            }
-        )
-    # Cryptomus automatic crypto (alternative to NOWPayments)
     show_cryptomus = _truthy_env("CRYPTOMUS_SHOW")
     if show_cryptomus is None:
         show_cryptomus = True
     if has_cryptomus and show_cryptomus:
         cm_label = (
             str(s_crypto.get("cryptomusCheckoutLabel") or "").strip()
-            or ("Crypto (Cryptomus)" if has_crypto else crypto_label)
+            or "Crypto (Cryptomus)"
         )
         cm_desc = (
             str(s_crypto.get("cryptomusCheckoutDesc") or "").strip()
@@ -2252,18 +2218,6 @@ def available_payment_methods() -> list:
                 "label": cm_label,
                 "provider": "cryptomus",
                 "desc": cm_desc,
-                "group": "instant",
-                "delivery": "auto",
-                "deliveryLabel": "Instant automatic delivery",
-            }
-        )
-    elif demo_only and show_crypto and not has_crypto and not has_cryptomus:
-        methods.append(
-            {
-                "id": "crypto",
-                "label": crypto_label,
-                "provider": "demo",
-                "desc": crypto_desc_demo,
                 "group": "instant",
                 "delivery": "auto",
                 "deliveryLabel": "Instant automatic delivery",
@@ -2459,11 +2413,18 @@ def api_checkout_start():
     if method == "paypal" and provider == "paypal":
         return _paypal_checkout(email, name, currency, normalized, cart_meta, base)
 
-    # ---- Crypto (NOWPayments) ----
+    # ---- Crypto (NOWPayments) — removed; use Cryptomus ----
     if method == "crypto" and provider == "nowpayments":
-        return _crypto_checkout(email, name, normalized, cart_meta, base)
+        return (
+            jsonify(
+                {
+                    "error": "NOWPayments has been removed. Use Crypto (Cryptomus) or set up Cryptomus on Render.",
+                }
+            ),
+            410,
+        )
 
-    # ---- Crypto auto alternative (Cryptomus) ----
+    # ---- Crypto auto (Cryptomus) ----
     if method in ("crypto_cryptomus", "crypto") and provider == "cryptomus":
         return _cryptomus_checkout(email, name, normalized, cart_meta, base)
 
@@ -3662,6 +3623,15 @@ def _paypal_checkout(email, name, currency, normalized, cart_meta, base):
 
 
 def _crypto_checkout(email, name, normalized, cart_meta, base):
+    """NOWPayments checkout — disabled. Prefer Cryptomus (_cryptomus_checkout)."""
+    return (
+        jsonify(
+            {
+                "error": "NOWPayments has been removed from this store. Use Cryptomus instead.",
+            }
+        ),
+        410,
+    )
     api_key = (os.environ.get("NOWPAYMENTS_API_KEY") or "").strip().strip('"').strip("'")
     if not api_key:
         return jsonify({"error": "NOWPAYMENTS_API_KEY not set"}), 503

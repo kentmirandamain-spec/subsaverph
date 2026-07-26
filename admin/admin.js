@@ -921,16 +921,17 @@ function settingsView() {
         </label>
       </section>
 
-      <!-- ========== 4c. CRYPTO (NOWPayments) ========== -->
+      <!-- ========== 4c. CRYPTO (Cryptomus + manual wallet) ========== -->
       <section class="settings-block" id="sc-crypto">
         <h3 class="settings-h">4c · Crypto payments</h3>
         <p class="muted settings-lead">
-          Two options: <strong>direct wallet</strong> (you control the address — recommended alternative)
-          and/or <strong>NOWPayments</strong> (auto gateway with API key on Render).
+          Options: <strong>direct wallet</strong> (you control the address) and/or
+          <strong>Cryptomus</strong> (auto gateway — Merchant UUID + API key on Render).
+          <strong>NOWPayments has been removed</strong> from this store.
         </p>
 
         <div class="settings-sub">
-          <h4 class="settings-sub-h">A · Direct crypto wallet (alternative — no NOWPayments)</h4>
+          <h4 class="settings-sub-h">A · Direct crypto wallet</h4>
           <p class="muted">Customer sends crypto to your address, pastes TXID; you Confirm in Orders (same as GCash QR).</p>
           <label class="check-row" style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
             <input type="checkbox" name="manualCryptoEnabled" value="1" ${
@@ -958,7 +959,7 @@ function settingsView() {
         </div>
 
         <div class="settings-sub">
-          <h4 class="settings-sub-h">B · Cryptomus (auto crypto — alternative to NOWPayments)</h4>
+          <h4 class="settings-sub-h">B · Cryptomus (auto crypto)</h4>
           <p class="muted">Automatic multi-coin checkout (hosted page). Instant codes after payment + webhook.</p>
           <label>Checkout label (optional)
             <input name="cryptomusCheckoutLabel" value="${escapeAttr(s.cryptomusCheckoutLabel || "")}" placeholder="Crypto (Cryptomus)" />
@@ -981,24 +982,12 @@ function settingsView() {
         </div>
 
         <div class="settings-sub">
-          <h4 class="settings-sub-h">C · NOWPayments (auto crypto)</h4>
-          <label>Checkout label (optional)
-            <input name="cryptoCheckoutLabel" value="${escapeAttr(s.cryptoCheckoutLabel || "")}" placeholder="Crypto (USDT, BTC, ETH…)" />
-          </label>
-          <label>Checkout description (optional)
-            <input name="cryptoCheckoutDesc" value="${escapeAttr(s.cryptoCheckoutDesc || "")}" placeholder="Pay with crypto · instant codes after confirm" />
-          </label>
-          <div class="panel" style="margin-top:12px;padding:14px;border:1px solid var(--line);border-radius:10px;background:rgba(0,0,0,0.2)">
-            <p style="margin:0 0 8px;font-weight:700">Change NOWPayments account</p>
-            <ol class="muted" style="margin:0;padding-left:1.2rem;line-height:1.55">
-              <li>Log in at <a href="https://account.nowpayments.io/" target="_blank" rel="noopener">account.nowpayments.io</a></li>
-              <li><strong>Settings → API keys</strong> → copy API key</li>
-              <li>Render → Environment → <code>NOWPAYMENTS_API_KEY</code></li>
-              <li>IPN: <code>https://subsaverph.com/api/webhooks/nowpayments</code></li>
-              <li>Whitelist <code>outboundIp</code> from /api/health → Manual Deploy</li>
-            </ol>
-            <p class="muted" style="margin:10px 0 0">Do not paste API keys into this form — only on Render.</p>
-          </div>
+          <h4 class="settings-sub-h">C · NOWPayments</h4>
+          <p class="muted" style="margin:0">
+            <strong>Removed.</strong> NOWPayments is no longer offered at checkout.
+            You can delete <code>NOWPAYMENTS_API_KEY</code> from Render Environment if it is still set.
+            Use <strong>Cryptomus</strong> (section B) or the direct wallet (section A) instead.
+          </p>
         </div>
       </section>
 

@@ -2015,7 +2015,6 @@ function paymentMethodsList() {
     : [
         // Card/Stripe omitted from fallback — use PayPal for card payments
         { id: "paypal", label: "PayPal", desc: "Instant codes", group: "instant", delivery: "auto" },
-        { id: "crypto", label: "Crypto (NOWPayments)", desc: "Instant codes", group: "instant", delivery: "auto" },
         { id: "crypto_cryptomus", label: "Crypto (Cryptomus)", desc: "Instant codes", group: "instant", delivery: "auto" },
         { id: "manual_crypto", label: "Crypto wallet", desc: "10–30 min", group: "instant", delivery: "manual" },
         { id: "manual_gcash", label: "GCash (QR)", desc: "10–30 min", group: "ewallet", delivery: "manual" },
@@ -2025,7 +2024,13 @@ function paymentMethodsList() {
         { id: "liqpay", label: "LiqPay", desc: "Instant codes", group: "instant", delivery: "auto" },
         { id: "demo", label: "Demo", desc: "Test only", group: "instant", delivery: "auto" },
       ];
-  return list;
+  // NOWPayments removed — never show method id "crypto" with nowpayments provider
+  return list.filter((m) => {
+    if (!m) return false;
+    if (m.id === "crypto" && (m.provider === "nowpayments" || !m.provider)) return false;
+    if (String(m.label || "").toLowerCase().includes("nowpayments")) return false;
+    return true;
+  });
 }
 
 const PH_EWALLETS = new Set([
