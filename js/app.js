@@ -106,14 +106,15 @@ const OFFICIAL_BRAND_PHOTO = {
   Duolingo: "/assets/products/photo-duolingo.png?v=deskphoto1",
   Spotify: "/assets/products/photo-spotify.png?v=deskphoto1",
 };
+/* Homepage slider assets: full logos (not cropped zooms) */
 const OFFICIAL_BRAND_PHOTO_SLIDE = {
-  xAI: "/assets/products/photo-xai-slide.png?v=deskphoto1",
-  Canva: "/assets/products/photo-canva-slide.png?v=deskphoto1",
-  CapCut: "/assets/products/photo-capcut-slide.png?v=deskphoto1",
-  Netflix: "/assets/products/photo-netflix-slide.png?v=deskphoto1",
-  YouTube: "/assets/products/photo-youtube-slide.png?v=deskphoto1",
-  Duolingo: "/assets/products/photo-duolingo-slide.png?v=deskphoto1",
-  Spotify: "/assets/products/photo-spotify-slide.png?v=deskphoto1",
+  xAI: "/assets/products/photo-xai.png?v=slideclean1",
+  Canva: "/assets/products/logos/brand-canva.png?v=slideclean1",
+  CapCut: "/assets/products/photo-capcut.png?v=slideclean1",
+  Netflix: "/assets/products/photo-netflix.png?v=slideclean1",
+  YouTube: "/assets/products/photo-youtube.png?v=slideclean1",
+  Duolingo: "/assets/products/photo-duolingo.png?v=slideclean1",
+  Spotify: "/assets/products/photo-spotify.png?v=slideclean1",
 };
 /** Per-product official photos (cards / detail / slider). */
 const OFFICIAL_PRODUCT_PHOTO = {
@@ -322,23 +323,24 @@ function productMobilePos(d) {
 function productDesktopPos(d) {
   return String(d?.imageDesktopPos || "center center");
 }
+/** Homepage slides default to contain so every logo is fully visible. */
 function productMobileSlideFit(d) {
-  if (d?.imageMobileSlideFit === "contain" || d?.imageMobileSlideFit === "cover") {
+  if (d?.imageMobileSlideFit === "cover" || d?.imageMobileSlideFit === "contain") {
     return d.imageMobileSlideFit;
   }
-  return productMobileFit(d);
+  return "contain";
 }
 function productDesktopSlideFit(d) {
-  if (d?.imageDesktopSlideFit === "contain" || d?.imageDesktopSlideFit === "cover") {
+  if (d?.imageDesktopSlideFit === "cover" || d?.imageDesktopSlideFit === "contain") {
     return d.imageDesktopSlideFit;
   }
-  return productDesktopFit(d); // default cover for official photos
+  return "contain";
 }
 function productMobileSlidePos(d) {
-  return String(d?.imageMobileSlidePos || d?.imageMobilePos || "center center");
+  return String(d?.imageMobileSlidePos || "center center");
 }
 function productDesktopSlidePos(d) {
-  return String(d?.imageDesktopSlidePos || d?.imageDesktopPos || "center center");
+  return String(d?.imageDesktopSlidePos || "center center");
 }
 
 /**
@@ -1290,24 +1292,26 @@ function viewHome() {
       ? slides
           .map((d, i) => {
             applyOfficialPhotos(d);
-            const photoSrc = productPhotoSlideSrc(d) || productPhotoSrc(d) || "";
-            const logoSrc = productDesktopSlideSrc(d) || productLogo(d) || "";
+            const brand = brandKey(d.brand);
+            /* Prefer dedicated slide assets; always fall back to full official logo photos */
+            let photoSrc = productPhotoSlideSrc(d) || productPhotoSrc(d) || "";
+            let logoSrc = productDesktopSlideSrc(d) || productLogo(d) || "";
+            if (brand && OFFICIAL_BRAND_PHOTO_SLIDE[brand]) {
+              if (!d.imageMobileSlide && !d.imageSlide) photoSrc = OFFICIAL_BRAND_PHOTO_SLIDE[brand];
+              if (!d.imageDesktopSlide) logoSrc = OFFICIAL_BRAND_PHOTO_SLIDE[brand];
+            }
             const brandLabel = d.brand === "xAI" ? "SuperGrok" : d.brand || "";
+            /* Slides: force contain + center unless admin set cover on slide fields only */
             const mFit = productMobileSlideFit(d);
             const dFit = productDesktopSlideFit(d);
-            const mPos = productMobileSlidePos(d);
-            const dPos = productDesktopSlidePos(d);
-            const coverClass =
-              d.brand === "Canva"
-                ? " product-slide--cover product-slide--canva product-slide--single"
-                : d.brand === "CapCut"
-                  ? " product-slide--cover product-slide--capcut product-slide--single"
-                  : " product-slide--cover product-slide--single";
+            const mPos = "center center";
+            const dPos = "center center";
+            const coverClass = ` product-slide--logo-fit product-slide--single product-slide--brand-${(brand || "other").toLowerCase().replace(/\s+/g, "")}`;
             const slideMedia = mediaPictureHtml({
               mobileSrc: photoSrc,
               desktopSrc: logoSrc,
               alt: brandLabel || d.name,
-              className: `product-slide-img product-cover-img${d.brand === "Canva" ? " product-cover-img--canva" : ""}`,
+              className: "product-slide-img product-slide-logo product-logo-img product-logo-img--fit",
               mFit,
               dFit,
               mPos,
@@ -1317,9 +1321,9 @@ function viewHome() {
               loading: i === 0 ? "eager" : "lazy",
             });
             return `
-            <article class="product-slide${i === 0 ? " is-active" : ""}${coverClass}" data-slide-index="${i}" data-brand="${escapeAttr(d.brand || "")}" ${i === 0 ? "" : "hidden"} style="--brand-bg:${escapeAttr(productBrandColor(d))};--m-fit:${escapeAttr(mFit)};--d-fit:${escapeAttr(dFit)};--m-pos:${escapeAttr(mPos)};--d-pos:${escapeAttr(dPos)}">
+            <article class="product-slide${i === 0 ? " is-active" : ""}${coverClass}" data-slide-index="${i}" data-brand="${escapeAttr(d.brand || "")}" ${i === 0 ? "" : "hidden"} style="--brand-bg:${escapeAttr(productBrandColor(d))};--m-fit:contain;--d-fit:contain;--m-pos:center center;--d-pos:center center">
               <a class="product-slide-link product-slide-link--logo" href="#/deal/${escapeAttr(d.id)}" tabindex="${i === 0 ? "0" : "-1"}">
-                <div class="product-slide-logo-wrap product-slide-logo-wrap--single">
+                <div class="product-slide-logo-wrap product-slide-logo-wrap--single product-slide-logo-wrap--centered">
                   ${slideMedia}
                 </div>
                 <div class="product-slide-shade product-slide-shade--logo"></div>
