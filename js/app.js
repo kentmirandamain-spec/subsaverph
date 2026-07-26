@@ -238,16 +238,24 @@ function isMediaUrl(src) {
 
 /**
  * Desktop media (cards / detail / slider).
- * Admin imageDesktop wins; otherwise official product photos (not SVG logos).
+ * Admin custom uploads win; otherwise official product photos for every brand.
  */
 function productLogo(d) {
   if (!d) return "";
-  /* Admin custom desktop image */
-  if (d.imageDesktop && isMediaUrl(d.imageDesktop)) return String(d.imageDesktop);
+  const isCustom = (url) => {
+    const s = String(url || "");
+    return /\/custom\//i.test(s) || /^https?:\/\//i.test(s);
+  };
+  /* Admin-set desktop image (custom upload or external URL) */
+  if (d.imageDesktop && isMediaUrl(d.imageDesktop) && isCustom(d.imageDesktop)) {
+    return String(d.imageDesktop);
+  }
   const logo = d.logo ? String(d.logo) : "";
-  if (logo && (/\/custom\//i.test(logo) || /^https?:\/\//i.test(logo))) return logo;
-  /* Prefer raster logo if it's a real photo */
-  if (logo && isProductPhoto(logo)) return logo;
+  if (logo && isCustom(logo)) return logo;
+  /* Admin desktop field that points at an official photo path is fine */
+  if (d.imageDesktop && isMediaUrl(d.imageDesktop) && /photo-/i.test(String(d.imageDesktop))) {
+    return String(d.imageDesktop);
+  }
   /* Official product photos for every brand on desktop */
   const id = String(d.id || "");
   if (id && OFFICIAL_PRODUCT_PHOTO[id]) return OFFICIAL_PRODUCT_PHOTO[id];
