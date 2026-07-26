@@ -16419,3 +16419,109 @@ html[data-theme="light"] .co-method {
 .product-slider--hero .product-slide[data-brand="YouTube"] {
   background: #0a0e16 !important;
 }
+
+/* ============================================================
+   Mobile Service + Category: swipe left/right chip rows
+   ============================================================ */
+@media (max-width: 900px) {
+  .deals-filters,
+  .filters.deals-filters,
+  aside.deals-filters {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    overflow: visible !important;
+    gap: 14px !important;
+    text-align: left !important;
+  }
+
+  .deals-filters .filter-group,
+  .deals-filters .filter-group--service,
+  .deals-filters .filter-group--category {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    overflow: visible !important;
+  }
+
+  .deals-filters .filter-group-title {
+    text-align: left !important;
+    width: 100% !important;
+    position: relative !important;
+    left: auto !important;
+    margin: 0 0 6px !important;
+    padding: 0 2px 6px !important;
+  }
+
+  /* Horizontal swipe strip */
+  .deals-filters .filter-group-options,
+  .deals-filters .filter-group--service .filter-group-options,
+  .deals-filters .filter-group--category .filter-group-options {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 8px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    -webkit-overflow-scrolling: touch !important;
+    overscroll-behavior-x: contain !important;
+    touch-action: pan-x pan-y !important;
+    scroll-snap-type: x proximity !important;
+    scroll-padding-inline: 12px !important;
+    padding: 4px 12px 12px !important;
+    margin: 0 -4px !important;
+    scrollbar-width: thin !important;
+    scrollbar-color: rgba(125, 211, 252, 0.45) transparent !important;
+    /* hint that more chips exist off-screen */
+    mask-image: linear-gradient(90deg, #000 0%, #000 calc(100% - 28px), transparent 100%) !important;
+    -webkit-mask-image: linear-gradient(90deg, #000 0%, #000 calc(100% - 28px), transparent 100%) !important;
+  }
+
+  .deals-filters .filter-group-options::-webkit-scrollbar {
+    height: 4px !important;
+    display: block !important;
+  }
+  .deals-filters .filter-group-options::-webkit-scrollbar-thumb {
+    background: rgba(125, 211, 252, 0.4) !important;
+    border-radius: 999px !important;
+  }
+
+  .deals-filters .radio,
+  .deals-filters .filter-service-chip,
+  .deals-filters .filter-group--service .radio,
+  .deals-filters .filter-group--category .radio {
+    flex: 0 0 auto !important;
+    flex-shrink: 0 !important;
+    white-space: nowrap !important;
+    scroll-snap-align: start !important;
+    min-width: max-content !important;
+    max-width: none !important;
+    width: auto !important;
+  }
+
+  .deals-filters .filter-service-label,
+  .deals-filters .radio span {
+    white-space: nowrap !important;
+    overflow: visible !important;
+  }
+
+  /* Home page catalog filters (same markup) */
+  .home-deals-inner .deals-filters .filter-group-options,
+  #view-all-deals .deals-filters .filter-group-options,
+  .page .deals-filters .filter-group-options {
+    overflow-x: auto !important;
+    flex-wrap: nowrap !important;
+    touch-action: pan-x pan-y !important;
+  }
+}
