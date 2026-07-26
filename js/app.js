@@ -95,28 +95,27 @@ const OFFICIAL_BRAND_LOGO = {
   Spotify: "/assets/products/logos/brand-spotify-fixed.svg?v=reallogo1",
 };
 /**
- * Mobile-only: official product photos for every product id + brand.
- * Desktop uses brand logos (logo-fit), not full product photos.
+ * Official product photos for every brand — used on mobile AND desktop.
  */
 const OFFICIAL_BRAND_PHOTO = {
-  xAI: "/assets/products/photo-xai.png?v=mobilephotos4",
-  Canva: "/assets/products/photo-canva.png?v=mobilephotos4",
-  CapCut: "/assets/products/photo-capcut.png?v=mobilephotos4",
-  Netflix: "/assets/products/photo-netflix.png?v=mobilephotos4",
-  YouTube: "/assets/products/photo-youtube.png?v=mobilephotos4",
-  Duolingo: "/assets/products/photo-duolingo.png?v=mobilephotos4",
-  Spotify: "/assets/products/photo-spotify.png?v=mobilephotos4",
+  xAI: "/assets/products/photo-xai.png?v=deskphoto1",
+  Canva: "/assets/products/photo-canva.png?v=deskphoto1",
+  CapCut: "/assets/products/photo-capcut.png?v=deskphoto1",
+  Netflix: "/assets/products/photo-netflix.png?v=deskphoto1",
+  YouTube: "/assets/products/photo-youtube.png?v=deskphoto1",
+  Duolingo: "/assets/products/photo-duolingo.png?v=deskphoto1",
+  Spotify: "/assets/products/photo-spotify.png?v=deskphoto1",
 };
 const OFFICIAL_BRAND_PHOTO_SLIDE = {
-  xAI: "/assets/products/photo-xai-slide.png?v=mobilephotos4",
-  Canva: "/assets/products/photo-canva-slide.png?v=mobilephotos4",
-  CapCut: "/assets/products/photo-capcut-slide.png?v=mobilephotos4",
-  Netflix: "/assets/products/photo-netflix-slide.png?v=mobilephotos4",
-  YouTube: "/assets/products/photo-youtube-slide.png?v=mobilephotos4",
-  Duolingo: "/assets/products/photo-duolingo-slide.png?v=mobilephotos4",
-  Spotify: "/assets/products/photo-spotify-slide.png?v=mobilephotos4",
+  xAI: "/assets/products/photo-xai-slide.png?v=deskphoto1",
+  Canva: "/assets/products/photo-canva-slide.png?v=deskphoto1",
+  CapCut: "/assets/products/photo-capcut-slide.png?v=deskphoto1",
+  Netflix: "/assets/products/photo-netflix-slide.png?v=deskphoto1",
+  YouTube: "/assets/products/photo-youtube-slide.png?v=deskphoto1",
+  Duolingo: "/assets/products/photo-duolingo-slide.png?v=deskphoto1",
+  Spotify: "/assets/products/photo-spotify-slide.png?v=deskphoto1",
 };
-/** Per-product official photos (mobile cards / detail / slider). */
+/** Per-product official photos (cards / detail / slider). */
 const OFFICIAL_PRODUCT_PHOTO = {
   "supergrok-7d": OFFICIAL_BRAND_PHOTO.xAI,
   "supergrok-1m": OFFICIAL_BRAND_PHOTO.xAI,
@@ -145,26 +144,10 @@ const OFFICIAL_PRODUCT_SLIDE = {
   "duolingo-super-1m": OFFICIAL_BRAND_PHOTO_SLIDE.Duolingo,
   "spotify-premium-1m": OFFICIAL_BRAND_PHOTO_SLIDE.Spotify,
 };
-/** Desktop card/slide media: brand logos (pre-photo change). */
-const OFFICIAL_BRAND_COVER = {
-  xAI: "/assets/products/logos/brand-xai-fixed.svg?v=reallogo1",
-  Canva: "/assets/products/logos/brand-canva.png?v=canvaword1",
-  CapCut: "/assets/products/logos/brand-capcut-official.svg?v=reallogo1",
-  YouTube: "/assets/products/logos/youtube-full.svg?v=reallogo1",
-  Duolingo: "/assets/products/logos/brand-duolingo-fixed.svg?v=reallogo1",
-  Netflix: "/assets/products/logos/brand-netflix-fixed.svg?v=reallogo1",
-  Spotify: "/assets/products/logos/brand-spotify-fixed.svg?v=reallogo1",
-};
-const OFFICIAL_BRAND_SLIDE = {
-  xAI: "/assets/products/logos/brand-xai-fixed.svg?v=reallogo1",
-  Canva: "/assets/products/logos/brand-canva.png?v=canvaword1",
-  CapCut: "/assets/products/logos/brand-capcut-official.svg?v=reallogo1",
-  Netflix: "/assets/products/logos/brand-netflix-fixed.svg?v=reallogo1",
-  YouTube: "/assets/products/logos/youtube-full.svg?v=reallogo1",
-  Duolingo: "/assets/products/logos/brand-duolingo-fixed.svg?v=reallogo1",
-  Spotify: "/assets/products/logos/brand-spotify-fixed.svg?v=reallogo1",
-};
-/** @deprecated aliases — mobile photo maps */
+/** Desktop defaults = same official photos (admin imageDesktop can still override). */
+const OFFICIAL_BRAND_COVER = { ...OFFICIAL_BRAND_PHOTO };
+const OFFICIAL_BRAND_SLIDE = { ...OFFICIAL_BRAND_PHOTO_SLIDE };
+/** @deprecated aliases */
 const MOBILE_OFFICIAL_PHOTO = OFFICIAL_BRAND_PHOTO;
 const MOBILE_OFFICIAL_SLIDE = OFFICIAL_BRAND_PHOTO_SLIDE;
 
@@ -209,7 +192,7 @@ function brandKey(brand) {
   return b;
 }
 
-/** Fill missing image fields with brand defaults — never overwrite admin custom images. */
+/** Fill missing image fields with official photos — never overwrite admin custom images. */
 function applyOfficialPhotos(d) {
   if (!d || typeof d !== "object") return d;
   const id = String(d.id || "");
@@ -221,29 +204,27 @@ function applyOfficialPhotos(d) {
     (brand && OFFICIAL_BRAND_PHOTO_SLIDE[brand]) ||
     defPhoto ||
     "";
-  const defLogo = (brand && OFFICIAL_BRAND_LOGO[brand]) || "";
   // Normalize aliases from admin dual fields
   if (!d.imageMobile && d.image) d.imageMobile = d.image;
-  if (!d.imageDesktop && d.logo) d.imageDesktop = d.logo;
+  if (!d.imageDesktop && d.logo && isProductPhoto(d.logo)) d.imageDesktop = d.logo;
   if (!d.imageMobileSlide && d.imageSlide) d.imageMobileSlide = d.imageSlide;
-  // Only fill empties
+  // Only fill empties — desktop uses official photos too (not SVG logos)
   if (!d.imageMobile && defPhoto) d.imageMobile = defPhoto;
   if (!d.image && (d.imageMobile || defPhoto)) d.image = d.imageMobile || defPhoto;
-  if (!d.imageMobileSlide && (d.imageMobile || defSlide)) {
-    d.imageMobileSlide = d.imageMobile || defSlide;
+  if (!d.imageMobileSlide && defSlide) d.imageMobileSlide = defSlide;
+  if (!d.imageSlide && (d.imageMobileSlide || defSlide)) {
+    d.imageSlide = d.imageMobileSlide || defSlide;
   }
-  if (!d.imageSlide && (d.imageMobileSlide || d.image || defSlide)) {
-    d.imageSlide = d.imageMobileSlide || d.image || defSlide;
-  }
-  if (!d.imageDesktop && defLogo) d.imageDesktop = defLogo;
-  if (!d.logo && (d.imageDesktop || defLogo)) d.logo = d.imageDesktop || defLogo;
-  if (!d.imageDesktopSlide && (d.imageDesktop || d.logo)) {
-    d.imageDesktopSlide = d.imageDesktop || d.logo;
-  }
+  if (!d.imageDesktop && defPhoto) d.imageDesktop = defPhoto;
+  if (!d.logo && (d.imageDesktop || defPhoto)) d.logo = d.imageDesktop || defPhoto;
+  if (!d.imageDesktopSlide && defSlide) d.imageDesktopSlide = defSlide;
   if (!d.imageMobileFit) d.imageMobileFit = "cover";
-  if (!d.imageDesktopFit) d.imageDesktopFit = "contain";
+  /* Desktop official photos: cover fills the plate cleanly */
+  if (!d.imageDesktopFit) d.imageDesktopFit = "cover";
   if (!d.imageMobilePos) d.imageMobilePos = "center center";
   if (!d.imageDesktopPos) d.imageDesktopPos = "center center";
+  if (!d.imageMobileSlideFit) d.imageMobileSlideFit = "cover";
+  if (!d.imageDesktopSlideFit) d.imageDesktopSlideFit = "cover";
   return d;
 }
 
@@ -255,15 +236,25 @@ function isMediaUrl(src) {
   return isProductPhoto(s) || /\.svg(\?|$)/i.test(s);
 }
 
-/** Desktop media (cards / detail / logo layer). Admin imageDesktop wins. */
+/**
+ * Desktop media (cards / detail / slider).
+ * Admin imageDesktop wins; otherwise official product photos (not SVG logos).
+ */
 function productLogo(d) {
   if (!d) return "";
+  /* Admin custom desktop image */
   if (d.imageDesktop && isMediaUrl(d.imageDesktop)) return String(d.imageDesktop);
   const logo = d.logo ? String(d.logo) : "";
   if (logo && (/\/custom\//i.test(logo) || /^https?:\/\//i.test(logo))) return logo;
+  /* Prefer raster logo if it's a real photo */
+  if (logo && isProductPhoto(logo)) return logo;
+  /* Official product photos for every brand on desktop */
+  const id = String(d.id || "");
+  if (id && OFFICIAL_PRODUCT_PHOTO[id]) return OFFICIAL_PRODUCT_PHOTO[id];
   const brand = brandKey(d.brand);
+  if (brand && OFFICIAL_BRAND_PHOTO[brand]) return OFFICIAL_BRAND_PHOTO[brand];
+  if (brand && OFFICIAL_BRAND_COVER[brand]) return OFFICIAL_BRAND_COVER[brand];
   if (brand && OFFICIAL_BRAND_LOGO[brand]) return OFFICIAL_BRAND_LOGO[brand];
-  if (d.brand && OFFICIAL_BRAND_LOGO[d.brand]) return OFFICIAL_BRAND_LOGO[d.brand];
   if (logo) return logo;
   const key = String(d.brand || "").toLowerCase().replace(/\s+/g, "");
   if (key) return `/assets/products/logos/brand-${key === "xai" ? "xai" : key}-fixed.svg?v=official3`;
@@ -308,14 +299,21 @@ function productPhotoSlideSrc(d) {
 function productDesktopSlideSrc(d) {
   if (!d) return "";
   if (d.imageDesktopSlide && isMediaUrl(d.imageDesktopSlide)) return String(d.imageDesktopSlide);
+  const id = String(d.id || "");
+  if (id && OFFICIAL_PRODUCT_SLIDE[id]) return OFFICIAL_PRODUCT_SLIDE[id];
+  const brand = brandKey(d.brand);
+  if (brand && OFFICIAL_BRAND_PHOTO_SLIDE[brand]) return OFFICIAL_BRAND_PHOTO_SLIDE[brand];
   return productLogo(d);
 }
 
 function productMobileFit(d) {
   return d?.imageMobileFit === "contain" ? "contain" : "cover";
 }
+/** Desktop defaults to cover for official photos (full plate). */
 function productDesktopFit(d) {
-  return d?.imageDesktopFit === "cover" ? "cover" : "contain";
+  if (d?.imageDesktopFit === "contain") return "contain";
+  if (d?.imageDesktopFit === "cover") return "cover";
+  return "cover";
 }
 function productMobilePos(d) {
   return String(d?.imageMobilePos || "center center");
@@ -333,7 +331,7 @@ function productDesktopSlideFit(d) {
   if (d?.imageDesktopSlideFit === "contain" || d?.imageDesktopSlideFit === "cover") {
     return d.imageDesktopSlideFit;
   }
-  return productDesktopFit(d);
+  return productDesktopFit(d); // default cover for official photos
 }
 function productMobileSlidePos(d) {
   return String(d?.imageMobileSlidePos || d?.imageMobilePos || "center center");
