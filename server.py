@@ -404,12 +404,43 @@ def store_is_ephemeral() -> bool:
     return True
 
 
-def github_store_configured() -> bool:
-    token = (
+def _github_store_token() -> str:
+    """Env token, or free-tier token saved under STORE (survives until next redeploy)."""
+    tok = (
         (os.environ.get("GITHUB_STORE_TOKEN") or "").strip()
         or (os.environ.get("GITHUB_TOKEN") or "").strip()
     )
-    repo = (os.environ.get("GITHUB_STORE_REPO") or "").strip()
+    if tok:
+        return tok
+    try:
+        p = STORE / ".gh_store_token"
+        if p.is_file():
+            return p.read_text(encoding="utf-8").strip()
+    except Exception:
+        pass
+    return ""
+
+
+def _save_github_store_token(token: str) -> None:
+    """Persist token on server STORE for this instance (free path after Enable once)."""
+    token = (token or "").strip()
+    if not token:
+        return
+    try:
+        STORE.mkdir(parents=True, exist_ok=True)
+        (STORE / ".gh_store_token").write_text(token + "\n", encoding="utf-8")
+        # Ensure not world-readable when possible
+        try:
+            os.chmod(STORE / ".gh_store_token", 0o600)
+        except Exception:
+            pass
+    except Exception:
+        pass
+
+
+def github_store_configured() -> bool:
+    token = _github_store_token()
+    repo = (os.environ.get("GITHUB_STORE_REPO") or "kentmirandamain-spec/subsaverph").strip()
     return bool(token and repo and "/" in repo)
 
 
@@ -477,11 +508,8 @@ def _github_api_json(method: str, url: str, token: str, body: dict | None = None
 
 def _github_put_file(rel_path: str, content_bytes: bytes, message: str) -> tuple[bool, str]:
     """Create/update a file in the configured GitHub repo (durable admin store)."""
-    token = (
-        (os.environ.get("GITHUB_STORE_TOKEN") or "").strip()
-        or (os.environ.get("GITHUB_TOKEN") or "").strip()
-    )
-    repo = (os.environ.get("GITHUB_STORE_REPO") or "").strip()
+    token = _github_store_token()
+    repo = (os.environ.get("GITHUB_STORE_REPO") or "kentmirandamain-spec/subsaverph").strip()
     branch = (os.environ.get("GITHUB_STORE_BRANCH") or "main").strip() or "main"
     if not token or not repo:
         return False, "GitHub store not configured"
@@ -5235,22 +5263,14 @@ def admin_store_sync_now():
     # Optional one-shot token from admin UI (free path — not stored on server disk)
     one_shot = str(data.get("token") or data.get("githubToken") or "").strip()
     if one_shot:
-        prev = os.environ.get("GITHUB_STORE_TOKEN")
-        prev_repo = os.environ.get("GITHUB_STORE_REPO")
-        try:
-            os.environ["GITHUB_STORE_TOKEN"] = one_shot
-            if not (os.environ.get("GITHUB_STORE_REPO") or "").strip():
-                os.environ["GITHUB_STORE_REPO"] = "kentmirandamain-spec/subsaverph"
-            with _STORE_LOCK:
-                result = sync_store_to_github("admin one-shot token sync")
-            return jsonify(result), (200 if result.get("ok") else 502)
-        finally:
-            if prev is None:
-                os.environ.pop("GITHUB_STORE_TOKEN", None)
-            else:
-                os.environ["GITHUB_STORE_TOKEN"] = prev
-            if prev_repo is None and not (os.environ.get("GITHUB_STORE_REPO") or "").strip():
-                pass
+        # Keep token for this Render instance so later saves sync without re-pasting
+        _save_github_store_token(one_shot)
+        if not (os.environ.get("GITHUB_STORE_REPO") or "").strip():
+            os.environ["GITHUB_STORE_REPO"] = "kentmirandamain-spec/subsaverph"
+        os.environ["GITHUB_STORE_TOKEN"] = one_shot
+        with _STORE_LOCK:
+            result = sync_store_to_github("admin enable free sync")
+        return jsonify(result), (200 if result.get("ok") else 502)
     if not github_store_configured():
         return (
             jsonify(
