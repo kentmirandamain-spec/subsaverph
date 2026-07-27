@@ -1162,3 +1162,43 @@ code {
   padding: 1px 5px;
   border-radius: 4px;
 }
+
+/* Floating toast — does not re-render the whole admin (keeps tabs/editors open) */
+.admin-toast-host {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10000;
+  max-width: min(92vw, 520px);
+  pointer-events: none;
+}
+.admin-toast-host[hidden] {
+  display: none !important;
+}
+.admin-toast-banner {
+  margin: 0;
+  padding: 12px 16px;
+  border-radius: 10px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-align: center;
+  pointer-events: none;
+}
+.admin-toast-banner.ok {
+  background: rgba(6, 40, 28, 0.95);
+  border: 1px solid rgba(52, 211, 153, 0.45);
+  color: #a7f3d0;
+}
+.admin-toast-banner.err {
+  background: rgba(50, 12, 18, 0.95);
+  border: 1px solid rgba(248, 113, 113, 0.5);
+  color: #fecaca;
+}
+/* Product modal: keep panel above backdrop interactions */
+.modal-bg .modal {
+  position: relative;
+  z-index: 2;
+  pointer-events: auto;
+}

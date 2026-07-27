@@ -43,8 +43,7 @@ function friendlyApiError(status, raw, data) {
     text.includes("Attention Required");
   if (status === 405) {
     return (
-      `HTTP 405 (method not allowed) — hard-refresh (Ctrl+F5) to load the latest admin, then try again. ` + 
-      `<p style="margin:8px 0 0;font-size:0.8rem;">On mobile, always hard-refresh (Ctrl+Shift+R) after changing styles or stock.</p>`
+      `HTTP 405 (method not allowed) — hard-refresh (Ctrl+F5) to load the latest admin, then try again. ` +
       `If it continues: Cloudflare Dashboard → Security → turn Bot Fight Mode off, Security Level Medium.`
     );
   }
@@ -104,16 +103,87 @@ async function api(path, opts = {}) {
   return data;
 }
 
+/** Toast timer — must not full-re-render admin (that closes tabs / wipes open editors). */
+let toastTimer = null;
+
+function ensureToastHost() {
+  let host = document.getElementById("adminToastHost");
+  if (!host) {
+    host = document.createElement("div");
+    host.id = "adminToastHost";
+    host.className = "admin-toast-host";
+    host.setAttribute("aria-live", "polite");
+    document.body.appendChild(host);
+  }
+  return host;
+}
+
+function updateToastHost() {
+  const host = ensureToastHost();
+  if (state.err) {
+    host.innerHTML = `<p class="err admin-toast-banner">${escapeHtml(state.err)}</p>`;
+    host.hidden = false;
+  } else if (state.msg) {
+    host.innerHTML = `<p class="ok admin-toast-banner">${escapeHtml(state.msg)}</p>`;
+    host.hidden = false;
+  } else {
+    host.innerHTML = "";
+    host.hidden = true;
+  }
+}
+
 function toast(msg, isErr = false) {
-  state.msg = isErr ? "" : msg;
-  state.err = isErr ? msg : "";
-  render();
-  const ms = isErr || String(msg).length > 80 ? 8000 : 2800;
-  setTimeout(() => {
+  state.msg = isErr ? "" : String(msg || "");
+  state.err = isErr ? String(msg || "") : "";
+  // Paint toast only — never call render() here (keeps tab + modal + form fields open)
+  if (document.querySelector(".shell")) {
+    updateToastHost();
+  } else {
+    // Login screen / first paint
+    try {
+      render();
+    } catch {
+      /* ignore */
+    }
+  }
+  if (toastTimer) clearTimeout(toastTimer);
+  const ms = isErr || String(msg || "").length > 80 ? 8000 : 3200;
+  toastTimer = setTimeout(() => {
     state.msg = "";
     state.err = "";
-    render();
+    updateToastHost();
   }, ms);
+}
+
+/** Sync open product editor form into state so a later render doesn't wipe fields. */
+function captureEditingForm() {
+  const form = document.getElementById("dealForm");
+  if (!form || !state.editing) return;
+  try {
+    const fd = new FormData(form);
+    const next = formToDeal(fd, state.editing);
+    state.editing = { ...state.editing, ...next, _isNew: !!state.editing._isNew };
+  } catch {
+    /* keep previous editing snapshot */
+  }
+}
+
+function rememberTab(tab) {
+  state.tab = tab;
+  try {
+    sessionStorage.setItem("subsaverph_admin_tab", tab);
+  } catch {
+    /* ignore */
+  }
+}
+
+function restoreTab() {
+  try {
+    const t = sessionStorage.getItem("subsaverph_admin_tab");
+    if (t) state.tab = t;
+  } catch {
+    /* ignore */
+  }
 }
 
 function loginView() {
@@ -196,9 +266,7 @@ function shell(content) {
         <button type="button" id="logoutBtn"><span class="side-ico">⎋</span> Log out</button>
         <p class="side-foot">SubSaverPH host console</p>
       </aside>
-      <main class="main">
-        ${state.msg ? `<p class="ok">${escapeHtml(state.msg)}</p>` : ""}
-        ${state.err ? `<p class="err">${escapeHtml(state.err)}</p>` : ""}
+      <main class="main" id="adminMain">
         ${content}
       </main>
     </div>
@@ -2804,6 +2872,7 @@ function render() {
           }),
         });
         state.user = data.username;
+        restoreTab();
         await loadAll();
         render();
       } catch (err) {
@@ -2812,6 +2881,19 @@ function render() {
     });
     return;
   }
+
+  // Keep open product editor fields if we re-render mid-edit
+  captureEditingForm();
+
+  const mainEl = document.getElementById("adminMain");
+  const scrollTop = mainEl ? mainEl.scrollTop : 0;
+  const active = document.activeElement;
+  const focusKey =
+    active && active.id
+      ? `#${active.id}`
+      : active && active.name
+        ? `[name="${active.name}"]`
+        : "";
 
   let content = "";
   if (state.tab === "dashboard") content = dashboardView();
@@ -2827,17 +2909,39 @@ function render() {
 
   app.innerHTML = shell(content);
   bindShell();
+  updateToastHost();
+
+  const mainAfter = document.getElementById("adminMain");
+  if (mainAfter) mainAfter.scrollTop = scrollTop;
+  if (focusKey) {
+    try {
+      const el = document.querySelector(focusKey);
+      if (el && typeof el.focus === "function") {
+        el.focus({ preventScroll: true });
+        if (typeof el.selectionStart === "number" && el.value != null) {
+          const len = String(el.value).length;
+          el.selectionStart = el.selectionEnd = len;
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+  }
 }
 
 function bindShell() {
   $$("[data-tab]").forEach((btn) => {
     btn.addEventListener("click", async () => {
-      state.tab = btn.dataset.tab;
-      state.editing = null;
+      const next = btn.dataset.tab;
+      // Same sidebar tab again (no pipeline change) — keep current page & open editors
+      if (next === state.tab && !btn.dataset.pipe) return;
+      rememberTab(next);
+      // Close product modal when leaving Listings
+      if (next !== "deals") state.editing = null;
       state.stockProductId = "";
       if (btn.dataset.pipe) {
         state.orderPipeFilter = btn.dataset.pipe;
-      } else if (state.tab !== "orders") {
+      } else if (next !== "orders") {
         state.orderPipeFilter = "all";
       }
       try {
@@ -3283,6 +3387,7 @@ function bindShell() {
           body: "{}",
         });
         await loadAll();
+        render();
         toast("Product deleted");
       } catch (err) {
         toast(err.message, true);
@@ -3295,12 +3400,25 @@ function bindShell() {
     render();
   });
 
+  // Backdrop close only on true backdrop click (not when dragging from form)
+  $("#modalBg")?.addEventListener("mousedown", (e) => {
+    if (e.target.id === "modalBg") state._modalBgDown = true;
+    else state._modalBgDown = false;
+  });
   $("#modalBg")?.addEventListener("click", (e) => {
-    if (e.target.id === "modalBg") {
+    if (e.target.id === "modalBg" && state._modalBgDown) {
+      state._modalBgDown = false;
       state.editing = null;
       render();
     }
   });
+  // Keep modal open while interacting inside the form panel
+  $("#dealForm")?.addEventListener("click", (e) => e.stopPropagation());
+  $("#dealForm")?.addEventListener("mousedown", (e) => e.stopPropagation());
+
+  // Continuously snapshot form so accidental re-renders don't wipe edits
+  $("#dealForm")?.addEventListener("input", () => captureEditingForm());
+  $("#dealForm")?.addEventListener("change", () => captureEditingForm());
 
   $("#dealForm")?.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -3317,6 +3435,7 @@ function bindShell() {
       }
       state.editing = null;
       await loadAll();
+      render(); // refresh list; toast no longer re-renders
       toast("Product saved — live on storefront");
     } catch (err) {
       toast(err.message, true);
@@ -4098,6 +4217,7 @@ async function boot() {
     const me = await api("/api/admin/me");
     if (me.authenticated) {
       state.user = me.username;
+      restoreTab();
       await loadAll();
     }
   } catch {
