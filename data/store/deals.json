@@ -446,7 +446,7 @@
     "extraDetails": [],
     "active": true,
     "imageMobile": "/assets/products/custom/yt-premium-imageMobile.png?v=39cbc194",
-    "imageMobileSlide": "/assets/products/photo-youtube-slide.png?v=officialm3",
+    "imageMobileSlide": "/assets/products/custom/yt-premium-imageMobileSlide.png?v=2d5539fc",
     "imageDesktop": "/assets/products/custom/yt-premium-imageDesktop.png?v=acda7f01",
     "imageDesktopSlide": "/assets/products/custom/yt-premium-imageDesktop.png?v=acda7f01",
     "imageMobileFit": "contain",
@@ -458,7 +458,7 @@
     "imageMobileSlidePos": "center center",
     "imageDesktopSlidePos": "center center",
     "image": "/assets/products/custom/yt-premium-imageMobile.png?v=39cbc194",
-    "imageSlide": "/assets/products/photo-youtube-slide.png?v=officialm3",
+    "imageSlide": "/assets/products/custom/yt-premium-imageMobileSlide.png?v=2d5539fc",
     "logo": "/assets/products/custom/yt-premium-imageDesktop.png?v=acda7f01",
     "imageBg": "/assets/products/plate-youtube.png",
     "brandColor": "#ffffff"
