@@ -4,7 +4,22 @@
   "canva-pro": [],
   "canva-teams": [],
   "capcut-pro": [],
-  "capcut-std": [],
+  "capcut-std": [
+    {
+      "code": "Username: salwalestari11@mgtatba.canvato.my.id Password: masuk123",
+      "status": "available",
+      "addedAt": "2026-07-27T14:17:40.638637Z",
+      "username": "salwalestari11@mgtatba.canvato.my.id",
+      "password": "masuk123"
+    },
+    {
+      "code": "Username: raditprabowo39@ldqnnoa.canvato.my.id Password: masuk123",
+      "status": "available",
+      "addedAt": "2026-07-27T14:18:00.280365Z",
+      "username": "raditprabowo39@ldqnnoa.canvato.my.id",
+      "password": "masuk123"
+    }
+  ],
   "netflix-prem": [],
   "netflix-std": [],
   "yt-premium": [
@@ -14,10 +29,32 @@
       "addedAt": "2026-07-27T13:45:35.606446Z",
       "username": "kwytvw90@1.emailmuu.com",
       "password": "Usilbanned"
+    },
+    {
+      "code": "Username: z3w9oe7f@1.emailmuu.com Password: Usilbanned",
+      "status": "available",
+      "addedAt": "2026-07-27T14:10:42.457672Z",
+      "username": "z3w9oe7f@1.emailmuu.com",
+      "password": "Usilbanned"
     }
   ],
   "yt-family": [],
-  "duolingo-super-1m": [],
+  "duolingo-super-1m": [
+    {
+      "code": "Username: usiucwh@duolingo.id Password: Premium@123",
+      "status": "available",
+      "addedAt": "2026-07-27T14:14:58.227670Z",
+      "username": "usiucwh@duolingo.id",
+      "password": "Premium@123"
+    },
+    {
+      "code": "Username: skwrdrn@duolingo.id Password: Premium@123",
+      "status": "available",
+      "addedAt": "2026-07-27T14:15:47.194099Z",
+      "username": "skwrdrn@duolingo.id",
+      "password": "Premium@123"
+    }
+  ],
   "spotify-premium-1m": [
     {
       "code": "Username: caasg@serenitry.com Password: Masukaja2836",
