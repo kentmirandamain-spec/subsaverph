@@ -137,7 +137,7 @@
     "imageMobilePos": "center center",
     "imageDesktopPos": "center center",
     "imageMobileSlideFit": "cover",
-    "imageDesktopSlideFit": "contain",
+    "imageDesktopSlideFit": "cover",
     "imageMobileSlidePos": "center center",
     "imageDesktopSlidePos": "center center",
     "image": "/assets/products/photo-canva.png?v=officialm3",
