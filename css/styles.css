@@ -16749,3 +16749,48 @@ html[data-theme="light"] .co-method {
     background: var(--hover-fill) !important;
   }
 }
+
+/* ============================================================
+   Homepage slides: high-res landscape full-bleed cover
+   ============================================================ */
+.product-slider--hero .product-slide--landscape,
+.product-slider--hero .product-slide--cover.product-slide--landscape {
+  background: #05060a !important;
+  overflow: hidden !important;
+}
+.product-slider--hero .product-slide--landscape .product-slide-logo-wrap,
+.product-slider--hero .product-slide--landscape .product-slide-logo-wrap--cover {
+  position: absolute !important;
+  inset: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  overflow: hidden !important;
+  background: #05060a !important;
+}
+.product-slider--hero .product-slide--landscape .product-slide-img,
+.product-slider--hero .product-slide--landscape .product-cover-img,
+.product-slider--hero .product-slide--landscape .product-slide-landscape-img,
+.product-slider--hero .product-slide--landscape .product-single-img,
+.product-slider--hero .product-slide--landscape .product-media-picture > img {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  max-height: none !important;
+  min-width: 100% !important;
+  min-height: 100% !important;
+  object-fit: cover !important;
+  object-position: center center !important;
+  transform: none !important;
+  filter: none !important;
+  margin: 0 !important;
+}
+.product-slider--hero .product-slide--landscape .product-slide-shade--logo {
+  background:
+    linear-gradient(180deg, rgba(5, 6, 10, 0.2) 0%, rgba(5, 6, 10, 0.08) 40%, rgba(5, 6, 10, 0.45) 100%) !important;
+  z-index: 3 !important;
+}

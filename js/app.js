@@ -106,15 +106,15 @@ const OFFICIAL_BRAND_PHOTO = {
   Duolingo: "/assets/products/photo-duolingo.png?v=deskphoto1",
   Spotify: "/assets/products/photo-spotify.png?v=deskphoto1",
 };
-/* Homepage slider assets: full logos (not cropped zooms) */
+/* Homepage slider: clear high-res landscape heroes (16:9) */
 const OFFICIAL_BRAND_PHOTO_SLIDE = {
-  xAI: "/assets/products/photo-xai.png?v=slideclean1",
-  Canva: "/assets/products/logos/brand-canva.png?v=slideclean1",
-  CapCut: "/assets/products/photo-capcut.png?v=slideclean1",
-  Netflix: "/assets/products/photo-netflix.png?v=slideclean1",
-  YouTube: "/assets/products/photo-youtube.png?v=slideclean1",
-  Duolingo: "/assets/products/photo-duolingo.png?v=slideclean1",
-  Spotify: "/assets/products/photo-spotify.png?v=slideclean1",
+  xAI: "/assets/products/slide-land-xai.jpg?v=landslide1",
+  Canva: "/assets/products/slide-land-canva.jpg?v=landslide1",
+  CapCut: "/assets/products/slide-land-capcut.jpg?v=landslide1",
+  Netflix: "/assets/products/slide-land-netflix.jpg?v=landslide1",
+  YouTube: "/assets/products/slide-land-youtube.jpg?v=landslide1",
+  Duolingo: "/assets/products/slide-land-duolingo.jpg?v=landslide1",
+  Spotify: "/assets/products/slide-land-spotify.jpg?v=landslide1",
 };
 /** Per-product official photos (cards / detail / slider). */
 const OFFICIAL_PRODUCT_PHOTO = {
@@ -348,18 +348,18 @@ function productMobilePos(d) {
 function productDesktopPos(d) {
   return String(d?.imageDesktopPos || "center center");
 }
-/** Homepage slides default to contain so every logo is fully visible. */
+/** Homepage landscape slides default to cover (full-bleed). */
 function productMobileSlideFit(d) {
   if (d?.imageMobileSlideFit === "cover" || d?.imageMobileSlideFit === "contain") {
     return d.imageMobileSlideFit;
   }
-  return "contain";
+  return "cover";
 }
 function productDesktopSlideFit(d) {
   if (d?.imageDesktopSlideFit === "cover" || d?.imageDesktopSlideFit === "contain") {
     return d.imageDesktopSlideFit;
   }
-  return "contain";
+  return "cover";
 }
 function productMobileSlidePos(d) {
   return String(d?.imageMobileSlidePos || "center center");
@@ -1320,33 +1320,37 @@ function viewHome() {
           .map((d, i) => {
             applyOfficialPhotos(d);
             const brand = brandKey(d.brand);
-            /* Clean slide logos (admin /custom/ or https only overrides) */
+            /* High-res landscape slide heroes (admin /custom/ still overrides via productPhotoSlideSrc) */
             const photoSrc = productPhotoSlideSrc(d) || "";
-            const logoSrc = productDesktopSlideSrc(d) || photoSrc || "";
+            const deskSrc = productDesktopSlideSrc(d) || photoSrc || "";
             const brandLabel = d.brand === "xAI" ? "SuperGrok" : d.brand || "";
-            /* Slides: force contain + center unless admin set cover on slide fields only */
-            const mFit = productMobileSlideFit(d);
-            const dFit = productDesktopSlideFit(d);
-            const mPos = "center center";
-            const dPos = "center center";
-            const coverClass = ` product-slide--logo-fit product-slide--single product-slide--brand-${(brand || "other").toLowerCase().replace(/\s+/g, "")}`;
+            /* Landscape fills stage with cover (admin fit fields still respected) */
+            const mFit = productMobileSlideFit(d) === "contain" && !String(d.imageMobileSlideFit || "").trim()
+              ? "cover"
+              : productMobileSlideFit(d);
+            const dFit = productDesktopSlideFit(d) === "contain" && !String(d.imageDesktopSlideFit || "").trim()
+              ? "cover"
+              : productDesktopSlideFit(d);
+            const mPos = productMobileSlidePos(d);
+            const dPos = productDesktopSlidePos(d);
+            const coverClass = ` product-slide--cover product-slide--landscape product-slide--single product-slide--brand-${(brand || "other").toLowerCase().replace(/\s+/g, "")}`;
             const slideMedia = mediaPictureHtml({
               mobileSrc: photoSrc,
-              desktopSrc: logoSrc,
+              desktopSrc: deskSrc,
               alt: brandLabel || d.name,
-              className: "product-slide-img product-slide-logo product-logo-img product-logo-img--fit",
-              mFit,
-              dFit,
+              className: "product-slide-img product-cover-img product-slide-landscape-img",
+              mFit: "cover",
+              dFit: "cover",
               mPos,
               dPos,
-              width: 1280,
-              height: 800,
+              width: 1920,
+              height: 1080,
               loading: i === 0 ? "eager" : "lazy",
             });
             return `
-            <article class="product-slide${i === 0 ? " is-active" : ""}${coverClass}" data-slide-index="${i}" data-brand="${escapeAttr(d.brand || "")}" ${i === 0 ? "" : "hidden"} style="--brand-bg:${escapeAttr(productBrandColor(d))};--m-fit:contain;--d-fit:contain;--m-pos:center center;--d-pos:center center">
+            <article class="product-slide${i === 0 ? " is-active" : ""}${coverClass}" data-slide-index="${i}" data-brand="${escapeAttr(d.brand || "")}" ${i === 0 ? "" : "hidden"} style="--brand-bg:${escapeAttr(productBrandColor(d))};--m-fit:cover;--d-fit:cover;--m-pos:${escapeAttr(mPos)};--d-pos:${escapeAttr(dPos)}">
               <a class="product-slide-link product-slide-link--logo" href="#/deal/${escapeAttr(d.id)}" tabindex="${i === 0 ? "0" : "-1"}">
-                <div class="product-slide-logo-wrap product-slide-logo-wrap--single product-slide-logo-wrap--centered">
+                <div class="product-slide-logo-wrap product-slide-logo-wrap--single product-slide-logo-wrap--cover">
                   ${slideMedia}
                 </div>
                 <div class="product-slide-shade product-slide-shade--logo"></div>
