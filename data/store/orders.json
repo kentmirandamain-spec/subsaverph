@@ -1,1 +1,411 @@
-[]
+[
+  {
+    "id": "PHB1CB5445BE",
+    "email": "hold@test.com",
+    "name": "H",
+    "currency": "PHP",
+    "items": [
+      {
+        "id": "supergrok-7d",
+        "name": "SuperGrok 7 Days",
+        "monogram": "SG",
+        "brand": "xAI",
+        "category": "AI",
+        "qty": 1,
+        "price": 99.0,
+        "priceBase": "PHP",
+        "duration": "7 days access",
+        "delivery": "Instant access code",
+        "codes": [],
+        "credentials": []
+      }
+    ],
+    "cart": [
+      {
+        "id": "supergrok-7d",
+        "qty": 1
+      }
+    ],
+    "status": "payment_submitted",
+    "paymentMode": "manual_ewallet",
+    "method": "manual_gcash",
+    "providerRef": "manual-PHB1CB5445BE",
+    "amountPhp": 99.0,
+    "amountFormatted": "₱99.00",
+    "payTo": {
+      "wallet": "GCash",
+      "name": "SubSaverPH",
+      "qrUrl": "/assets/qr/gcash-qr.jpg"
+    },
+    "paymentInstructions": {
+      "steps": [
+        "Open your GCash app.",
+        "Scan the QR code below (or use Scan QR in GCash).",
+        "Pay exactly ₱99.00 (SubSaverPH).",
+        "Put Order ID PHB1CB5445BE in the message / notes field if asked.",
+        "After paying, paste your payment reference below and submit.",
+        "Stock is not held until you submit your payment reference.",
+        "Delivery of login codes: usually 10–30 minutes after we verify payment."
+      ],
+      "note": "Scan the QR with your e-wallet app. Pay the exact amount and put your Order ID in the message. Codes unlock after we confirm payment.",
+      "qrUrl": "/assets/qr/gcash-qr.jpg",
+      "deliveryEta": "10–30 minutes"
+    },
+    "paymentReference": "REF12345",
+    "paymentProofNote": "",
+    "createdAt": "2026-07-23T08:44:59.264369Z",
+    "delivery": "after_confirm",
+    "deliveryEta": "10–30 minutes",
+    "stockHeld": false,
+    "countsAsPending": true,
+    "isIncompleteCheckout": false,
+    "message": "Payment reference received. We are verifying your transfer. Login codes are usually delivered within 10–30 minutes after confirmation. Stock is reserved when we confirm your payment.",
+    "emailSent": false,
+    "paymentSubmittedAt": "2026-07-23T08:44:59.284191Z"
+  },
+  {
+    "id": "PH5A43BB4695",
+    "email": "kentmirandamain@gmail.com",
+    "name": "Test Customer",
+    "currency": "PHP",
+    "items": [
+      {
+        "id": "supergrok-7d",
+        "name": "SuperGrok 7 Days",
+        "monogram": "SG",
+        "brand": "xAI",
+        "category": "AI",
+        "qty": 1,
+        "price": 99.0,
+        "priceBase": "PHP",
+        "duration": "7 days access",
+        "delivery": "Instant access code",
+        "codes": [],
+        "credentials": []
+      }
+    ],
+    "cart": [
+      {
+        "id": "supergrok-7d",
+        "qty": 1
+      }
+    ],
+    "status": "payment_submitted",
+    "paymentMode": "manual_ewallet",
+    "method": "manual_gcash",
+    "providerRef": "manual-PH5A43BB4695",
+    "amountPhp": 99.0,
+    "amountFormatted": "₱99.00",
+    "payTo": {
+      "wallet": "GCash",
+      "name": "SubSaverPH",
+      "qrUrl": "/assets/qr/gcash-qr.jpg"
+    },
+    "paymentInstructions": {
+      "steps": [
+        "Open your GCash app.",
+        "Scan the QR code below (or use Scan QR in GCash).",
+        "Pay exactly ₱99.00 (SubSaverPH).",
+        "Put Order ID PH5A43BB4695 in the message / notes field if asked.",
+        "After paying, paste your payment reference below and submit.",
+        "We verify the transfer and release your login codes."
+      ],
+      "note": "Scan the QR with your e-wallet app. Pay the exact amount and put your Order ID in the message. Codes unlock after we confirm payment.",
+      "qrUrl": "/assets/qr/gcash-qr.jpg"
+    },
+    "paymentReference": "phjcneivuhwev",
+    "paymentProofNote": "",
+    "createdAt": "2026-07-23T08:38:41.008626Z",
+    "delivery": "after_confirm",
+    "message": "Payment reference received. We are verifying your transfer. Codes will unlock once payment is confirmed.",
+    "emailSent": false,
+    "paymentSubmittedAt": "2026-07-23T08:42:31.108306Z"
+  },
+  {
+    "id": "PH4A8F23262F",
+    "email": "q@test.com",
+    "name": "Q",
+    "currency": "PHP",
+    "items": [
+      {
+        "id": "supergrok-7d",
+        "name": "SuperGrok 7 Days",
+        "monogram": "SG",
+        "brand": "xAI",
+        "category": "AI",
+        "qty": 1,
+        "price": 99.0,
+        "priceBase": "PHP",
+        "duration": "7 days access",
+        "delivery": "Instant access code",
+        "codes": [],
+        "credentials": []
+      }
+    ],
+    "cart": [
+      {
+        "id": "supergrok-7d",
+        "qty": 1
+      }
+    ],
+    "status": "awaiting_payment",
+    "paymentMode": "manual_ewallet",
+    "method": "manual_gcash",
+    "providerRef": "manual-PH4A8F23262F",
+    "amountPhp": 99.0,
+    "amountFormatted": "₱99.00",
+    "payTo": {
+      "wallet": "GCash",
+      "name": "SubSaverPH",
+      "qrUrl": "/assets/qr/gcash-qr.jpg"
+    },
+    "paymentInstructions": {
+      "steps": [
+        "Open your GCash app.",
+        "Scan the QR code below (or use Scan QR in GCash).",
+        "Pay exactly ₱99.00 (SubSaverPH).",
+        "Put Order ID PH4A8F23262F in the message / notes field if asked.",
+        "After paying, paste your payment reference below and submit.",
+        "Delivery of login codes: usually 10–30 minutes after we verify payment."
+      ],
+      "note": "Scan the QR with your e-wallet app. Pay the exact amount and put your Order ID in the message. Codes unlock after we confirm payment.",
+      "qrUrl": "/assets/qr/gcash-qr.jpg",
+      "deliveryEta": "10–30 minutes"
+    },
+    "paymentReference": "",
+    "paymentProofNote": "",
+    "createdAt": "2026-07-23T08:26:39.648100Z",
+    "delivery": "after_confirm",
+    "deliveryEta": "10–30 minutes",
+    "message": "Scan the GCash QR and pay ₱99.00. Use Order ID PH4A8F23262F as reference. Login codes are delivered in about 10–30 minutes after payment is verified.",
+    "emailSent": false
+  },
+  {
+    "id": "PH98CC55D9A9",
+    "email": "kentmirandamain@gmail.com",
+    "name": "Test Customer",
+    "currency": "PHP",
+    "items": [
+      {
+        "id": "supergrok-7d",
+        "name": "SuperGrok 7 Days",
+        "monogram": "SG",
+        "brand": "xAI",
+        "category": "AI",
+        "qty": 1,
+        "price": 99.0,
+        "priceBase": "PHP",
+        "duration": "7 days access",
+        "delivery": "Instant access code",
+        "codes": [],
+        "credentials": []
+      }
+    ],
+    "cart": [
+      {
+        "id": "supergrok-7d",
+        "qty": 1
+      }
+    ],
+    "status": "awaiting_payment",
+    "paymentMode": "manual_ewallet",
+    "method": "manual_maya",
+    "providerRef": "manual-PH98CC55D9A9",
+    "amountPhp": 99.0,
+    "amountFormatted": "₱99.00",
+    "payTo": {
+      "wallet": "Maya",
+      "name": "SubSaverPH",
+      "qrUrl": "/assets/qr/maya-qr.jpg"
+    },
+    "paymentInstructions": {
+      "steps": [
+        "Open your Maya app.",
+        "Scan the QR code below (or use Scan QR in Maya).",
+        "Pay exactly ₱99.00 (SubSaverPH).",
+        "Put Order ID PH98CC55D9A9 in the message / notes field if asked.",
+        "After paying, paste your payment reference below and submit.",
+        "We verify the transfer and release your login codes."
+      ],
+      "note": "Scan the QR with your e-wallet app. Pay the exact amount and put your Order ID in the message. Codes unlock after we confirm payment.",
+      "qrUrl": "/assets/qr/maya-qr.jpg"
+    },
+    "paymentReference": "",
+    "paymentProofNote": "",
+    "createdAt": "2026-07-23T08:24:53.624932Z",
+    "delivery": "after_confirm",
+    "message": "Scan the Maya QR and pay ₱99.00. Use Order ID PH98CC55D9A9 as reference. Codes unlock after we confirm payment.",
+    "emailSent": false
+  },
+  {
+    "id": "PH50082EB8FC",
+    "email": "kentmirandamain@gmail.com",
+    "name": "Test Customer",
+    "currency": "PHP",
+    "items": [
+      {
+        "id": "supergrok-7d",
+        "name": "SuperGrok 7 Days",
+        "monogram": "SG",
+        "brand": "xAI",
+        "category": "AI",
+        "qty": 1,
+        "price": 99.0,
+        "priceBase": "PHP",
+        "duration": "7 days access",
+        "delivery": "Instant access code",
+        "codes": [],
+        "credentials": []
+      }
+    ],
+    "cart": [
+      {
+        "id": "supergrok-7d",
+        "qty": 1
+      }
+    ],
+    "status": "awaiting_payment",
+    "paymentMode": "manual_ewallet",
+    "method": "manual_gcash",
+    "providerRef": "manual-PH50082EB8FC",
+    "amountPhp": 99.0,
+    "amountFormatted": "₱99.00",
+    "payTo": {
+      "wallet": "GCash",
+      "name": "SubSaverPH",
+      "qrUrl": "/assets/qr/gcash-qr.jpg"
+    },
+    "paymentInstructions": {
+      "steps": [
+        "Open your GCash app.",
+        "Scan the QR code below (or use Scan QR in GCash).",
+        "Pay exactly ₱99.00 (SubSaverPH).",
+        "Put Order ID PH50082EB8FC in the message / notes field if asked.",
+        "After paying, paste your payment reference below and submit.",
+        "We verify the transfer and release your login codes."
+      ],
+      "note": "Scan the QR with your e-wallet app. Pay the exact amount and put your Order ID in the message. Codes unlock after we confirm payment.",
+      "qrUrl": "/assets/qr/gcash-qr.jpg"
+    },
+    "paymentReference": "",
+    "paymentProofNote": "",
+    "createdAt": "2026-07-23T08:21:09.454871Z",
+    "delivery": "after_confirm",
+    "message": "Scan the GCash QR and pay ₱99.00. Use Order ID PH50082EB8FC as reference. Codes unlock after we confirm payment.",
+    "emailSent": false
+  },
+  {
+    "id": "PH87A693725C",
+    "email": "t@test.com",
+    "name": "T",
+    "currency": "PHP",
+    "items": [
+      {
+        "id": "supergrok-7d",
+        "name": "SuperGrok 7 Days",
+        "monogram": "SG",
+        "brand": "xAI",
+        "category": "AI",
+        "qty": 1,
+        "price": 99.0,
+        "priceBase": "PHP",
+        "duration": "7 days access",
+        "delivery": "Instant access code",
+        "codes": [],
+        "credentials": []
+      }
+    ],
+    "cart": [
+      {
+        "id": "supergrok-7d",
+        "qty": 1
+      }
+    ],
+    "status": "awaiting_payment",
+    "paymentMode": "manual_ewallet",
+    "method": "manual_gcash",
+    "providerRef": "manual-PH87A693725C",
+    "amountPhp": 99.0,
+    "amountFormatted": "₱99.00",
+    "payTo": {
+      "wallet": "GCash",
+      "name": "SubSaverPH",
+      "qrUrl": "/assets/qr/gcash-qr.png"
+    },
+    "paymentInstructions": {
+      "steps": [
+        "Open your GCash app.",
+        "Scan the QR code below (or use Scan QR in GCash).",
+        "Pay exactly ₱99.00 (SubSaverPH).",
+        "Put Order ID PH87A693725C in the message / notes field if asked.",
+        "After paying, paste your payment reference below and submit.",
+        "We verify the transfer and release your login codes."
+      ],
+      "note": "Scan the QR with your e-wallet app. Pay the exact amount and put your Order ID in the message. Codes unlock after we confirm payment.",
+      "qrUrl": "/assets/qr/gcash-qr.png"
+    },
+    "paymentReference": "",
+    "paymentProofNote": "",
+    "createdAt": "2026-07-23T04:56:03.065137Z",
+    "delivery": "after_confirm",
+    "message": "Scan the GCash QR and pay ₱99.00. Use Order ID PH87A693725C as reference. Codes unlock after we confirm payment.",
+    "emailSent": false
+  },
+  {
+    "id": "PHF1F3392F96",
+    "email": "buyer@test.com",
+    "name": "Test Buyer",
+    "currency": "PHP",
+    "items": [
+      {
+        "id": "supergrok-7d",
+        "name": "SuperGrok 7 Days",
+        "monogram": "SG",
+        "brand": "xAI",
+        "category": "AI",
+        "qty": 1,
+        "price": 99.0,
+        "priceBase": "PHP",
+        "duration": "7 days access",
+        "delivery": "Instant access code",
+        "codes": [],
+        "credentials": []
+      }
+    ],
+    "cart": [
+      {
+        "id": "supergrok-7d",
+        "qty": 1
+      }
+    ],
+    "status": "payment_submitted",
+    "paymentMode": "manual_ewallet",
+    "method": "manual_gcash",
+    "providerRef": "manual-PHF1F3392F96",
+    "amountPhp": 99.0,
+    "amountFormatted": "₱99.00",
+    "payTo": {
+      "wallet": "GCash",
+      "number": "09171234567",
+      "name": "SubSaverPH Test"
+    },
+    "paymentInstructions": {
+      "steps": [
+        "Open your GCash app and send money (Send / Transfer).",
+        "Pay exactly 99.00 PHP to 09171234567 (SubSaverPH Test).",
+        "Put Order ID PHF1F3392F96 in the message / notes / reference field.",
+        "After sending, paste your GCash/Maya reference number below and submit.",
+        "We verify payment and release your login codes (usually within a few hours)."
+      ],
+      "note": "Send the exact amount. Put your Order ID in the GCash/Maya message or reference field. Codes unlock after we confirm payment.",
+      "qrUrl": ""
+    },
+    "paymentReference": "GCASH-REF-99999",
+    "paymentProofNote": "",
+    "createdAt": "2026-07-23T04:46:45.194862Z",
+    "delivery": "after_confirm",
+    "message": "Payment reference received. We are verifying your transfer. Codes will unlock once payment is confirmed.",
+    "emailSent": false,
+    "paymentSubmittedAt": "2026-07-23T04:46:45.203876Z"
+  }
+]
