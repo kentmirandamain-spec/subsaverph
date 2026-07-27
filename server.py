@@ -85,6 +85,31 @@ def normalize_api_trailing_slash():
     return None
 
 
+@app.errorhandler(405)
+def api_method_not_allowed(e):
+    """Return JSON 405 for /api/* so admin never parses Flask HTML as a blank error."""
+    path = request.path or ""
+    if path.startswith("/api/"):
+        allow = ""
+        try:
+            allow = ", ".join(sorted(e.valid_methods or []))  # type: ignore[attr-defined]
+        except Exception:
+            allow = ""
+        return (
+            jsonify(
+                {
+                    "error": "Method not allowed",
+                    "method": request.method,
+                    "path": path,
+                    "allow": allow or None,
+                    "hint": "Admin mutations must use POST. Hard-refresh admin (Ctrl+F5) and try again.",
+                }
+            ),
+            405,
+        )
+    return e
+
+
 # Canonical public site — never use the free Render hostname in search results
 CANONICAL_SITE_URL = "https://subsaverph.com"
 
@@ -5341,53 +5366,76 @@ def admin_create_deal():
     return jsonify({"ok": True, "deal": deal}), 201
 
 
+def _admin_apply_deal_update(deal_id: str, data: dict):
+    """
+    Merge admin deal update into store. Shared by multi-method and POST-only
+    /save routes so Cloudflare/WAF never has to accept PUT/DELETE on the same path.
+    """
+    deals = load_deals(include_inactive=True)
+    for i, d in enumerate(deals):
+        if d.get("id") != deal_id:
+            continue
+        merged = {**d, **data}
+        # Never wipe stored product images with blank form fields unless
+        # admin explicitly clears (_clearImages / clearImages).
+        force_clear = bool(
+            data.get("_clearImages")
+            or data.get("clearImages")
+            or data.get("clearPhotos")
+        )
+        if not force_clear:
+            for key in (
+                "imageMobile",
+                "imageMobileSlide",
+                "imageDesktop",
+                "imageDesktopSlide",
+                "image",
+                "imageSlide",
+                "logo",
+            ):
+                new_v = str(merged.get(key) or "").strip()
+                old_v = str(d.get(key) or "").strip()
+                if not new_v and old_v:
+                    merged[key] = old_v
+        else:
+            for key in (
+                "imageMobile",
+                "imageMobileSlide",
+                "imageDesktop",
+                "imageDesktopSlide",
+                "image",
+                "imageSlide",
+                "logo",
+            ):
+                if key in data:
+                    merged[key] = str(data.get(key) or "").strip()
+        updated = normalize_deal(merged, deal_id)
+        deals[i] = updated
+        save_deals(deals)
+        return None, updated
+    return "Deal not found", None
+
+
+@app.post("/api/admin/deals/<deal_id>/save")
+@require_admin
+def admin_save_deal(deal_id: str):
+    """POST-only deal update — preferred path (avoids multi-method / CF 405 issues)."""
+    data = request.get_json(silent=True) or {}
+    err, updated = _admin_apply_deal_update(deal_id, data if isinstance(data, dict) else {})
+    if err:
+        return jsonify({"error": err}), 404
+    return jsonify({"ok": True, "deal": updated})
+
+
 @app.route("/api/admin/deals/<deal_id>", methods=["PUT", "POST"])
 @require_admin
 def admin_update_deal(deal_id: str):
-    """PUT or POST (POST works better through some Cloudflare setups)."""
+    """Legacy PUT/POST on bare deal path (kept for older admin.js). Prefer …/save."""
     data = request.get_json(silent=True) or {}
-    deals = load_deals(include_inactive=True)
-    for i, d in enumerate(deals):
-        if d.get("id") == deal_id:
-            merged = {**d, **data}
-            # Never wipe stored product images with blank form fields unless
-            # admin explicitly clears (_clearImages / clearImages).
-            force_clear = bool(
-                data.get("_clearImages")
-                or data.get("clearImages")
-                or data.get("clearPhotos")
-            )
-            if not force_clear:
-                for key in (
-                    "imageMobile",
-                    "imageMobileSlide",
-                    "imageDesktop",
-                    "imageDesktopSlide",
-                    "image",
-                    "imageSlide",
-                    "logo",
-                ):
-                    new_v = str(merged.get(key) or "").strip()
-                    old_v = str(d.get(key) or "").strip()
-                    if not new_v and old_v:
-                        merged[key] = old_v
-            else:
-                for key in (
-                    "imageMobile",
-                    "imageMobileSlide",
-                    "imageDesktop",
-                    "imageDesktopSlide",
-                    "image",
-                    "imageSlide",
-                    "logo",
-                ):
-                    if key in data:
-                        merged[key] = str(data.get(key) or "").strip()
-            updated = normalize_deal(merged, deal_id)
-            deals[i] = updated
-            save_deals(deals)
-            return jsonify({"ok": True, "deal": updated})
-    return jsonify({"error": "Deal not found"}), 404
+    err, updated = _admin_apply_deal_update(deal_id, data if isinstance(data, dict) else {})
+    if err:
+        return jsonify({"error": err}), 404
+    return jsonify({"ok": True, "deal": updated})
 
 
 @app.route("/api/admin/deals/<deal_id>", methods=["DELETE"])
@@ -5403,11 +5451,7 @@ def admin_delete_deal(deal_id: str):
     return jsonify({"ok": True})
 
 
-@app.route("/api/admin/settings", methods=["PUT", "POST"])
-@require_admin
-def admin_update_settings():
-    """PUT or POST — POST is preferred via Cloudflare (avoids 405 on PUT)."""
-    data = request.get_json(silent=True) or {}
+def _admin_apply_settings_update(data: dict):
     current = load_settings()
     for k, v in data.items():
         if not isinstance(k, str):
@@ -5423,6 +5467,24 @@ def admin_update_settings():
         if key in current:
             current[key] = _normalize_qr_url(str(current.get(key) or ""))
     save_settings(current)
+    return current
+
+
+@app.post("/api/admin/settings/save")
+@require_admin
+def admin_save_settings():
+    """POST-only settings update — preferred path (avoids multi-method / CF 405)."""
+    data = request.get_json(silent=True) or {}
+    current = _admin_apply_settings_update(data if isinstance(data, dict) else {})
+    return jsonify({"ok": True, "settings": current})
+
+
+@app.route("/api/admin/settings", methods=["PUT", "POST"])
+@require_admin
+def admin_update_settings():
+    """Legacy PUT/POST on /settings (kept for older admin.js). Prefer …/save."""
+    data = request.get_json(silent=True) or {}
+    current = _admin_apply_settings_update(data if isinstance(data, dict) else {})
     return jsonify({"ok": True, "settings": current})
 
 
@@ -6420,12 +6482,25 @@ def public_index():
 @app.get("/admin")
 @app.get("/admin/")
 def admin_page():
-    return _serve_html("index.html", ROOT / "admin")
+    resp = _serve_html("index.html", ROOT / "admin")
+    # Always fetch latest admin shell (cache-bust query on JS/CSS depends on this)
+    resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    resp.headers["Pragma"] = "no-cache"
+    resp.headers["X-Robots-Tag"] = "noindex, nofollow"
+    return resp
 
 
 @app.get("/admin/<path:path>")
 def admin_static(path: str):
-    return send_from_directory(ROOT / "admin", path)
+    resp = send_from_directory(ROOT / "admin", path)
+    # Admin JS/CSS change often — never let Cloudflare/browser serve a stale
+    # script that still uses PUT (that caused intermittent HTTP 405 toasts).
+    lower = (path or "").lower()
+    if lower.endswith((".js", ".css", ".html")):
+        resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        resp.headers["Pragma"] = "no-cache"
+        resp.headers["Expires"] = "0"
+    return resp
 
 
 @app.get("/robots.txt")

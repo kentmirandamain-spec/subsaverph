@@ -39,8 +39,11 @@ const state = {
   orderPayFilter: "all",
 };
 
-function friendlyApiError(status, raw, data) {
+function friendlyApiError(status, raw, data, meta = {}) {
   const text = String(raw || "");
+  const method = String(meta.method || "GET").toUpperCase();
+  const path = String(meta.path || meta.url || "").split("?")[0] || "";
+  const where = path ? ` on ${method} ${path}` : method !== "GET" ? ` (${method})` : "";
   const looksHtml =
     /^\s*<!DOCTYPE/i.test(text) ||
     /^\s*<html/i.test(text) ||
@@ -48,28 +51,31 @@ function friendlyApiError(status, raw, data) {
     text.includes("Cloudflare") ||
     text.includes("Attention Required");
   if (status === 405) {
+    const allow = data && data.allow ? ` Allowed: ${data.allow}.` : "";
     return (
-      `HTTP 405 (method not allowed) — hard-refresh (Ctrl+F5) to load the latest admin, then try again. ` +
-      `If it continues: Cloudflare Dashboard → Security → turn Bot Fight Mode off, Security Level Medium.`
+      `HTTP 405 (method not allowed)${where}.${allow} ` +
+      `Hard-refresh (Ctrl+F5) to load the latest admin, then try again. ` +
+      `If it continues: Cloudflare → Security → turn Bot Fight Mode off, Security Level Medium.`
     );
   }
   if (looksHtml) {
     return (
-      `Host/Cloudflare returned an error page (HTTP ${status || "?"}) instead of API JSON. ` +
+      `Host/Cloudflare returned an error page (HTTP ${status || "?"})${where} instead of API JSON. ` +
       `Usually: origin timeout, brief Render restart, or Cloudflare security. ` +
       `Wait 30s, hard-refresh (Ctrl+F5), try again. In Cloudflare: Security → turn Bot Fight Mode off for this site, or set Security Level to Medium.`
     );
   }
   return String(
-    (data && (data.error || data.detail || data.message)) ||
-      `Request failed (HTTP ${status || "?"})`
+    (data && (data.error || data.detail || data.message || data.hint)) ||
+      `Request failed (HTTP ${status || "?"})${where}`
   ).slice(0, 500);
 }
 
 /**
  * Admin API helper.
- * - Mutations use POST (Cloudflare sometimes returns HTML 405 for PUT/DELETE).
+ * - Mutations use POST on …/save or …/delete (Cloudflare/WAF sometimes 405s PUT/DELETE or multi-method paths).
  * - Paths are normalized (no trailing slash) — trailing slash caused live 405 on /api/admin/settings/.
+ * - On 405 for a bare deal/settings path, automatically retries the POST-only /save route once.
  */
 async function api(path, opts = {}) {
   let url = String(path || "");
@@ -81,6 +87,7 @@ async function api(path, opts = {}) {
     const base = url.slice(0, q).replace(/\/+$/, "") || "/";
     url = base + url.slice(q);
   }
+  const method = String((opts && opts.method) || "GET").toUpperCase();
   const headers = {
     "Content-Type": "application/json",
     Accept: "application/json",
@@ -104,7 +111,25 @@ async function api(path, opts = {}) {
     data = {};
   }
   if (!res.ok) {
-    throw new Error(friendlyApiError(res.status, raw, data));
+    // Auto-retry: POST /api/admin/deals/:id → /save (and same for settings)
+    if (
+      res.status === 405 &&
+      method === "POST" &&
+      !String(url).includes("/save") &&
+      !String(url).includes("/delete")
+    ) {
+      const mDeal = url.match(/^(\/api\/admin\/deals\/[^/?#]+)$/);
+      const mSettings = url === "/api/admin/settings";
+      const retryUrl = mDeal ? `${mDeal[1]}/save` : mSettings ? "/api/admin/settings/save" : null;
+      if (retryUrl) {
+        try {
+          return await api(retryUrl, opts);
+        } catch {
+          /* fall through to original error */
+        }
+      }
+    }
+    throw new Error(friendlyApiError(res.status, raw, data, { method, path: url }));
   }
   return data;
 }
@@ -3703,7 +3728,7 @@ function bindShell() {
       if (state.editing?._isNew) {
         await api("/api/admin/deals", { method: "POST", body: JSON.stringify(payload) });
       } else {
-        await api(`/api/admin/deals/${encodeURIComponent(state.editing.id)}`, {
+        await api(`/api/admin/deals/${encodeURIComponent(state.editing.id)}/save`, {
           method: "POST",
           body: JSON.stringify(payload),
         });
@@ -4033,7 +4058,7 @@ function bindShell() {
       };
       btn.disabled = true;
       try {
-        const data = await api(`/api/admin/deals/${encodeURIComponent(dealId)}`, {
+        const data = await api(`/api/admin/deals/${encodeURIComponent(dealId)}/save`, {
           method: "POST",
           body: JSON.stringify(payload),
         });
@@ -4236,7 +4261,7 @@ function bindShell() {
       };
       btn.disabled = true;
       try {
-        const data = await api(`/api/admin/deals/${encodeURIComponent(dealId)}`, {
+        const data = await api(`/api/admin/deals/${encodeURIComponent(dealId)}/save`, {
           method: "POST",
           body: JSON.stringify(payload),
         });
@@ -4350,7 +4375,7 @@ function bindShell() {
     payload.manualCryptoEnabled = fd.get("manualCryptoEnabled") === "1";
     payload.uiStrings = uiStrings;
     try {
-      const data = await api("/api/admin/settings", {
+      const data = await api("/api/admin/settings/save", {
         method: "POST",
         body: JSON.stringify(payload),
       });
