@@ -31,6 +31,8 @@ const state = {
   monthSearch: "",
   /** Order pipeline filter on orders tab */
   orderPipeFilter: "all",
+  /** Payment-mode filter on orders tab (all | paypal | cryptomus | …) */
+  orderPayFilter: "all",
 };
 
 function friendlyApiError(status, raw, data) {
@@ -1411,6 +1413,15 @@ function isPhpOrder(o) {
 }
 
 function orderLineTotal(o) {
+  if (o?.amountPhp != null && Number.isFinite(Number(o.amountPhp))) {
+    return Number(o.amountPhp);
+  }
+  if (o?.amountUsd != null && Number.isFinite(Number(o.amountUsd))) {
+    return Number(o.amountUsd);
+  }
+  if (o?.amount != null && Number.isFinite(Number(o.amount))) {
+    return Number(o.amount);
+  }
   const items = Array.isArray(o?.items) ? o.items : [];
   return items.reduce((sum, i) => {
     const qty = Math.max(
@@ -1426,6 +1437,53 @@ function orderLineTotal(o) {
 
 function orderStatusKey(o) {
   return String(o?.status || "").toLowerCase();
+}
+
+/** Label for every payment mode shown in Admin → Orders */
+function paymentMethodLabel(o) {
+  if (o?.paymentLabel) return String(o.paymentLabel);
+  const mode = String(o?.paymentMode || o?.provider || "").toLowerCase();
+  const method = String(o?.method || "").toLowerCase();
+  const blob = `${mode} ${method}`;
+  if (blob.includes("paypal")) return "PayPal";
+  if (blob.includes("cryptomus")) return "Cryptomus";
+  if (blob.includes("nowpayments") || method === "crypto" || mode === "crypto") return "Crypto (NOWPayments)";
+  if (blob.includes("manual_crypto")) return "Crypto wallet (manual)";
+  if (blob.includes("manual_gcash") || method === "manual_gcash") return "GCash (QR)";
+  if (blob.includes("manual_maya") || method === "manual_maya") return "Maya (QR)";
+  if (blob.includes("manual_ewallet") || blob.includes("manual_e")) return "E-wallet (QR)";
+  if (blob.includes("stripe")) return "Card (Stripe)";
+  if (method === "card" || mode === "card") return "Card";
+  if (blob.includes("liqpay")) return "LiqPay";
+  if (blob.includes("xendit")) return "Xendit";
+  if (blob.includes("paymongo")) return "PayMongo";
+  if (blob.includes("gcash")) return "GCash";
+  if (blob.includes("maya") || blob.includes("paymaya")) return "Maya";
+  if (blob.includes("grab")) return "GrabPay";
+  if (blob.includes("shopee")) return "ShopeePay";
+  if (blob.includes("demo") || blob.includes("instant_demo")) return "Demo";
+  return o?.paymentMode || o?.method || o?.provider || "Payment";
+}
+
+function formatOrderAmount(o) {
+  if (o?.amountFormatted) return String(o.amountFormatted);
+  const cur = String(o?.currency || "").toUpperCase();
+  const total = orderLineTotal(o);
+  if (o?.amountPhp != null && Number.isFinite(Number(o.amountPhp))) {
+    return `₱${Number(o.amountPhp).toFixed(2)}`;
+  }
+  if (o?.amountUsd != null && Number.isFinite(Number(o.amountUsd))) {
+    return `$${Number(o.amountUsd).toFixed(2)} USD`;
+  }
+  if (cur === "USD") return `$${total.toFixed(2)} USD`;
+  if (cur && cur !== "PHP") return `${total.toFixed(2)} ${cur}`;
+  return money(total);
+}
+
+function paymentModeKey(o) {
+  return String(o?.paymentMode || o?.provider || o?.method || "other")
+    .toLowerCase()
+    .replace(/\s+/g, "_");
 }
 
 function startOfLocalDay(d = new Date()) {
@@ -1979,12 +2037,15 @@ function orderMatchesSearch(o, qRaw) {
     o.currency,
     o.method,
     o.paymentMode,
+    o.paymentLabel,
+    o.provider,
     o.providerRef,
     o.stripeSessionId,
     o.stripePaymentIntent,
     o.createdAt,
     o.refundedAt,
     o.message,
+    paymentMethodLabel(o),
   ];
   for (const item of o.items || []) {
     parts.push(item.id, item.name, item.brand, item.category, item.price, item.qty);
@@ -2016,7 +2077,12 @@ function ordersView() {
   const periodQ = (state.monthSearch || "").trim();
   const searching = q.length > 0;
   const periodSearching = !searching && periodQ.length > 0;
-  const periodOrders = filterOrdersByRange(allOrders, range.from, range.to);
+  // Include undated rows so no payment mode disappears from the list
+  const periodOrders = (allOrders || []).filter((o) => {
+    const d = orderEventDate(o);
+    if (!d) return true;
+    return d >= range.from && d <= range.to;
+  });
 
   let list;
   if (searching) {
@@ -2046,37 +2112,78 @@ function ordersView() {
     );
   }
 
+  // Payment-mode filter (all modes)
+  const payFilter = state.orderPayFilter || "all";
+  if (payFilter !== "all") {
+    list = list.filter((o) => {
+      const label = paymentMethodLabel(o).toLowerCase();
+      const key = paymentModeKey(o);
+      const f = payFilter.toLowerCase();
+      return key.includes(f) || label.includes(f) || f.includes(key);
+    });
+  }
+
+  // Mode chips from current period (all modes present in data)
+  const modeCounts = {};
+  for (const o of allOrders) {
+    const lab = paymentMethodLabel(o);
+    modeCounts[lab] = (modeCounts[lab] || 0) + 1;
+  }
+  const modeChips = [
+    `<button type="button" class="btn ghost btn-sm ${payFilter === "all" ? "active" : ""}" data-pay-filter="all">All methods (${allOrders.length})</button>`,
+    ...Object.entries(modeCounts)
+      .sort((a, b) => b[1] - a[1])
+      .map(
+        ([lab, n]) =>
+          `<button type="button" class="btn ghost btn-sm ${
+            payFilter !== "all" &&
+            (lab.toLowerCase().includes(payFilter.toLowerCase()) ||
+              payFilter.toLowerCase().includes(lab.toLowerCase().slice(0, 6)))
+              ? "active"
+              : ""
+          }" data-pay-filter="${escapeAttr(lab)}">${escapeHtml(lab)} (${n})</button>`
+      ),
+  ].join(" ");
+
   const rows = list
     .map((o) => {
       const st = orderStatusKey(o);
       const isRefunded = st === "refunded" || st === "refund" || st === "reversed" || st === "chargeback";
       const isPaid = ["paid", "completed", "succeeded", "complete", "success"].includes(st);
-      // Only payment_submitted counts as admin-pending (buyer sent a reference).
-      // Incomplete QR checkouts never appear here — stock not held until confirm.
+      const isOpen = !!o.isOpenCheckout || st === "checkout_open";
       const isManualPending =
         (o.paymentMode === "manual_ewallet" || o.paymentMode === "manual_crypto") &&
         st === "payment_submitted" &&
         !!(o.paymentReference || "").trim();
-      const lineTotal =
-        o.amountPhp != null &&
-        (o.paymentMode === "manual_ewallet" || o.paymentMode === "manual_crypto")
-          ? Number(o.amountPhp)
-          : orderLineTotal(o);
-      const codes = (o.items || []).map((i) => `${i.name}: ${(i.codes || []).join(", ")}`).join(" · ");
+      const payLabel = paymentMethodLabel(o);
+      const codes = (o.items || [])
+        .map((i) => {
+          const c = (i.codes || []).filter(Boolean).join(", ");
+          return c ? `${i.name}: ${c}` : i.name || i.id || "";
+        })
+        .filter(Boolean)
+        .join(" · ");
       const mail = o.emailSent
         ? "invoice emailed"
         : o.ackEmailSent
           ? "ack emailed"
           : o.emailDetail || o.ackEmailDetail
             ? "email fail"
-            : "—";
+            : isOpen
+              ? "not paid yet"
+              : "—";
       const badgeClass = isRefunded
         ? "badge badge-refund"
         : isManualPending
           ? "badge badge-pending"
-          : "badge";
+          : isOpen
+            ? "badge badge-pending"
+            : "badge";
+      const statusText = isOpen ? "checkout open" : o.status || "";
       let actions = "";
-      if (isManualPending) {
+      if (isOpen) {
+        actions = `<div class="muted" style="margin-top:4px;font-size:0.75rem">Waiting for customer to finish ${escapeHtml(payLabel)}</div>`;
+      } else if (isManualPending) {
         const ref = `Ref: ${escapeHtml(o.paymentReference || "—")}`;
         const wallet = (o.payTo && o.payTo.wallet) || o.method || "e-wallet";
         actions = `
@@ -2091,28 +2198,38 @@ function ordersView() {
           <button type="button" class="btn ghost btn-sm" data-order-status="refunded" data-order-id="${escapeAttr(o.id)}" style="margin-left:4px">Mark refunded</button>`;
       } else if (isRefunded) {
         actions = `<button type="button" class="btn ghost btn-sm" data-order-status="paid" data-order-id="${escapeAttr(o.id)}">Undo refund</button>`;
+      } else if (st === "awaiting_payment" || st === "cancelled") {
+        actions = `<div class="muted" style="margin-top:4px;font-size:0.75rem">${escapeHtml(o.message || st)}</div>`;
       }
       return `
-      <tr class="${isRefunded ? "row-refunded" : isManualPending ? "row-pending" : ""}">
-        <td><strong>${escapeHtml(o.id)}</strong><div class="muted">${escapeHtml(o.createdAt || "")}</div>
+      <tr class="${isRefunded ? "row-refunded" : isManualPending || isOpen ? "row-pending" : ""}">
+        <td>
+          <strong>${escapeHtml(o.id)}</strong>
+          <div class="muted">${escapeHtml(o.createdAt || "")}</div>
+          <div class="muted" style="margin-top:4px"><strong>${escapeHtml(payLabel)}</strong></div>
           ${
-            o.paymentMode === "manual_ewallet"
-              ? `<div class="muted">manual e-wallet</div>`
-              : o.paymentMode === "manual_crypto"
-                ? `<div class="muted">manual crypto wallet</div>`
-                : ""
-          }</td>
-        <td>${escapeHtml(o.email)}<div class="muted">${escapeHtml(o.name || "")}</div></td>
-        <td><span class="${badgeClass}">${escapeHtml(o.status || "")}</span>
+            o.providerRef
+              ? `<div class="muted" style="font-size:0.72rem;word-break:break-all">ref ${escapeHtml(String(o.providerRef).slice(0, 24))}</div>`
+              : ""
+          }
+        </td>
+        <td>${escapeHtml(o.email || "—")}<div class="muted">${escapeHtml(o.name || "")}</div>
+          ${o.currency ? `<div class="muted">${escapeHtml(String(o.currency).toUpperCase())}</div>` : ""}
+        </td>
+        <td><span class="${badgeClass}">${escapeHtml(statusText)}</span>
           <div class="muted">${escapeHtml(mail)}</div>
           ${actions ? `<div style="margin-top:6px">${actions}</div>` : ""}</td>
-        <td><strong class="${isRefunded ? "sales-loss" : ""}">${isRefunded ? "− " : ""}${
-          o.amountFormatted &&
-          (o.paymentMode === "manual_ewallet" || o.paymentMode === "manual_crypto")
-            ? escapeHtml(o.amountFormatted)
-            : escapeHtml(money(lineTotal))
-        }</strong>
-          <div class="muted" style="max-width:280px;word-break:break-all">${escapeHtml(codes || (isManualPending ? "codes after confirm" : ""))}</div></td>
+        <td><strong class="${isRefunded ? "sales-loss" : ""}">${isRefunded ? "− " : ""}${escapeHtml(
+          formatOrderAmount(o)
+        )}</strong>
+          <div class="muted" style="max-width:280px;word-break:break-all">${escapeHtml(
+            codes ||
+              (isManualPending
+                ? "codes after confirm"
+                : isOpen
+                  ? "codes after payment"
+                  : "")
+          )}</div></td>
       </tr>`;
     })
     .join("");
@@ -2121,13 +2238,13 @@ function ordersView() {
     ? `No invoices match “${escapeHtml(q)}”.`
     : periodSearching
       ? `No invoices match “${escapeHtml(periodQ)}” in ${escapeHtml(range.label)}.`
-      : "No orders in this period.";
+      : "No orders in this period for this filter.";
 
   const globalSearchHint = searching
     ? `Showing <strong>${list.length}</strong> match(es) across all invoices`
     : periodSearching
       ? `<strong>${list.length}</strong> match(es) in ${escapeHtml(range.label)}`
-      : `Period: <strong>${escapeHtml(range.label)}</strong> · <strong>${list.length}</strong> invoice(s)`;
+      : `Period: <strong>${escapeHtml(range.label)}</strong> · <strong>${list.length}</strong> of <strong>${allOrders.length}</strong> invoice(s)`;
 
   const pipeNote =
     pipe === "preparing"
@@ -2136,39 +2253,42 @@ function ordersView() {
         ? "Showing: Delivered / paid orders"
         : pipe === "refunded"
           ? "Showing: Refunded orders"
-          : "";
+          : "All payment methods · PayPal, Cryptomus, QR, card, demo…";
 
   return `
     <div class="top">
       <div>
         <h1>Orders / Sales</h1>
-        <p class="subtitle">${pipeNote || "Order list · PHP P&L"}</p>
+        <p class="subtitle">${pipeNote}</p>
       </div>
       ${
-        pipe !== "all"
+        pipe !== "all" || payFilter !== "all"
           ? `<button type="button" class="btn ghost btn-sm" id="clearOrderPipe">Show all</button>`
           : ""
       }
     </div>
     ${salesChecklistHtml(report, allOrders, deals)}
+    <div class="panel" style="margin-bottom:12px">
+      <p class="muted" style="margin:0 0 8px;font-size:0.78rem;letter-spacing:0.06em;text-transform:uppercase;font-weight:700">Payment methods</p>
+      <div class="row-actions" style="flex-wrap:wrap;gap:6px">${modeChips}</div>
+    </div>
     <div class="panel invoice-search-box invoice-search-box-panel">
       <label class="invoice-search-label" for="adminOrderSearch">Search all invoices</label>
       <input
         id="adminOrderSearch"
         class="invoice-search-input"
         type="search"
-        placeholder="Order ID, email, customer name, product, login code, status…"
+        placeholder="Order ID, email, PayPal, Cryptomus, product, login code, status…"
         value="${escapeAttr(state.orderSearch || "")}"
         autocomplete="off"
       />
       <p class="muted invoice-search-hint">
-        ${globalSearchHint}.
-        Mark refunded to deduct from PHP P&amp;L.
+        ${globalSearchHint}. Every payment mode is listed (including open checkouts not finished yet).
       </p>
     </div>
     <div class="panel" style="overflow:auto">
       <table class="table">
-        <thead><tr><th>Order / invoice</th><th>Customer</th><th>Status</th><th>Amount / codes</th></tr></thead>
+        <thead><tr><th>Order / method</th><th>Customer</th><th>Status</th><th>Amount / codes</th></tr></thead>
         <tbody>${rows || `<tr><td colspan="4" class="muted">${emptyMsg}</td></tr>`}</tbody>
       </table>
     </div>`;
@@ -2985,7 +3105,15 @@ function bindShell() {
 
   $("#clearOrderPipe")?.addEventListener("click", () => {
     state.orderPipeFilter = "all";
+    state.orderPayFilter = "all";
     render();
+  });
+
+  $$("[data-pay-filter]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      state.orderPayFilter = btn.dataset.payFilter || "all";
+      render();
+    });
   });
 
   $$("[data-sales-year]").forEach((btn) => {

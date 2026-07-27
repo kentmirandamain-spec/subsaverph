@@ -1546,6 +1546,8 @@ def fulfill_order(
         )
 
     order_id = "PH" + uuid.uuid4().hex[:10].upper()
+    pay_mode = str(payment_mode_name or method or "paid").strip()
+    pay_method = str(method or payment_mode_name or pay_mode).strip()
     order = {
         "id": order_id,
         "email": email,
@@ -1553,8 +1555,12 @@ def fulfill_order(
         "currency": currency,
         "items": line_results,
         "status": "paid",
-        "paymentMode": payment_mode_name,
-        "method": method or payment_mode_name,
+        "paymentMode": pay_mode,
+        "method": pay_method,
+        "provider": pay_mode,
+        "paymentLabel": _admin_payment_label(
+            {"paymentMode": pay_mode, "method": pay_method, "provider": pay_mode}
+        ),
         "stripeSessionId": stripe_session_id,
         "stripePaymentIntent": stripe_payment_intent,
         "providerRef": provider_ref,
@@ -5386,29 +5392,194 @@ def admin_clear_all_inventory():
     return jsonify({"ok": True, "mode": mode, "removed": removed})
 
 
+def _admin_payment_label(o: dict) -> str:
+    """Human label for any payment mode (PayPal, Cryptomus, QR, card, demo…)."""
+    mode = str(o.get("paymentMode") or o.get("provider") or "").strip().lower()
+    method = str(o.get("method") or "").strip().lower()
+    blob = f"{mode} {method}"
+    if "paypal" in blob:
+        return "PayPal"
+    if "cryptomus" in blob:
+        return "Cryptomus"
+    if "nowpayments" in blob or mode == "crypto" or method == "crypto":
+        return "Crypto (NOWPayments)"
+    if "manual_crypto" in blob:
+        return "Crypto wallet (manual)"
+    if "manual_gcash" in blob or method == "manual_gcash":
+        return "GCash (QR)"
+    if "manual_maya" in blob or method == "manual_maya":
+        return "Maya (QR)"
+    if "manual_ewallet" in blob or "manual_e" in blob:
+        return "E-wallet (QR)"
+    if "stripe" in blob or method == "card" and "stripe" in blob:
+        return "Card (Stripe)"
+    if method == "card" or mode == "card":
+        return "Card"
+    if "liqpay" in blob:
+        return "LiqPay"
+    if "xendit" in blob:
+        return "Xendit"
+    if "paymongo" in blob:
+        return "PayMongo"
+    if "gcash" in blob:
+        return "GCash"
+    if "maya" in blob or "paymaya" in blob:
+        return "Maya"
+    if "grab" in blob:
+        return "GrabPay"
+    if "shopee" in blob:
+        return "ShopeePay"
+    if "demo" in blob or "instant_demo" in blob:
+        return "Demo"
+    if mode or method:
+        return (o.get("paymentMode") or o.get("method") or o.get("provider") or "Payment")
+    return "Payment"
+
+
+def _pending_to_admin_order(ref: str, p: dict) -> dict:
+    """Open redirect checkouts (PayPal/Cryptomus/etc.) as visible admin rows."""
+    cart = p.get("cart") or p.get("items") or []
+    items = []
+    if isinstance(cart, list):
+        for row in cart:
+            if not isinstance(row, dict):
+                continue
+            items.append(
+                {
+                    "id": row.get("id"),
+                    "name": row.get("name") or row.get("id"),
+                    "qty": row.get("qty") or 1,
+                    "price": row.get("price"),
+                    "brand": row.get("brand"),
+                    "codes": [],
+                }
+            )
+    provider = str(p.get("provider") or p.get("method") or "checkout")
+    method = str(p.get("method") or provider)
+    return {
+        "id": f"OPEN-{str(ref)[:10].upper()}",
+        "email": p.get("email") or "",
+        "name": p.get("name") or "",
+        "currency": p.get("currency") or "",
+        "items": items,
+        "status": "checkout_open",
+        "paymentMode": provider,
+        "method": method,
+        "provider": provider,
+        "providerRef": ref,
+        "createdAt": p.get("createdAt") or "",
+        "delivery": "pending",
+        "message": "Customer opened payment — not completed / not fulfilled yet",
+        "isOpenCheckout": True,
+        "amountUsd": p.get("amountUsd"),
+        "amount": p.get("amount"),
+        "paymentLabel": _admin_payment_label(
+            {"paymentMode": provider, "method": method, "provider": provider}
+        ),
+    }
+
+
 @app.get("/api/admin/orders")
 @require_admin
 def admin_orders():
     """
-    Real orders only. Incomplete e-wallet checkouts (no payment reference)
-    live in ewallet_checkouts.json and are intentionally excluded.
+    All real orders for every payment mode (PayPal, Cryptomus, manual QR/crypto,
+    card, demo, etc.), plus open redirect checkouts still in pending_payments.
+    Incomplete manual QR with no payment reference stay excluded (noise).
     """
     try:
         purge_stale_ewallet_checkouts()
     except Exception:
         pass
-    # Hide legacy incomplete e-wallet rows that never got a payment reference
+
     raw = load_orders()
     orders = []
+    seen_refs = set()
     for o in raw:
+        if not isinstance(o, dict):
+            continue
         if (
             is_manual_payment_mode(o.get("paymentMode"))
             and str(o.get("status") or "").lower() == "awaiting_payment"
             and not (o.get("paymentReference") or "").strip()
         ):
             continue
-        orders.append(o)
-    return jsonify({"orders": orders[:500], "total": len(orders)})
+        row = dict(o)
+        # Normalize labels so admin UI can show every mode clearly
+        if not row.get("method"):
+            row["method"] = row.get("paymentMode") or row.get("provider") or ""
+        if not row.get("paymentMode"):
+            row["paymentMode"] = row.get("provider") or row.get("method") or ""
+        if not row.get("provider"):
+            row["provider"] = row.get("paymentMode") or row.get("method") or ""
+        row["paymentLabel"] = _admin_payment_label(row)
+        pref = str(row.get("providerRef") or "").strip()
+        if pref:
+            seen_refs.add(pref)
+        sid = str(row.get("stripeSessionId") or "").strip()
+        if sid:
+            seen_refs.add(sid)
+        orders.append(row)
+
+    # Open checkouts: PayPal / Cryptomus / LiqPay / etc. not yet fulfilled
+    try:
+        pending_all = read_json(STORE / "pending_payments.json", {})
+        if isinstance(pending_all, dict):
+            for ref, p in pending_all.items():
+                if not ref or not isinstance(p, dict):
+                    continue
+                if str(ref) in seen_refs:
+                    continue
+                # Drop very old open sessions (>7 days)
+                created = str(p.get("createdAt") or "")
+                try:
+                    from datetime import datetime, timezone
+
+                    if created:
+                        ts = datetime.fromisoformat(created.replace("Z", "+00:00"))
+                        age_h = (
+                            datetime.now(timezone.utc) - ts
+                        ).total_seconds() / 3600.0
+                        if age_h > 24 * 7:
+                            continue
+                except Exception:
+                    pass
+                orders.append(_pending_to_admin_order(str(ref), p))
+    except Exception:
+        pass
+
+    from datetime import datetime as _dt
+
+    def _sort_key(o):
+        raw_d = str(o.get("createdAt") or o.get("paidAt") or "")
+        try:
+            return _dt.fromisoformat(raw_d.replace("Z", "+00:00"))
+        except Exception:
+            return _dt(1970, 1, 1)
+
+    try:
+        orders.sort(key=_sort_key, reverse=True)
+    except Exception:
+        pass
+
+    return jsonify(
+        {
+            "orders": orders[:500],
+            "total": len(orders),
+            "modes": sorted(
+                {
+                    str(
+                        o.get("paymentLabel")
+                        or o.get("paymentMode")
+                        or o.get("method")
+                        or ""
+                    )
+                    for o in orders
+                    if o.get("paymentMode") or o.get("method") or o.get("paymentLabel")
+                }
+            ),
+        }
+    )
 
 
 @app.post("/api/admin/orders/<order_id>/status")
