@@ -1,6 +1,14 @@
 {
   "supergrok-7d": [],
-  "supergrok-1m": [],
+  "supergrok-1m": [
+    {
+      "code": "Username: grok.19@friendlyshare.com.ua Password: Premium@123",
+      "status": "available",
+      "addedAt": "2026-07-27T14:36:34.226074Z",
+      "username": "grok.19@friendlyshare.com.ua",
+      "password": "Premium@123"
+    }
+  ],
   "canva-pro": [],
   "canva-teams": [],
   "capcut-pro": [],
