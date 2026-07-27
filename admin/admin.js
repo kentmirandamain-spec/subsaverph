@@ -2877,6 +2877,8 @@ function formToDeal(fd, existing) {
     image: imageMobile,
     imageSlide: imageMobileSlide || imageMobile,
     logo: imageDesktop,
+    // Server only wipes blank image fields when this is true
+    _clearImages: forceClearImages,
     imageBg: existing?.imageBg || "",
     brandColor,
   };
@@ -3779,6 +3781,7 @@ function bindShell() {
         image: deal.imageMobile || deal.image || "",
         imageSlide: imageMobileSlide || deal.imageSlide || "",
         logo: deal.imageDesktop || deal.logo || "",
+        _clearImages: forceClear,
       };
       btn.disabled = true;
       try {
@@ -3981,6 +3984,7 @@ function bindShell() {
         imageSlide: deal.imageMobileSlide || deal.imageSlide || imageMobile || "",
         imageMobileSlide: deal.imageMobileSlide || "",
         imageDesktopSlide: deal.imageDesktopSlide || "",
+        _clearImages: forceClear,
       };
       btn.disabled = true;
       try {
