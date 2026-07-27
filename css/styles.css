@@ -16564,22 +16564,26 @@ html[data-theme="light"] .co-method {
     touch-action: pan-x pan-y !important;
     scroll-snap-type: x proximity !important;
     scroll-padding-inline: 12px !important;
-    padding: 4px 12px 12px !important;
+    padding: 4px 12px 6px !important;
     margin: 0 -4px !important;
-    scrollbar-width: thin !important;
-    scrollbar-color: rgba(125, 211, 252, 0.45) transparent !important;
-    /* hint that more chips exist off-screen */
-    mask-image: linear-gradient(90deg, #000 0%, #000 calc(100% - 28px), transparent 100%) !important;
-    -webkit-mask-image: linear-gradient(90deg, #000 0%, #000 calc(100% - 28px), transparent 100%) !important;
+    /* No visible swipe/scrollbar under categories — still swipeable */
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+    mask-image: none !important;
+    -webkit-mask-image: none !important;
   }
 
-  .deals-filters .filter-group-options::-webkit-scrollbar {
-    height: 4px !important;
-    display: block !important;
+  .deals-filters .filter-group-options::-webkit-scrollbar,
+  .deals-filters .filter-group--service .filter-group-options::-webkit-scrollbar,
+  .deals-filters .filter-group--category .filter-group-options::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+    display: none !important;
+    background: transparent !important;
   }
   .deals-filters .filter-group-options::-webkit-scrollbar-thumb {
-    background: rgba(125, 211, 252, 0.4) !important;
-    border-radius: 999px !important;
+    display: none !important;
+    background: transparent !important;
   }
 
   .deals-filters .radio,
