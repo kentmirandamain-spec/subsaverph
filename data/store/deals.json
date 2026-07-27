@@ -499,7 +499,7 @@
     "imageMobile": "/assets/products/photo-spotify.png?v=officialm3",
     "imageMobileSlide": "/assets/products/custom/spotify-premium-1m-imageMobileSlide.png?v=998d0415",
     "imageDesktop": "/assets/products/logos/brand-spotify-fixed.svg?v=official3",
-    "imageDesktopSlide": "",
+    "imageDesktopSlide": "/assets/products/custom/spotify-premium-1m-imageDesktopSlide.png?v=2742ebbf",
     "imageMobileFit": "cover",
     "imageDesktopFit": "contain",
     "imageMobilePos": "center center",
