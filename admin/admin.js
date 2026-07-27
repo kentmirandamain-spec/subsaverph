@@ -274,28 +274,22 @@ function shell(content) {
       </aside>
       <main class="main" id="adminMain">
         ${
-          state.storeEphemeral && !getClientGithubToken()
-            ? `<div class="err store-warn" style="margin:0 0 14px;padding:12px 14px;border-radius:10px;line-height:1.45">
-                <strong>Free durable store — enable once</strong><br/>
-                Paste a GitHub token with <code>repo</code> access. Kept only in <strong>this browser</strong>.
-                Saves will push products/stock/settings to GitHub so free Render redeploys do not wipe them.
+          state.githubStoreSync || !state.storeEphemeral || getClientGithubToken()
+            ? `<div class="ok" style="margin:0 0 14px;padding:10px 12px;border-radius:10px;line-height:1.4">
+                  <strong>Free store sync is ON</strong> — products, stock, and settings are saved to GitHub so free redeploys keep them.
+                  <button type="button" class="btn ghost btn-sm" id="btnStoreSync" style="margin-left:8px">Sync now</button>
+                  <button type="button" class="btn ghost btn-sm" id="btnStoreHydrate" style="margin-left:4px">Pull from GitHub</button>
+                </div>`
+            : `<div class="err store-warn" style="margin:0 0 14px;padding:12px 14px;border-radius:10px;line-height:1.45">
+                <strong>Free durable store — enable once after redeploy</strong><br/>
+                Paste a GitHub <code>repo</code> token, then click <strong>Enable free sync</strong>.
+                Token stays in this browser (and on the server until the next free redeploy).
                 <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;align-items:center">
                   <input id="githubStoreTokenInput" type="password" placeholder="ghp_… GitHub token" style="flex:1;min-width:220px;padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--text)" autocomplete="off" />
                   <button type="button" class="btn solid btn-sm" id="btnSaveGithubToken">Enable free sync</button>
-                  <button type="button" class="btn ghost btn-sm" id="btnStoreSync">Sync now</button>
                   <button type="button" class="btn ghost btn-sm" id="btnStoreHydrate">Pull from GitHub</button>
                 </div>
               </div>`
-            : `<div class="ok" style="margin:0 0 14px;padding:10px 12px;border-radius:10px;line-height:1.4">
-                  <strong>Free store sync ready</strong> — admin data can be kept on GitHub across redeploys.
-                  <button type="button" class="btn ghost btn-sm" id="btnStoreSync" style="margin-left:8px">Sync now</button>
-                  <button type="button" class="btn ghost btn-sm" id="btnStoreHydrate" style="margin-left:4px">Pull from GitHub</button>
-                  ${
-                    getClientGithubToken()
-                      ? `<button type="button" class="btn ghost btn-sm" id="btnClearGithubToken" style="margin-left:4px">Remove browser token</button>`
-                      : ""
-                  }
-                </div>`
         }
         ${content}
       </main>
@@ -4506,10 +4500,15 @@ async function loadSupportMessages() {
 
 function applyStoreMeta(me) {
   if (!me || typeof me !== "object") return;
+  // Prefer live server flags (set after Enable free sync on this Render instance)
   if (typeof me.storeEphemeral === "boolean") state.storeEphemeral = me.storeEphemeral;
-  state.githubStoreSync = !!me.githubStoreSync || !!getClientGithubToken();
-  // Browser token counts as free sync enabled for UI
+  if (typeof me.githubStoreSync === "boolean") state.githubStoreSync = me.githubStoreSync;
   if (getClientGithubToken()) {
+    state.storeEphemeral = false;
+    state.githubStoreSync = true;
+  }
+  // If server says sync is on, never show the red “enable once” box
+  if (me.githubStoreSync) {
     state.storeEphemeral = false;
     state.githubStoreSync = true;
   }
