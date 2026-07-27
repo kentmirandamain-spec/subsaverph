@@ -15,6 +15,10 @@ const state = {
   stockCodes: [],
   orders: [],
   supportMessages: [],
+  /** Live store durability flags from /api/admin/me */
+  storeEphemeral: true,
+  githubStoreSync: false,
+  storeHint: "",
   /**
    * Orders/Sales drill-down: Year → Month → Week → Day
    * salesMonthKey: "YYYY-MM"
@@ -269,6 +273,24 @@ function shell(content) {
         <p class="side-foot">SubSaverPH host console</p>
       </aside>
       <main class="main" id="adminMain">
+        ${
+          state.storeEphemeral
+            ? `<div class="err store-warn" style="margin:0 0 14px;padding:12px 14px;border-radius:10px;line-height:1.45">
+                <strong>Admin data can reset</strong> — this host uses temporary disk.
+                After redeploy or free-tier sleep, products, stock, settings, and images revert to git defaults.
+                <br/><span class="muted" style="display:block;margin-top:6px">${escapeHtml(
+                  state.storeHint ||
+                    "Fix: set GITHUB_STORE_TOKEN + GITHUB_STORE_REPO on Render (recommended), or mount STORE_DIR on a persistent disk."
+                )}</span>
+                <button type="button" class="btn ghost btn-sm" id="btnStoreSync" style="margin-top:10px">Sync store to GitHub now</button>
+              </div>`
+            : state.githubStoreSync
+              ? `<div class="ok" style="margin:0 0 14px;padding:10px 12px;border-radius:10px">
+                  Store sync is on — admin saves are pushed to GitHub so redeploys keep your data.
+                  <button type="button" class="btn ghost btn-sm" id="btnStoreSync" style="margin-left:8px">Sync now</button>
+                </div>`
+              : ""
+        }
         ${content}
       </main>
     </div>
@@ -3019,6 +3041,12 @@ function render() {
           }),
         });
         state.user = data.username;
+        try {
+          const me = await api("/api/admin/me");
+          applyStoreMeta(me);
+        } catch {
+          /* ignore */
+        }
         restoreTab();
         await loadAll();
         render();
@@ -3077,6 +3105,40 @@ function render() {
 }
 
 function bindShell() {
+  $("#btnStoreSync")?.addEventListener("click", async () => {
+    const btn = $("#btnStoreSync");
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = "Syncing…";
+    }
+    try {
+      const data = await api("/api/admin/store-sync", { method: "POST", body: "{}" });
+      if (data.ok) {
+        state.githubStoreSync = true;
+        state.storeEphemeral = false;
+        toast(`Synced ${data.synced || 0} file(s) to GitHub — redeploys will keep admin data`);
+      } else if (data.skipped) {
+        toast(
+          "GitHub sync not configured. Add GITHUB_STORE_TOKEN + GITHUB_STORE_REPO on Render.",
+          true
+        );
+      } else {
+        toast(
+          (data.errors && data.errors[0]) || data.error || "Store sync failed",
+          true
+        );
+      }
+    } catch (err) {
+      toast(err.message || "Store sync failed", true);
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = "Sync store to GitHub now";
+      }
+      render();
+    }
+  });
+
   $$("[data-tab]").forEach((btn) => {
     btn.addEventListener("click", async () => {
       const next = btn.dataset.tab;
@@ -4391,11 +4453,20 @@ async function loadSupportMessages() {
   state.supportMessages = data.messages || [];
 }
 
+function applyStoreMeta(me) {
+  if (!me || typeof me !== "object") return;
+  state.storeEphemeral = me.storeEphemeral !== false && !me.githubStoreSync && !me.storeDir?.includes("/var/");
+  if (typeof me.storeEphemeral === "boolean") state.storeEphemeral = me.storeEphemeral;
+  state.githubStoreSync = !!me.githubStoreSync;
+  state.storeHint = me.storeHint || "";
+}
+
 async function boot() {
   try {
     const me = await api("/api/admin/me");
     if (me.authenticated) {
       state.user = me.username;
+      applyStoreMeta(me);
       restoreTab();
       await loadAll();
     }

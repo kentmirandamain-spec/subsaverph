@@ -39,7 +39,12 @@ except Exception:
     pass
 
 ROOT = Path(__file__).resolve().parent
-STORE = ROOT / "data" / "store"
+# Durable store path: set STORE_DIR on Render to a persistent disk mount (e.g. /var/data/store)
+# Free instances wipe local disk on every redeploy/sleep — without STORE_DIR or GitHub sync,
+# admin edits reset to the git-bundled files.
+_store_env = (os.environ.get("STORE_DIR") or os.environ.get("DATA_STORE_PATH") or "").strip()
+STORE = Path(_store_env) if _store_env else (ROOT / "data" / "store")
+BUNDLED_STORE = ROOT / "data" / "store"
 DEALS_FILE = STORE / "deals.json"
 SETTINGS_FILE = STORE / "settings.json"
 AUTH_FILE = STORE / "auth.json"
@@ -47,6 +52,7 @@ INVENTORY_FILE = STORE / "inventory.json"
 ORDERS_FILE = STORE / "orders.json"
 # Incomplete e-wallet checkouts (no payment reference yet) — NOT real orders
 EWALLET_CHECKOUTS_FILE = STORE / "ewallet_checkouts.json"
+CUSTOM_PRODUCTS_DIR = ROOT / "assets" / "products" / "custom"
 
 app = Flask(__name__, static_folder=None)
 # Stable secret so admin sessions survive restarts (set SECRET_KEY on Render)
@@ -388,6 +394,179 @@ def _serve_html(filename: str, folder: Path | None = None):
 # ---------- storage ----------
 
 
+def store_is_ephemeral() -> bool:
+    """True when admin data will be lost on redeploy (no disk + no GitHub sync)."""
+    if _store_env:
+        # Custom STORE_DIR — assume operator mounted a persistent volume
+        return False
+    if github_store_configured():
+        return False
+    return True
+
+
+def github_store_configured() -> bool:
+    token = (
+        (os.environ.get("GITHUB_STORE_TOKEN") or "").strip()
+        or (os.environ.get("GITHUB_TOKEN") or "").strip()
+    )
+    repo = (os.environ.get("GITHUB_STORE_REPO") or "").strip()
+    return bool(token and repo and "/" in repo)
+
+
+def _seed_store_from_bundled() -> None:
+    """Copy git-bundled data/store → STORE when STORE is empty (first boot on disk)."""
+    if STORE.resolve() == BUNDLED_STORE.resolve():
+        return
+    if not BUNDLED_STORE.is_dir():
+        return
+    for name in (
+        "deals.json",
+        "settings.json",
+        "auth.json",
+        "inventory.json",
+        "orders.json",
+        "ewallet_checkouts.json",
+        "pending_payments.json",
+        "support_messages.json",
+    ):
+        dest = STORE / name
+        src = BUNDLED_STORE / name
+        if dest.exists() or not src.is_file():
+            continue
+        try:
+            dest.write_bytes(src.read_bytes())
+        except OSError:
+            pass
+
+
+def _github_api_json(method: str, url: str, token: str, body: dict | None = None, timeout: int = 45):
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+        "User-Agent": "SubSaverPH-StoreSync",
+    }
+    raw = b""
+    if body is not None:
+        raw = json.dumps(body).encode("utf-8")
+        headers["Content-Type"] = "application/json"
+    try:
+        import urllib.error
+        import urllib.request
+
+        req = urllib.request.Request(url, data=raw if body is not None else None, headers=headers, method=method)
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            text = resp.read().decode("utf-8", errors="replace")
+            try:
+                return resp.status, json.loads(text) if text else {}
+            except Exception:
+                return resp.status, {"raw": text[:500]}
+    except Exception as e:
+        code = getattr(e, "code", 0) or 0
+        err_body = ""
+        if hasattr(e, "read"):
+            try:
+                err_body = e.read().decode("utf-8", errors="replace")[:500]  # type: ignore
+            except Exception:
+                pass
+        try:
+            return int(code), json.loads(err_body) if err_body.startswith("{") else {"error": str(e), "raw": err_body}
+        except Exception:
+            return int(code) if code else 0, {"error": str(e), "raw": err_body}
+
+
+def _github_put_file(rel_path: str, content_bytes: bytes, message: str) -> tuple[bool, str]:
+    """Create/update a file in the configured GitHub repo (durable admin store)."""
+    token = (
+        (os.environ.get("GITHUB_STORE_TOKEN") or "").strip()
+        or (os.environ.get("GITHUB_TOKEN") or "").strip()
+    )
+    repo = (os.environ.get("GITHUB_STORE_REPO") or "").strip()
+    branch = (os.environ.get("GITHUB_STORE_BRANCH") or "main").strip() or "main"
+    if not token or not repo:
+        return False, "GitHub store not configured"
+    import base64
+
+    api_path = rel_path.replace("\\", "/").lstrip("/")
+    url = f"https://api.github.com/repos/{repo}/contents/{api_path}"
+    # Get existing sha (required for update)
+    status, existing = _github_api_json("GET", f"{url}?ref={branch}", token)
+    sha = None
+    if status == 200 and isinstance(existing, dict):
+        sha = existing.get("sha")
+    body = {
+        "message": message[:200],
+        "content": base64.b64encode(content_bytes).decode("ascii"),
+        "branch": branch,
+    }
+    if sha:
+        body["sha"] = sha
+    status2, result = _github_api_json("PUT", url, token, body)
+    if status2 in (200, 201):
+        return True, "ok"
+    err = ""
+    if isinstance(result, dict):
+        err = str(result.get("message") or result.get("error") or result)[:300]
+    return False, err or f"HTTP {status2}"
+
+
+def sync_store_to_github(reason: str = "admin save") -> dict:
+    """
+    Push live store JSON (+ optional custom product images) to GitHub so redeploys
+    keep admin changes. Set GITHUB_STORE_TOKEN + GITHUB_STORE_REPO on Render.
+    """
+    if not github_store_configured():
+        return {"ok": False, "skipped": True, "reason": "not_configured"}
+    files = [
+        ("data/store/deals.json", DEALS_FILE),
+        ("data/store/settings.json", SETTINGS_FILE),
+        ("data/store/inventory.json", INVENTORY_FILE),
+        ("data/store/orders.json", ORDERS_FILE),
+        ("data/store/auth.json", AUTH_FILE),
+        ("data/store/pending_payments.json", STORE / "pending_payments.json"),
+        ("data/store/ewallet_checkouts.json", EWALLET_CHECKOUTS_FILE),
+        ("data/store/support_messages.json", STORE / "support_messages.json"),
+    ]
+    # Custom uploads also live on ephemeral disk — sync them too
+    if CUSTOM_PRODUCTS_DIR.is_dir():
+        for p in CUSTOM_PRODUCTS_DIR.rglob("*"):
+            if p.is_file() and p.stat().st_size <= 8_000_000:
+                rel = f"assets/products/custom/{p.relative_to(CUSTOM_PRODUCTS_DIR).as_posix()}"
+                files.append((rel, p))
+
+    ok_n = 0
+    fail = []
+    for rel, path in files:
+        if not path.is_file():
+            continue
+        try:
+            data = path.read_bytes()
+        except OSError as e:
+            fail.append(f"{rel}: read {e}")
+            continue
+        ok, msg = _github_put_file(rel, data, f"chore(store): {reason} — {rel}")
+        if ok:
+            ok_n += 1
+        else:
+            fail.append(f"{rel}: {msg}")
+    return {"ok": ok_n > 0 and not fail, "synced": ok_n, "errors": fail[:12]}
+
+
+def _schedule_github_store_sync(reason: str) -> None:
+    """Fire-and-forget sync so admin API stays fast."""
+    if not github_store_configured():
+        return
+
+    def _run():
+        try:
+            with _STORE_LOCK:
+                sync_store_to_github(reason)
+        except Exception:
+            pass
+
+    threading.Thread(target=_run, daemon=True).start()
+
+
 def ensure_store() -> None:
     try:
         STORE.mkdir(parents=True, exist_ok=True)
@@ -395,6 +574,8 @@ def ensure_store() -> None:
         # Read-only FS edge case — continue with bundled defaults
         return
     try:
+        # First boot on a mounted disk: seed from repo bundle once
+        _seed_store_from_bundled()
         if not AUTH_FILE.exists():
             AUTH_FILE.write_text(
                 json.dumps(
@@ -508,7 +689,8 @@ def read_json(path: Path, default):
 
 
 def write_json(path: Path, data) -> None:
-    path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
 
 def load_deals(include_inactive: bool = False):
@@ -520,6 +702,7 @@ def load_deals(include_inactive: bool = False):
 
 def save_deals(deals) -> None:
     write_json(DEALS_FILE, deals)
+    _schedule_github_store_sync("save deals")
 
 
 def load_settings():
@@ -528,6 +711,7 @@ def load_settings():
 
 def save_settings(settings) -> None:
     write_json(SETTINGS_FILE, settings)
+    _schedule_github_store_sync("save settings")
 
 
 def load_auth():
@@ -541,6 +725,7 @@ def load_inventory() -> dict:
 
 def save_inventory(inv: dict) -> None:
     write_json(INVENTORY_FILE, inv)
+    _schedule_github_store_sync("save inventory")
 
 
 def load_orders() -> list:
@@ -550,6 +735,7 @@ def load_orders() -> list:
 
 def save_orders(orders: list) -> None:
     write_json(ORDERS_FILE, orders)
+    _schedule_github_store_sync("save orders")
 
 
 def load_ewallet_checkouts() -> dict:
@@ -1084,6 +1270,9 @@ def health():
             "ewalletProvider": ewallet_provider(),
             "stockByProduct": stock_summary,
             "inventoryFile": str(INVENTORY_FILE),
+            "storeDir": str(STORE),
+            "storeEphemeral": store_is_ephemeral(),
+            "githubStoreSync": github_store_configured(),
             "supportInboxConfigured": bool(_safe_support_inbox()),
             "outboundIp": outbound,
             "cryptomusWebhookUrl": f"{public_base_url()}/api/webhooks/cryptomus",
@@ -4936,7 +5125,44 @@ def admin_logout():
 def admin_me():
     if not session.get("admin"):
         return jsonify({"authenticated": False}), 401
-    return jsonify({"authenticated": True, "username": session.get("admin_user", "admin")})
+    return jsonify(
+        {
+            "authenticated": True,
+            "username": session.get("admin_user", "admin"),
+            "storeDir": str(STORE),
+            "storeEphemeral": store_is_ephemeral(),
+            "githubStoreSync": github_store_configured(),
+            "storeHint": (
+                "Admin data is on temporary disk and will reset on redeploy/sleep. "
+                "Set GITHUB_STORE_TOKEN + GITHUB_STORE_REPO on Render, or mount STORE_DIR on a persistent disk."
+                if store_is_ephemeral()
+                else (
+                    "Admin data syncs to GitHub after saves."
+                    if github_store_configured()
+                    else "Admin data uses STORE_DIR (persistent disk)."
+                )
+            ),
+        }
+    )
+
+
+@app.post("/api/admin/store-sync")
+@require_admin
+def admin_store_sync_now():
+    """Force push current store files to GitHub (if configured)."""
+    if not github_store_configured():
+        return (
+            jsonify(
+                {
+                    "error": "GitHub store sync is not configured. "
+                    "Set GITHUB_STORE_TOKEN and GITHUB_STORE_REPO on Render.",
+                }
+            ),
+            400,
+        )
+    with _STORE_LOCK:
+        result = sync_store_to_github("manual admin sync")
+    return jsonify(result), (200 if result.get("ok") else 502)
 
 
 @app.post("/api/admin/password")
@@ -5155,6 +5381,7 @@ def admin_upload_product_image():
                 deal_out = deals[i]
                 break
 
+    _schedule_github_store_sync(f"upload product image {kind}")
     return jsonify(
         {
             "ok": True,

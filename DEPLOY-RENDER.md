@@ -78,8 +78,35 @@ git push -u origin main
 
 - **Free tier sleeps** after ~15 minutes idle. First visit after sleep can take 30–60 seconds.
 - **Stay online:** see **KEEP-ONLINE-24-7.md** (GitHub keep-alive ping, or upgrade to Render Starter ~$7/mo for real 24/7).
-- **Admin edits** are stored on the server disk and may reset when Render rebuilds the free instance. Re-apply important price changes after redeploy, or upgrade later for a persistent disk.
+- **Admin edits reset on free Render** unless you make storage durable (see below). Redeploys and free-tier sleep wipe local `data/store/` and custom uploads.
 - To update the site: change files → `git push` → Render auto-redeploys.
+
+### Keep admin data after redeploy (recommended)
+
+**Option A — GitHub store sync (works on free plan)**
+
+1. GitHub → Settings → Developer settings → Personal access tokens  
+2. Create a token with `repo` write access to `subsaverph`  
+3. Render → Environment → add:
+
+```env
+GITHUB_STORE_TOKEN=ghp_your_token_here
+GITHUB_STORE_REPO=kentmirandamain-spec/subsaverph
+GITHUB_STORE_BRANCH=main
+```
+
+4. Save → Manual Deploy  
+5. Admin dashboard should show “Store sync is on”. After you save products/settings/stock, files under `data/store/` are pushed back to GitHub so the next deploy keeps them.
+
+**Option B — Persistent disk (Render Starter+)**
+
+1. Upgrade the web service off Free  
+2. Add a disk mounted at `/var/data`  
+3. Set:
+
+```env
+STORE_DIR=/var/data/store
+```
 
 ---
 
