@@ -567,6 +567,80 @@ def _schedule_github_store_sync(reason: str) -> None:
     threading.Thread(target=_run, daemon=True).start()
 
 
+def hydrate_store_from_github() -> dict:
+    """
+    Pull durable store JSON from GitHub into STORE (free-tier safe).
+    Uses public raw URLs (public repo) or Contents API when a token is set.
+    Call on boot so redeploys pick up last admin sync.
+    """
+    repo = (os.environ.get("GITHUB_STORE_REPO") or "kentmirandamain-spec/subsaverph").strip()
+    branch = (os.environ.get("GITHUB_STORE_BRANCH") or "main").strip() or "main"
+    token = (
+        (os.environ.get("GITHUB_STORE_TOKEN") or "").strip()
+        or (os.environ.get("GITHUB_TOKEN") or "").strip()
+    )
+    names = (
+        "deals.json",
+        "settings.json",
+        "inventory.json",
+        "orders.json",
+        "auth.json",
+        "pending_payments.json",
+        "ewallet_checkouts.json",
+        "support_messages.json",
+    )
+    pulled = []
+    errors = []
+    for name in names:
+        rel = f"data/store/{name}"
+        text = None
+        # Prefer API when token present (works for private repos + avoids CDN lag)
+        if token:
+            st, data = _github_api_json(
+                "GET",
+                f"https://api.github.com/repos/{repo}/contents/{rel}?ref={branch}",
+                token,
+            )
+            if st == 200 and isinstance(data, dict) and data.get("content"):
+                import base64
+
+                try:
+                    text = base64.b64decode(data["content"]).decode("utf-8")
+                except Exception as e:
+                    errors.append(f"{name}: decode {e}")
+                    continue
+        if text is None:
+            raw_url = f"https://raw.githubusercontent.com/{repo}/{branch}/{rel}"
+            try:
+                import urllib.request
+
+                req = urllib.request.Request(
+                    raw_url,
+                    headers={"User-Agent": "SubSaverPH-StoreHydrate", "Cache-Control": "no-cache"},
+                )
+                with urllib.request.urlopen(req, timeout=25) as resp:
+                    text = resp.read().decode("utf-8", errors="replace")
+            except Exception as e:
+                errors.append(f"{name}: {e}")
+                continue
+        if not text or not text.strip():
+            continue
+        # Basic JSON validation
+        try:
+            json.loads(text)
+        except Exception:
+            errors.append(f"{name}: invalid json")
+            continue
+        try:
+            dest = STORE / name
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_text(text if text.endswith("\n") else text + "\n", encoding="utf-8")
+            pulled.append(name)
+        except OSError as e:
+            errors.append(f"{name}: write {e}")
+    return {"ok": bool(pulled), "pulled": pulled, "errors": errors[:12], "repo": repo, "branch": branch}
+
+
 def ensure_store() -> None:
     try:
         STORE.mkdir(parents=True, exist_ok=True)
@@ -576,6 +650,13 @@ def ensure_store() -> None:
     try:
         # First boot on a mounted disk: seed from repo bundle once
         _seed_store_from_bundled()
+        # Free durability: restore last admin data committed/synced to GitHub
+        try:
+            pull = (os.environ.get("GITHUB_STORE_PULL") or "1").strip().lower()
+            if pull not in ("0", "false", "no", "off"):
+                hydrate_store_from_github()
+        except Exception:
+            pass
         if not AUTH_FILE.exists():
             AUTH_FILE.write_text(
                 json.dumps(
@@ -5150,18 +5231,48 @@ def admin_me():
 @require_admin
 def admin_store_sync_now():
     """Force push current store files to GitHub (if configured)."""
+    data = request.get_json(silent=True) or {}
+    # Optional one-shot token from admin UI (free path — not stored on server disk)
+    one_shot = str(data.get("token") or data.get("githubToken") or "").strip()
+    if one_shot:
+        prev = os.environ.get("GITHUB_STORE_TOKEN")
+        prev_repo = os.environ.get("GITHUB_STORE_REPO")
+        try:
+            os.environ["GITHUB_STORE_TOKEN"] = one_shot
+            if not (os.environ.get("GITHUB_STORE_REPO") or "").strip():
+                os.environ["GITHUB_STORE_REPO"] = "kentmirandamain-spec/subsaverph"
+            with _STORE_LOCK:
+                result = sync_store_to_github("admin one-shot token sync")
+            return jsonify(result), (200 if result.get("ok") else 502)
+        finally:
+            if prev is None:
+                os.environ.pop("GITHUB_STORE_TOKEN", None)
+            else:
+                os.environ["GITHUB_STORE_TOKEN"] = prev
+            if prev_repo is None and not (os.environ.get("GITHUB_STORE_REPO") or "").strip():
+                pass
     if not github_store_configured():
         return (
             jsonify(
                 {
                     "error": "GitHub store sync is not configured. "
-                    "Set GITHUB_STORE_TOKEN and GITHUB_STORE_REPO on Render.",
+                    "Set GITHUB_STORE_TOKEN and GITHUB_STORE_REPO on Render, "
+                    "or paste a GitHub token in Admin (saved only in your browser).",
                 }
             ),
             400,
         )
     with _STORE_LOCK:
         result = sync_store_to_github("manual admin sync")
+    return jsonify(result), (200 if result.get("ok") else 502)
+
+
+@app.post("/api/admin/store-hydrate")
+@require_admin
+def admin_store_hydrate_now():
+    """Pull latest store JSON from GitHub into live STORE (after redeploy recovery)."""
+    with _STORE_LOCK:
+        result = hydrate_store_from_github()
     return jsonify(result), (200 if result.get("ok") else 502)
 
 

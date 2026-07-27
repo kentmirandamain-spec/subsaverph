@@ -274,22 +274,28 @@ function shell(content) {
       </aside>
       <main class="main" id="adminMain">
         ${
-          state.storeEphemeral
+          state.storeEphemeral && !getClientGithubToken()
             ? `<div class="err store-warn" style="margin:0 0 14px;padding:12px 14px;border-radius:10px;line-height:1.45">
-                <strong>Admin data can reset</strong> — this host uses temporary disk.
-                After redeploy or free-tier sleep, products, stock, settings, and images revert to git defaults.
-                <br/><span class="muted" style="display:block;margin-top:6px">${escapeHtml(
-                  state.storeHint ||
-                    "Fix: set GITHUB_STORE_TOKEN + GITHUB_STORE_REPO on Render (recommended), or mount STORE_DIR on a persistent disk."
-                )}</span>
-                <button type="button" class="btn ghost btn-sm" id="btnStoreSync" style="margin-top:10px">Sync store to GitHub now</button>
+                <strong>Free durable store — enable once</strong><br/>
+                Paste a GitHub token with <code>repo</code> access. Kept only in <strong>this browser</strong>.
+                Saves will push products/stock/settings to GitHub so free Render redeploys do not wipe them.
+                <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+                  <input id="githubStoreTokenInput" type="password" placeholder="ghp_… GitHub token" style="flex:1;min-width:220px;padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--text)" autocomplete="off" />
+                  <button type="button" class="btn solid btn-sm" id="btnSaveGithubToken">Enable free sync</button>
+                  <button type="button" class="btn ghost btn-sm" id="btnStoreSync">Sync now</button>
+                  <button type="button" class="btn ghost btn-sm" id="btnStoreHydrate">Pull from GitHub</button>
+                </div>
               </div>`
-            : state.githubStoreSync
-              ? `<div class="ok" style="margin:0 0 14px;padding:10px 12px;border-radius:10px">
-                  Store sync is on — admin saves are pushed to GitHub so redeploys keep your data.
+            : `<div class="ok" style="margin:0 0 14px;padding:10px 12px;border-radius:10px;line-height:1.4">
+                  <strong>Free store sync ready</strong> — admin data can be kept on GitHub across redeploys.
                   <button type="button" class="btn ghost btn-sm" id="btnStoreSync" style="margin-left:8px">Sync now</button>
+                  <button type="button" class="btn ghost btn-sm" id="btnStoreHydrate" style="margin-left:4px">Pull from GitHub</button>
+                  ${
+                    getClientGithubToken()
+                      ? `<button type="button" class="btn ghost btn-sm" id="btnClearGithubToken" style="margin-left:4px">Remove browser token</button>`
+                      : ""
+                  }
                 </div>`
-              : ""
         }
         ${content}
       </main>
@@ -3105,6 +3111,47 @@ function render() {
 }
 
 function bindShell() {
+  $("#btnSaveGithubToken")?.addEventListener("click", async () => {
+    const input = $("#githubStoreTokenInput");
+    const token = (input?.value || "").trim();
+    if (!token || token.length < 20) {
+      toast("Paste a valid GitHub token (ghp_…)", true);
+      return;
+    }
+    setClientGithubToken(token);
+    toast("Token saved in this browser only — syncing now…");
+    const data = await clientSyncStoreToGithub("enable free sync");
+    if (data && data.ok) {
+      state.storeEphemeral = false;
+      state.githubStoreSync = true;
+      toast(`Free sync ON — ${data.synced || 0} file(s) pushed to GitHub`);
+    } else {
+      toast((data && (data.error || data.errors?.[0])) || "Sync failed — check token has repo access", true);
+    }
+    render();
+  });
+
+  $("#btnClearGithubToken")?.addEventListener("click", () => {
+    setClientGithubToken("");
+    toast("Browser token removed");
+    render();
+  });
+
+  $("#btnStoreHydrate")?.addEventListener("click", async () => {
+    try {
+      const data = await api("/api/admin/store-hydrate", { method: "POST", body: "{}" });
+      if (data.ok) {
+        await loadAll();
+        toast(`Pulled from GitHub: ${(data.pulled || []).join(", ") || "ok"}`);
+        render();
+      } else {
+        toast((data.errors && data.errors[0]) || "Pull failed", true);
+      }
+    } catch (err) {
+      toast(err.message || "Pull failed", true);
+    }
+  });
+
   $("#btnStoreSync")?.addEventListener("click", async () => {
     const btn = $("#btnStoreSync");
     if (btn) {
@@ -3112,14 +3159,18 @@ function bindShell() {
       btn.textContent = "Syncing…";
     }
     try {
-      const data = await api("/api/admin/store-sync", { method: "POST", body: "{}" });
+      const token = getClientGithubToken();
+      const data = await api("/api/admin/store-sync", {
+        method: "POST",
+        body: JSON.stringify(token ? { token } : {}),
+      });
       if (data.ok) {
         state.githubStoreSync = true;
         state.storeEphemeral = false;
         toast(`Synced ${data.synced || 0} file(s) to GitHub — redeploys will keep admin data`);
       } else if (data.skipped) {
         toast(
-          "GitHub sync not configured. Add GITHUB_STORE_TOKEN + GITHUB_STORE_REPO on Render.",
+          "Add a GitHub token above (free) or set GITHUB_STORE_TOKEN on Render.",
           true
         );
       } else {
@@ -3133,7 +3184,7 @@ function bindShell() {
     } finally {
       if (btn) {
         btn.disabled = false;
-        btn.textContent = "Sync store to GitHub now";
+        btn.textContent = "Sync now";
       }
       render();
     }
@@ -3654,7 +3705,7 @@ function bindShell() {
       state.editing = null;
       await loadAll();
       render(); // refresh list; toast no longer re-renders
-      toast("Product saved — live on storefront");
+      await afterAdminSave("Product saved — live on storefront");
     } catch (err) {
       toast(err.message, true);
     }
@@ -3985,7 +4036,7 @@ function bindShell() {
         }
         const card = slideCard(dealId);
         if (card) delete card.dataset.clearSlide;
-        toast(`Saved slide for ${deal.brand || deal.name}`);
+        await afterAdminSave(`Saved slide for ${deal.brand || deal.name}`);
       } catch (err) {
         toast(err.message || "Save failed", true);
       } finally {
@@ -4188,9 +4239,9 @@ function bindShell() {
         }
         const card = photoCard(dealId);
         if (card) delete card.dataset.clearPhotos;
-        toast(`Saved photos for ${deal.name}`);
         refreshPhotoPreview(dealId, "mobile");
         refreshPhotoPreview(dealId, "desktop");
+        await afterAdminSave(`Saved photos for ${deal.name}`);
       } catch (err) {
         toast(err.message || "Save failed", true);
       } finally {
@@ -4297,7 +4348,7 @@ function bindShell() {
         body: JSON.stringify(payload),
       });
       state.settings = data.settings;
-      toast("All site text saved — live on storefront");
+      await afterAdminSave("All site text saved — live on storefront");
     } catch (err) {
       toast(err.message, true);
     }
@@ -4455,10 +4506,101 @@ async function loadSupportMessages() {
 
 function applyStoreMeta(me) {
   if (!me || typeof me !== "object") return;
-  state.storeEphemeral = me.storeEphemeral !== false && !me.githubStoreSync && !me.storeDir?.includes("/var/");
   if (typeof me.storeEphemeral === "boolean") state.storeEphemeral = me.storeEphemeral;
-  state.githubStoreSync = !!me.githubStoreSync;
+  state.githubStoreSync = !!me.githubStoreSync || !!getClientGithubToken();
+  // Browser token counts as free sync enabled for UI
+  if (getClientGithubToken()) {
+    state.storeEphemeral = false;
+    state.githubStoreSync = true;
+  }
   state.storeHint = me.storeHint || "";
+}
+
+const GH_STORE_LS_KEY = "subsaverph_github_store_token";
+const GH_STORE_REPO = "kentmirandamain-spec/subsaverph";
+const GH_STORE_BRANCH = "main";
+
+function getClientGithubToken() {
+  try {
+    return (localStorage.getItem(GH_STORE_LS_KEY) || "").trim();
+  } catch {
+    return "";
+  }
+}
+
+function setClientGithubToken(token) {
+  try {
+    if (token) localStorage.setItem(GH_STORE_LS_KEY, token);
+    else localStorage.removeItem(GH_STORE_LS_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Free durability: push store JSON to GitHub from the admin browser (no Render env needed). */
+async function clientPushFileToGithub(relPath, contentText, token) {
+  const api = `https://api.github.com/repos/${GH_STORE_REPO}/contents/${relPath}`;
+  const headers = {
+    Authorization: `Bearer ${token}`,
+    Accept: "application/vnd.github+json",
+    "Content-Type": "application/json",
+    "X-GitHub-Api-Version": "2022-11-28",
+  };
+  let sha = null;
+  try {
+    const getRes = await fetch(`${api}?ref=${GH_STORE_BRANCH}`, { headers });
+    if (getRes.ok) {
+      const data = await getRes.json();
+      sha = data.sha || null;
+    }
+  } catch {
+    /* create new */
+  }
+  const body = {
+    message: `chore(store): admin save ${relPath}`,
+    content: btoa(unescape(encodeURIComponent(contentText))),
+    branch: GH_STORE_BRANCH,
+  };
+  if (sha) body.sha = sha;
+  const putRes = await fetch(api, { method: "PUT", headers, body: JSON.stringify(body) });
+  if (!putRes.ok) {
+    const err = await putRes.text();
+    throw new Error(err.slice(0, 200) || `GitHub HTTP ${putRes.status}`);
+  }
+  return true;
+}
+
+/** After admin saves: push live store to GitHub via server using browser-held token (free). */
+async function clientSyncStoreToGithub(reason = "admin save") {
+  const token = getClientGithubToken();
+  if (!token) return { ok: false, skipped: true, reason: "no_client_token" };
+  try {
+    const data = await api("/api/admin/store-sync", {
+      method: "POST",
+      body: JSON.stringify({ token, reason }),
+    });
+    if (data && data.ok) {
+      state.githubStoreSync = true;
+      state.storeEphemeral = false;
+    }
+    return data || { ok: false };
+  } catch (e) {
+    return { ok: false, error: e.message || String(e) };
+  }
+}
+
+async function afterAdminSave(msg) {
+  const sync = await clientSyncStoreToGithub(msg || "admin save");
+  if (sync && sync.ok) {
+    toast(`${msg || "Saved"} · synced to GitHub (keeps free redeploys)`);
+  } else if (sync && sync.skipped) {
+    toast(msg || "Saved");
+  } else {
+    toast(
+      `${msg || "Saved"} · GitHub sync failed: ${(sync && (sync.error || (sync.errors && sync.errors[0]))) || "check token"}`,
+      true
+    );
+  }
 }
 
 async function boot() {
