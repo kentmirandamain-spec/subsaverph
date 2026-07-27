@@ -345,7 +345,7 @@
     "active": true,
     "imageMobile": "/assets/products/photo-netflix.png?v=officialm3",
     "imageMobileSlide": "/assets/products/photo-netflix-slide.png?v=officialm3",
-    "imageDesktop": "/assets/products/logos/brand-netflix-fixed.svg?v=official3",
+    "imageDesktop": "/assets/products/custom/netflix-prem-imageDesktop.png?v=a53e5ce9",
     "imageDesktopSlide": "/assets/products/custom/netflix-prem-imageDesktopSlide.png?v=202a592c",
     "imageMobileFit": "cover",
     "imageDesktopFit": "contain",
@@ -357,7 +357,7 @@
     "imageDesktopSlidePos": "center center",
     "image": "/assets/products/photo-netflix.png?v=officialm3",
     "imageSlide": "/assets/products/photo-netflix-slide.png?v=officialm3",
-    "logo": "/assets/products/logos/brand-netflix-fixed.svg?v=official3",
+    "logo": "/assets/products/custom/netflix-prem-imageDesktop.png?v=a53e5ce9",
     "imageBg": "/assets/products/plate-netflix.png",
     "brandColor": "#000000"
   },
