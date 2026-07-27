@@ -1303,13 +1303,13 @@ function viewHome() {
   const slides = [];
   for (const brand of brandOrder) {
     const deal = all.find((d) => d.brand === brand);
-    if (deal) {
+    if (deal && !isSoldOut(deal)) {
       slides.push(deal);
       seenBrands.add(brand);
     }
   }
   for (const d of all) {
-    if (d.brand && !seenBrands.has(d.brand)) {
+    if (d.brand && !seenBrands.has(d.brand) && !isSoldOut(d)) {
       slides.push(d);
       seenBrands.add(d.brand);
     }
