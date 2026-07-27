@@ -276,19 +276,22 @@ function shell(content) {
         ${
           state.githubStoreSync || !state.storeEphemeral || getClientGithubToken()
             ? `<div class="ok" style="margin:0 0 14px;padding:10px 12px;border-radius:10px;line-height:1.4">
-                  <strong>Free store sync is ON</strong> — products, stock, and settings are saved to GitHub so free redeploys keep them.
+                  <strong>Free store sync is ON</strong> — products, stock, and settings are kept on GitHub across free redeploys.
                   <button type="button" class="btn ghost btn-sm" id="btnStoreSync" style="margin-left:8px">Sync now</button>
                   <button type="button" class="btn ghost btn-sm" id="btnStoreHydrate" style="margin-left:4px">Pull from GitHub</button>
                 </div>`
             : `<div class="err store-warn" style="margin:0 0 14px;padding:12px 14px;border-radius:10px;line-height:1.45">
-                <strong>Free durable store — enable once after redeploy</strong><br/>
-                Paste a GitHub <code>repo</code> token, then click <strong>Enable free sync</strong>.
-                Token stays in this browser (and on the server until the next free redeploy).
+                <strong>Free durable store — enable once in this browser</strong><br/>
+                1) Create a GitHub token with <code>repo</code> access<br/>
+                2) Paste it below → <strong>Enable free sync</strong><br/>
+                Token is saved in <strong>this browser only</strong> (survives redeploys). The server also remembers it until the next free redeploy.
+                After that, every Save pushes products/stock/settings to GitHub automatically.
                 <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;align-items:center">
-                  <input id="githubStoreTokenInput" type="password" placeholder="ghp_… GitHub token" style="flex:1;min-width:220px;padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--text)" autocomplete="off" />
+                  <input id="githubStoreTokenInput" type="password" placeholder="ghp_… or github_pat_…" style="flex:1;min-width:220px;padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--text)" autocomplete="off" />
                   <button type="button" class="btn solid btn-sm" id="btnSaveGithubToken">Enable free sync</button>
                   <button type="button" class="btn ghost btn-sm" id="btnStoreHydrate">Pull from GitHub</button>
                 </div>
+                <p class="muted" style="margin:10px 0 0;font-size:0.8rem">Token: GitHub → Settings → Developer settings → Personal access tokens → generate with <code>repo</code>.</p>
               </div>`
         }
         ${content}
