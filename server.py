@@ -5258,19 +5258,22 @@ def admin_me():
 @app.post("/api/admin/store-sync")
 @require_admin
 def admin_store_sync_now():
-    """Force push current store files to GitHub (if configured)."""
+    """
+    Push store files to GitHub.
+    Default: queue in background (avoids Cloudflare/Render 502 on long sync).
+    Pass {"wait": true} to run inline (explicit Sync now button).
+    """
     data = request.get_json(silent=True) or {}
-    # Optional one-shot token from admin UI (free path — not stored on server disk)
+    wait = bool(data.get("wait"))
+    reason = str(data.get("reason") or "manual admin sync").strip()[:80] or "manual admin sync"
+    # Optional one-shot token from admin UI (free path)
     one_shot = str(data.get("token") or data.get("githubToken") or "").strip()
     if one_shot:
-        # Keep token for this Render instance so later saves sync without re-pasting
         _save_github_store_token(one_shot)
         if not (os.environ.get("GITHUB_STORE_REPO") or "").strip():
             os.environ["GITHUB_STORE_REPO"] = "kentmirandamain-spec/subsaverph"
         os.environ["GITHUB_STORE_TOKEN"] = one_shot
-        with _STORE_LOCK:
-            result = sync_store_to_github("admin enable free sync")
-        return jsonify(result), (200 if result.get("ok") else 502)
+        reason = "admin enable free sync"
     if not github_store_configured():
         return (
             jsonify(
@@ -5282,8 +5285,11 @@ def admin_store_sync_now():
             ),
             400,
         )
+    if not wait:
+        _schedule_github_store_sync(reason)
+        return jsonify({"ok": True, "queued": True, "reason": reason})
     with _STORE_LOCK:
-        result = sync_store_to_github("manual admin sync")
+        result = sync_store_to_github(reason)
     return jsonify(result), (200 if result.get("ok") else 502)
 
 

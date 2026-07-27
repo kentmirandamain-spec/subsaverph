@@ -3157,14 +3157,19 @@ function bindShell() {
     }
     try {
       const token = getClientGithubToken();
+      // Explicit button: wait for result when possible, but fall back to queued
       const data = await api("/api/admin/store-sync", {
         method: "POST",
-        body: JSON.stringify(token ? { token } : {}),
+        body: JSON.stringify(token ? { token, wait: false, reason: "manual Sync now" } : { wait: false, reason: "manual Sync now" }),
       });
-      if (data.ok) {
+      if (data.ok || data.queued) {
         state.githubStoreSync = true;
         state.storeEphemeral = false;
-        toast(`Synced ${data.synced || 0} file(s) to GitHub — redeploys will keep admin data`);
+        toast(
+          data.queued
+            ? "GitHub sync started in the background — check GitHub data/store in ~30s"
+            : `Synced ${data.synced || 0} file(s) to GitHub`
+        );
       } else if (data.skipped) {
         toast(
           "Add a GitHub token above (free) or set GITHUB_STORE_TOKEN on Render.",
@@ -3177,7 +3182,12 @@ function bindShell() {
         );
       }
     } catch (err) {
-      toast(err.message || "Store sync failed", true);
+      const m = err.message || "Store sync failed";
+      if (/502|timeout|Cloudflare|Gateway/i.test(m)) {
+        toast("Sync may still be running in the background — wait 30s and check GitHub data/store");
+      } else {
+        toast(m, true);
+      }
     } finally {
       if (btn) {
         btn.disabled = false;
@@ -4572,36 +4582,56 @@ async function clientPushFileToGithub(relPath, contentText, token) {
   return true;
 }
 
-/** After admin saves: push live store to GitHub via server using browser-held token (free). */
-async function clientSyncStoreToGithub(reason = "admin save") {
+/**
+ * Queue GitHub store sync (background — avoids Cloudflare 502 on long pushes).
+ * Save already succeeded; sync is best-effort.
+ */
+async function clientSyncStoreToGithub(reason = "admin save", { wait = false } = {}) {
   const token = getClientGithubToken();
-  if (!token) return { ok: false, skipped: true, reason: "no_client_token" };
+  // Server may already have instance token from Enable free sync
+  const body = { reason, wait: !!wait };
+  if (token) body.token = token;
   try {
     const data = await api("/api/admin/store-sync", {
       method: "POST",
-      body: JSON.stringify({ token, reason }),
+      body: JSON.stringify(body),
     });
-    if (data && data.ok) {
+    if (data && (data.ok || data.queued)) {
       state.githubStoreSync = true;
       state.storeEphemeral = false;
     }
     return data || { ok: false };
   } catch (e) {
-    return { ok: false, error: e.message || String(e) };
+    const msg = e.message || String(e);
+    // 502/timeout while queuing is not a failed product save
+    if (/502|timeout|Cloudflare|Gateway/i.test(msg)) {
+      return { ok: true, queued: true, softError: msg };
+    }
+    return { ok: false, error: msg };
   }
 }
 
 async function afterAdminSave(msg) {
-  const sync = await clientSyncStoreToGithub(msg || "admin save");
-  if (sync && sync.ok) {
-    toast(`${msg || "Saved"} · synced to GitHub (keeps free redeploys)`);
-  } else if (sync && sync.skipped) {
-    toast(msg || "Saved");
-  } else {
-    toast(
-      `${msg || "Saved"} · GitHub sync failed: ${(sync && (sync.error || (sync.errors && sync.errors[0]))) || "check token"}`,
-      true
-    );
+  // Product/settings save already wrote to the live server.
+  // GitHub sync is best-effort (and usually already scheduled by the API).
+  toast(msg || "Saved");
+  try {
+    const sync = await clientSyncStoreToGithub(msg || "admin save", { wait: false });
+    if (sync && sync.skipped) return;
+    if (sync && (sync.ok || sync.queued) && !sync.softError) {
+      // Quiet success — don't spam a second toast
+      return;
+    }
+    if (sync && sync.softError) {
+      // Ignore — background sync may still complete; avoid scary red error after a good save
+      return;
+    }
+    if (sync && !sync.ok && sync.error && !/no_client_token|not configured/i.test(sync.error)) {
+      // Non-blocking note only
+      console.warn("GitHub store sync:", sync.error);
+    }
+  } catch (e) {
+    console.warn("GitHub store sync:", e);
   }
 }
 
