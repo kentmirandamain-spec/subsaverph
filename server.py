@@ -4980,7 +4980,41 @@ def admin_update_deal(deal_id: str):
     deals = load_deals(include_inactive=True)
     for i, d in enumerate(deals):
         if d.get("id") == deal_id:
-            updated = normalize_deal({**d, **data}, deal_id)
+            merged = {**d, **data}
+            # Never wipe stored product images with blank form fields unless
+            # admin explicitly clears (_clearImages / clearImages).
+            force_clear = bool(
+                data.get("_clearImages")
+                or data.get("clearImages")
+                or data.get("clearPhotos")
+            )
+            if not force_clear:
+                for key in (
+                    "imageMobile",
+                    "imageMobileSlide",
+                    "imageDesktop",
+                    "imageDesktopSlide",
+                    "image",
+                    "imageSlide",
+                    "logo",
+                ):
+                    new_v = str(merged.get(key) or "").strip()
+                    old_v = str(d.get(key) or "").strip()
+                    if not new_v and old_v:
+                        merged[key] = old_v
+            else:
+                for key in (
+                    "imageMobile",
+                    "imageMobileSlide",
+                    "imageDesktop",
+                    "imageDesktopSlide",
+                    "image",
+                    "imageSlide",
+                    "logo",
+                ):
+                    if key in data:
+                        merged[key] = str(data.get(key) or "").strip()
+            updated = normalize_deal(merged, deal_id)
             deals[i] = updated
             save_deals(deals)
             return jsonify({"ok": True, "deal": updated})

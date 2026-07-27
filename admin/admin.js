@@ -2795,19 +2795,44 @@ function productImageEditorHTML(deal) {
   `;
 }
 
+/** Keep stored image when form field is blank (prevents accidental wipe on product save). */
+function keepImageField(formVal, existingVal, forceClear) {
+  if (forceClear) return "";
+  const v = String(formVal ?? "").trim();
+  if (v) return v;
+  return String(existingVal ?? "").trim();
+}
+
 function formToDeal(fd, existing) {
-  const imageMobile = String(fd.get("imageMobile") || "").trim();
-  const imageMobileSlide = String(fd.get("imageMobileSlide") || "").trim();
-  const imageDesktop = String(fd.get("imageDesktop") || "").trim();
-  const imageDesktopSlide = String(fd.get("imageDesktopSlide") || "").trim();
-  const imageMobileFit = String(fd.get("imageMobileFit") || "cover").trim();
-  const imageDesktopFit = String(fd.get("imageDesktopFit") || "contain").trim();
-  const imageMobilePos = String(fd.get("imageMobilePos") || "center center").trim();
-  const imageDesktopPos = String(fd.get("imageDesktopPos") || "center center").trim();
-  const imageMobileSlideFit = String(fd.get("imageMobileSlideFit") || imageMobileFit || "cover").trim();
-  const imageDesktopSlideFit = String(fd.get("imageDesktopSlideFit") || imageDesktopFit || "contain").trim();
-  const imageMobileSlidePos = String(fd.get("imageMobileSlidePos") || imageMobilePos || "center center").trim();
-  const imageDesktopSlidePos = String(fd.get("imageDesktopSlidePos") || imageDesktopPos || "center center").trim();
+  const forceClearImages = !!(existing && existing._clearImages);
+  const imageMobile = keepImageField(fd.get("imageMobile"), existing?.imageMobile || existing?.image, forceClearImages);
+  const imageMobileSlide = keepImageField(
+    fd.get("imageMobileSlide"),
+    existing?.imageMobileSlide || existing?.imageSlide,
+    forceClearImages
+  );
+  const imageDesktop = keepImageField(fd.get("imageDesktop"), existing?.imageDesktop || existing?.logo, forceClearImages);
+  const imageDesktopSlide = keepImageField(
+    fd.get("imageDesktopSlide"),
+    existing?.imageDesktopSlide,
+    forceClearImages
+  );
+  const imageMobileFit = String(fd.get("imageMobileFit") || existing?.imageMobileFit || "cover").trim();
+  const imageDesktopFit = String(fd.get("imageDesktopFit") || existing?.imageDesktopFit || "contain").trim();
+  const imageMobilePos = String(fd.get("imageMobilePos") || existing?.imageMobilePos || "center center").trim();
+  const imageDesktopPos = String(fd.get("imageDesktopPos") || existing?.imageDesktopPos || "center center").trim();
+  const imageMobileSlideFit = String(
+    fd.get("imageMobileSlideFit") || existing?.imageMobileSlideFit || imageMobileFit || "cover"
+  ).trim();
+  const imageDesktopSlideFit = String(
+    fd.get("imageDesktopSlideFit") || existing?.imageDesktopSlideFit || imageDesktopFit || "contain"
+  ).trim();
+  const imageMobileSlidePos = String(
+    fd.get("imageMobileSlidePos") || existing?.imageMobileSlidePos || imageMobilePos || "center center"
+  ).trim();
+  const imageDesktopSlidePos = String(
+    fd.get("imageDesktopSlidePos") || existing?.imageDesktopSlidePos || imageDesktopPos || "center center"
+  ).trim();
   const brandColor = String(fd.get("brandColor") || existing?.brandColor || "").trim();
   return {
     id: String(fd.get("id") || existing?.id || "").trim(),
@@ -3433,6 +3458,7 @@ function bindShell() {
           body: JSON.stringify(payload),
         });
       }
+      if (state.editing) state.editing._clearImages = false;
       state.editing = null;
       await loadAll();
       render(); // refresh list; toast no longer re-renders
@@ -3616,6 +3642,7 @@ function bindShell() {
       if (el) el.value = "";
     });
     if (state.editing) {
+      state.editing._clearImages = true;
       state.editing.imageMobile = "";
       state.editing.imageMobileSlide = "";
       state.editing.imageDesktop = "";
@@ -3628,7 +3655,7 @@ function bindShell() {
     setPreview("previewDesktop", "", "contain", "center center");
     setPreview("previewMobileSlide", "", "cover", "center center");
     setPreview("previewDesktopSlide", "", "contain", "center center");
-    toast("Cleared — save product to apply on storefront");
+    toast("Cleared — save product to apply default brand photos");
   });
 
   // Live preview for slide fields inside product modal
@@ -3726,20 +3753,31 @@ function bindShell() {
       const deal = (state.deals || []).find((d) => d.id === dealId);
       if (!deal) return toast("Product not found", true);
       const patch = readSlideFields(dealId);
+      const forceClear = !!slideCard(dealId)?.dataset.clearSlide;
+      const imageMobileSlide = keepImageField(
+        patch.imageMobileSlide,
+        deal.imageMobileSlide || deal.imageSlide,
+        forceClear
+      );
+      const imageDesktopSlide = keepImageField(
+        patch.imageDesktopSlide,
+        deal.imageDesktopSlide,
+        forceClear
+      );
       const payload = {
         ...deal,
-        imageMobileSlide: patch.imageMobileSlide || "",
-        imageDesktopSlide: patch.imageDesktopSlide || "",
-        imageMobileSlideFit: patch.imageMobileSlideFit || "cover",
-        imageDesktopSlideFit: patch.imageDesktopSlideFit || "contain",
-        imageMobileSlidePos: patch.imageMobileSlidePos || "center center",
-        imageDesktopSlidePos: patch.imageDesktopSlidePos || "center center",
+        imageMobileSlide,
+        imageDesktopSlide,
+        imageMobileSlideFit: patch.imageMobileSlideFit || deal.imageMobileSlideFit || "cover",
+        imageDesktopSlideFit: patch.imageDesktopSlideFit || deal.imageDesktopSlideFit || "contain",
+        imageMobileSlidePos: patch.imageMobileSlidePos || deal.imageMobileSlidePos || "center center",
+        imageDesktopSlidePos: patch.imageDesktopSlidePos || deal.imageDesktopSlidePos || "center center",
         brandColor: patch.brandColor || deal.brandColor || "",
         // keep card images
         imageMobile: deal.imageMobile || deal.image || "",
         imageDesktop: deal.imageDesktop || deal.logo || "",
         image: deal.imageMobile || deal.image || "",
-        imageSlide: patch.imageMobileSlide || deal.imageSlide || "",
+        imageSlide: imageMobileSlide || deal.imageSlide || "",
         logo: deal.imageDesktop || deal.logo || "",
       };
       btn.disabled = true;
@@ -3752,6 +3790,8 @@ function bindShell() {
           const i = state.deals.findIndex((d) => d.id === dealId);
           if (i >= 0) state.deals[i] = data.deal;
         }
+        const card = slideCard(dealId);
+        if (card) delete card.dataset.clearSlide;
         toast(`Saved slide for ${deal.brand || deal.name}`);
       } catch (err) {
         toast(err.message || "Save failed", true);
@@ -3766,12 +3806,13 @@ function bindShell() {
       const dealId = btn.getAttribute("data-clear-slide");
       const card = slideCard(dealId);
       if (!card) return;
+      card.dataset.clearSlide = "1";
       card.querySelectorAll('[data-field="imageMobileSlide"], [data-field="imageDesktopSlide"]').forEach((el) => {
         el.value = "";
       });
       refreshSlidePreview(dealId, "mobile");
       refreshSlidePreview(dealId, "desktop");
-      toast("Cleared — click Save slide to apply");
+      toast("Cleared — click Save slide to apply defaults");
     });
   });
 
@@ -3923,18 +3964,21 @@ function bindShell() {
       const deal = (state.deals || []).find((d) => d.id === dealId);
       if (!deal) return toast("Product not found", true);
       const patch = readPhotoFields(dealId);
+      const forceClear = !!photoCard(dealId)?.dataset.clearPhotos;
+      const imageMobile = keepImageField(patch.imageMobile, deal.imageMobile || deal.image, forceClear);
+      const imageDesktop = keepImageField(patch.imageDesktop, deal.imageDesktop || deal.logo, forceClear);
       const payload = {
         ...deal,
-        imageMobile: patch.imageMobile || "",
-        imageDesktop: patch.imageDesktop || "",
-        imageMobileFit: patch.imageMobileFit || "cover",
-        imageDesktopFit: patch.imageDesktopFit || "cover",
-        imageMobilePos: patch.imageMobilePos || "center center",
-        imageDesktopPos: patch.imageDesktopPos || "center center",
+        imageMobile,
+        imageDesktop,
+        imageMobileFit: patch.imageMobileFit || deal.imageMobileFit || "cover",
+        imageDesktopFit: patch.imageDesktopFit || deal.imageDesktopFit || "cover",
+        imageMobilePos: patch.imageMobilePos || deal.imageMobilePos || "center center",
+        imageDesktopPos: patch.imageDesktopPos || deal.imageDesktopPos || "center center",
         brandColor: patch.brandColor || deal.brandColor || "",
-        image: patch.imageMobile || deal.image || "",
-        logo: patch.imageDesktop || deal.logo || "",
-        imageSlide: deal.imageMobileSlide || deal.imageSlide || patch.imageMobile || "",
+        image: imageMobile,
+        logo: imageDesktop,
+        imageSlide: deal.imageMobileSlide || deal.imageSlide || imageMobile || "",
         imageMobileSlide: deal.imageMobileSlide || "",
         imageDesktopSlide: deal.imageDesktopSlide || "",
       };
@@ -3948,6 +3992,8 @@ function bindShell() {
           const i = state.deals.findIndex((d) => d.id === dealId);
           if (i >= 0) state.deals[i] = data.deal;
         }
+        const card = photoCard(dealId);
+        if (card) delete card.dataset.clearPhotos;
         toast(`Saved photos for ${deal.name}`);
         refreshPhotoPreview(dealId, "mobile");
         refreshPhotoPreview(dealId, "desktop");
@@ -3964,6 +4010,7 @@ function bindShell() {
       const dealId = btn.getAttribute("data-clear-photos");
       const card = photoCard(dealId);
       if (!card) return;
+      card.dataset.clearPhotos = "1";
       card.querySelectorAll('[data-photo-field="imageMobile"], [data-photo-field="imageDesktop"]').forEach((el) => {
         el.value = "";
       });

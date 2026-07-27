@@ -205,22 +205,21 @@ function applyOfficialPhotos(d) {
     (brand && OFFICIAL_BRAND_PHOTO_SLIDE[brand]) ||
     defPhoto ||
     "";
-  // Normalize aliases from admin dual fields
-  if (!d.imageMobile && d.image) d.imageMobile = d.image;
-  if (!d.imageDesktop && d.logo && isProductPhoto(d.logo)) d.imageDesktop = d.logo;
-  if (!d.imageMobileSlide && d.imageSlide) d.imageMobileSlide = d.imageSlide;
-  // Only fill empties — desktop uses official photos too (not SVG logos)
-  if (!d.imageMobile && defPhoto) d.imageMobile = defPhoto;
-  if (!d.image && (d.imageMobile || defPhoto)) d.image = d.imageMobile || defPhoto;
-  if (!d.imageMobileSlide && defSlide) d.imageMobileSlide = defSlide;
-  if (!d.imageSlide && (d.imageMobileSlide || defSlide)) {
+  // Normalize aliases from admin dual fields (do not replace non-empty admin values)
+  if (!String(d.imageMobile || "").trim() && d.image) d.imageMobile = d.image;
+  if (!String(d.imageDesktop || "").trim() && d.logo && isMediaUrl(d.logo)) d.imageDesktop = d.logo;
+  if (!String(d.imageMobileSlide || "").trim() && d.imageSlide) d.imageMobileSlide = d.imageSlide;
+  // Only fill truly empty fields — never overwrite admin URLs
+  if (!String(d.imageMobile || "").trim() && defPhoto) d.imageMobile = defPhoto;
+  if (!String(d.image || "").trim() && (d.imageMobile || defPhoto)) d.image = d.imageMobile || defPhoto;
+  if (!String(d.imageMobileSlide || "").trim() && defSlide) d.imageMobileSlide = defSlide;
+  if (!String(d.imageSlide || "").trim() && (d.imageMobileSlide || defSlide)) {
     d.imageSlide = d.imageMobileSlide || defSlide;
   }
-  if (!d.imageDesktop && defPhoto) d.imageDesktop = defPhoto;
-  if (!d.logo && (d.imageDesktop || defPhoto)) d.logo = d.imageDesktop || defPhoto;
-  if (!d.imageDesktopSlide && defSlide) d.imageDesktopSlide = defSlide;
+  if (!String(d.imageDesktop || "").trim() && defPhoto) d.imageDesktop = defPhoto;
+  if (!String(d.logo || "").trim() && (d.imageDesktop || defPhoto)) d.logo = d.imageDesktop || defPhoto;
+  if (!String(d.imageDesktopSlide || "").trim() && defSlide) d.imageDesktopSlide = defSlide;
   if (!d.imageMobileFit) d.imageMobileFit = "cover";
-  /* Desktop official photos: cover fills the plate cleanly */
   if (!d.imageDesktopFit) d.imageDesktopFit = "cover";
   if (!d.imageMobilePos) d.imageMobilePos = "center center";
   if (!d.imageDesktopPos) d.imageDesktopPos = "center center";
@@ -239,15 +238,12 @@ function isMediaUrl(src) {
 
 /**
  * Desktop media (cards / detail / slider).
- * Any admin-set imageDesktop always wins; else official product photos.
+ * Any admin-set imageDesktop / logo always wins; else official product photos.
  */
 function productLogo(d) {
   if (!d) return "";
-  /* Admin desktop image — always preferred when set */
-  if (d.imageDesktop && isMediaUrl(d.imageDesktop)) return String(d.imageDesktop);
-  const logo = d.logo ? String(d.logo) : "";
-  /* Custom uploads / external URLs on legacy logo field */
-  if (logo && (/\/custom\//i.test(logo) || /^https?:\/\//i.test(logo))) return logo;
+  const admin = adminMediaOr(d, "imageDesktop", "logo");
+  if (admin) return admin;
   /* Official product photos for every brand on desktop */
   const id = String(d.id || "");
   if (id && OFFICIAL_PRODUCT_PHOTO[id]) return OFFICIAL_PRODUCT_PHOTO[id];
@@ -255,7 +251,6 @@ function productLogo(d) {
   if (brand && OFFICIAL_BRAND_PHOTO[brand]) return OFFICIAL_BRAND_PHOTO[brand];
   if (brand && OFFICIAL_BRAND_COVER[brand]) return OFFICIAL_BRAND_COVER[brand];
   if (brand && OFFICIAL_BRAND_LOGO[brand]) return OFFICIAL_BRAND_LOGO[brand];
-  if (logo) return logo;
   const key = String(d.brand || "").toLowerCase().replace(/\s+/g, "");
   if (key) return `/assets/products/logos/brand-${key === "xai" ? "xai" : key}-fixed.svg?v=official3`;
   if (d.id) return `/assets/products/${d.id}.png`;
@@ -275,11 +270,11 @@ function brandUsesCover(brand) {
   return Boolean(isMobileView() && brandKey(brand) && OFFICIAL_BRAND_PHOTO[brandKey(brand)]);
 }
 
-/** Mobile card / detail photo. Admin imageMobile wins. */
+/** Mobile card / detail photo. Admin imageMobile / image always wins. */
 function productPhotoSrc(d) {
   if (!d) return "";
-  if (d.imageMobile && isMediaUrl(d.imageMobile)) return String(d.imageMobile);
-  if (d.image && isMediaUrl(d.image)) return String(d.image);
+  const admin = adminMediaOr(d, "imageMobile", "image");
+  if (admin) return admin;
   const id = String(d.id || "");
   if (id && OFFICIAL_PRODUCT_PHOTO[id]) return OFFICIAL_PRODUCT_PHOTO[id];
   const brand = brandKey(d.brand);
@@ -287,21 +282,35 @@ function productPhotoSrc(d) {
   return "";
 }
 
+/** True when the URL is an admin-set media path (upload, absolute, or site path). */
 function isAdminCustomMedia(url) {
-  const s = String(url || "");
-  return /\/custom\//i.test(s) || /^https?:\/\//i.test(s);
+  if (!isMediaUrl(url)) return false;
+  const s = String(url || "").trim();
+  // Any explicitly saved media wins over rotating official defaults
+  if (/\/custom\//i.test(s) || /^https?:\/\//i.test(s) || s.startsWith("/")) return true;
+  return isProductPhoto(s);
 }
 
-/** Mobile homepage slider image — clean centered logos by default. */
+/**
+ * Prefer any non-empty admin image field; only then fall back to official art.
+ * Prevents storefront from “changing” images back after admin sets them.
+ */
+function adminMediaOr(d, ...fields) {
+  if (!d) return "";
+  for (const key of fields) {
+    const v = d[key];
+    if (v && isMediaUrl(v)) return String(v).trim();
+  }
+  return "";
+}
+
+/** Mobile homepage slider — admin image always wins when set. */
 function productPhotoSlideSrc(d) {
   if (!d) return "";
-  /* Admin custom slide only */
-  if (d.imageMobileSlide && isMediaUrl(d.imageMobileSlide) && isAdminCustomMedia(d.imageMobileSlide)) {
-    return String(d.imageMobileSlide);
-  }
-  if (d.imageSlide && isMediaUrl(d.imageSlide) && isAdminCustomMedia(d.imageSlide)) {
-    return String(d.imageSlide);
-  }
+  const admin =
+    adminMediaOr(d, "imageMobileSlide", "imageSlide") ||
+    adminMediaOr(d, "imageMobile", "image");
+  if (admin) return admin;
   const brand = brandKey(d.brand);
   if (brand && OFFICIAL_BRAND_PHOTO_SLIDE[brand]) return OFFICIAL_BRAND_PHOTO_SLIDE[brand];
   const id = String(d.id || "");
@@ -309,16 +318,14 @@ function productPhotoSlideSrc(d) {
   return productPhotoSrc(d);
 }
 
-/** Desktop homepage slider image — clean centered logos by default. */
+/** Desktop homepage slider — admin image always wins when set. */
 function productDesktopSlideSrc(d) {
   if (!d) return "";
-  if (d.imageDesktopSlide && isMediaUrl(d.imageDesktopSlide) && isAdminCustomMedia(d.imageDesktopSlide)) {
-    return String(d.imageDesktopSlide);
-  }
-  /* Admin desktop photo if custom */
-  if (d.imageDesktop && isMediaUrl(d.imageDesktop) && isAdminCustomMedia(d.imageDesktop)) {
-    return String(d.imageDesktop);
-  }
+  const admin =
+    adminMediaOr(d, "imageDesktopSlide") ||
+    adminMediaOr(d, "imageDesktop", "logo") ||
+    adminMediaOr(d, "imageMobileSlide", "imageSlide");
+  if (admin) return admin;
   const brand = brandKey(d.brand);
   if (brand && OFFICIAL_BRAND_PHOTO_SLIDE[brand]) return OFFICIAL_BRAND_PHOTO_SLIDE[brand];
   const id = String(d.id || "");
