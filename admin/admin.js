@@ -2216,9 +2216,8 @@ function dealModal(deal) {
 
         <h3 class="settings-h" style="margin-top:16px">Product images — mobile &amp; desktop</h3>
         <p class="muted" style="margin-top:0">
-          Set separate images for phone and computer. Upload a file or paste a URL.
-          Leave a field empty to use the default brand art. Fit: <strong>contain</strong> shows the full logo;
-          <strong>cover</strong> fills the frame (may crop edges).
+          Image URLs are <strong>optional</strong>. Upload a file or paste a URL, or leave empty to use the default brand photo.
+          Fit: <strong>contain</strong> shows the full logo; <strong>cover</strong> fills the frame (may crop edges).
         </p>
         ${productImageEditorHTML(deal)}
 
@@ -2316,7 +2315,7 @@ function photosView() {
             </div>
             ${!mobile && def ? `<p class="muted" style="margin:0;font-size:0.75rem">Showing default · upload or paste URL to override</p>` : ""}
             <label>Mobile image URL
-              <input type="url" data-photo-field="imageMobile" data-deal="${escapeAttr(d.id)}" value="${escapeAttr(mobile)}" placeholder="${escapeAttr(def || "https://… or /assets/…")}" />
+              <input type="text" inputmode="url" autocomplete="off" data-photo-field="imageMobile" data-deal="${escapeAttr(d.id)}" value="${escapeAttr(mobile)}" placeholder="${escapeAttr(def || "Optional — https://… or /assets/…")}" />
             </label>
             <div class="qr-upload-row">
               <label class="qr-upload-label">Upload mobile
@@ -2353,7 +2352,7 @@ function photosView() {
             </div>
             ${!desktop && def ? `<p class="muted" style="margin:0;font-size:0.75rem">Showing default · upload or paste URL to override</p>` : ""}
             <label>Desktop image URL
-              <input type="url" data-photo-field="imageDesktop" data-deal="${escapeAttr(d.id)}" value="${escapeAttr(desktop)}" placeholder="${escapeAttr(def || "https://… or /assets/…")}" />
+              <input type="text" inputmode="url" autocomplete="off" data-photo-field="imageDesktop" data-deal="${escapeAttr(d.id)}" value="${escapeAttr(desktop)}" placeholder="${escapeAttr(def || "Optional — https://… or /assets/…")}" />
             </label>
             <div class="qr-upload-row">
               <label class="qr-upload-label">Upload desktop
@@ -2463,7 +2462,7 @@ function slidesView() {
               }
             </div>
             <label>Image URL
-              <input type="url" data-field="imageMobileSlide" data-deal="${escapeAttr(d.id)}" value="${escapeAttr(mobileSlide)}" placeholder="Leave empty to use card image" />
+              <input type="text" inputmode="url" autocomplete="off" data-field="imageMobileSlide" data-deal="${escapeAttr(d.id)}" value="${escapeAttr(mobileSlide)}" placeholder="Optional — leave empty to use card image" />
             </label>
             <div class="qr-upload-row">
               <label class="qr-upload-label">Upload
@@ -2501,7 +2500,7 @@ function slidesView() {
               }
             </div>
             <label>Image URL
-              <input type="url" data-field="imageDesktopSlide" data-deal="${escapeAttr(d.id)}" value="${escapeAttr(desktopSlide)}" placeholder="Leave empty to use card image" />
+              <input type="text" inputmode="url" autocomplete="off" data-field="imageDesktopSlide" data-deal="${escapeAttr(d.id)}" value="${escapeAttr(desktopSlide)}" placeholder="Optional — leave empty to use card image" />
             </label>
             <div class="qr-upload-row">
               <label class="qr-upload-label">Upload
@@ -2592,8 +2591,8 @@ function productImageEditorHTML(deal) {
             ${preview("previewMobile", mobile, mFit, mPos, "Mobile")}
           </div>
           <div class="product-image-fields">
-            <label>Mobile card / detail image URL
-              <input name="imageMobile" id="dealImageMobile" type="url" placeholder="https://… or /assets/…" value="${escapeAttr(mobile)}" />
+            <label>Mobile card / detail image URL <span class="muted">(optional)</span>
+              <input name="imageMobile" id="dealImageMobile" type="text" inputmode="url" autocomplete="off" placeholder="Optional — empty uses default brand photo" value="${escapeAttr(mobile)}" />
             </label>
             <div class="qr-upload-row product-image-upload-row">
               <label class="qr-upload-label">Upload mobile image
@@ -2624,8 +2623,8 @@ function productImageEditorHTML(deal) {
           </div>
           <div class="product-image-fields">
             <strong style="font-size:0.85rem">Homepage slider (mobile)</strong>
-            <label>Mobile slide image URL
-              <input name="imageMobileSlide" id="dealImageMobileSlide" type="url" placeholder="Leave empty to use card image" value="${escapeAttr(mobileSlide)}" />
+            <label>Mobile slide image URL <span class="muted">(optional)</span>
+              <input name="imageMobileSlide" id="dealImageMobileSlide" type="text" inputmode="url" autocomplete="off" placeholder="Optional — leave empty to use card image" value="${escapeAttr(mobileSlide)}" />
             </label>
             <div class="qr-upload-row product-image-upload-row">
               <label class="qr-upload-label">Upload mobile slide
@@ -2658,8 +2657,8 @@ function productImageEditorHTML(deal) {
             ${preview("previewDesktop", desktop, dFit, dPos, "Desktop")}
           </div>
           <div class="product-image-fields">
-            <label>Desktop card / detail image URL
-              <input name="imageDesktop" id="dealImageDesktop" type="url" placeholder="https://… or /assets/…" value="${escapeAttr(desktop)}" />
+            <label>Desktop card / detail image URL <span class="muted">(optional)</span>
+              <input name="imageDesktop" id="dealImageDesktop" type="text" inputmode="url" autocomplete="off" placeholder="Optional — empty uses default brand photo" value="${escapeAttr(desktop)}" />
             </label>
             <div class="qr-upload-row product-image-upload-row">
               <label class="qr-upload-label">Upload desktop image
@@ -2690,8 +2689,8 @@ function productImageEditorHTML(deal) {
           </div>
           <div class="product-image-fields">
             <strong style="font-size:0.85rem">Homepage slider (desktop)</strong>
-            <label>Desktop slide image URL
-              <input name="imageDesktopSlide" id="dealImageDesktopSlide" type="url" placeholder="Leave empty to use card image" value="${escapeAttr(desktopSlide)}" />
+            <label>Desktop slide image URL <span class="muted">(optional)</span>
+              <input name="imageDesktopSlide" id="dealImageDesktopSlide" type="text" inputmode="url" autocomplete="off" placeholder="Optional — leave empty to use card image" value="${escapeAttr(desktopSlide)}" />
             </label>
             <div class="qr-upload-row product-image-upload-row">
               <label class="qr-upload-label">Upload desktop slide
