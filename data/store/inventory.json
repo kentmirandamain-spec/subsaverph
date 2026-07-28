@@ -3,13 +3,29 @@
   "supergrok-1m": [
     {
       "code": "Username: grok.19@friendlyshare.com.ua Password: Premium@123",
-      "status": "available",
+      "status": "sold",
       "addedAt": "2026-07-27T14:36:34.226074Z",
       "username": "grok.19@friendlyshare.com.ua",
-      "password": "Premium@123"
+      "password": "Premium@123",
+      "soldAt": "2026-07-28T06:14:15.821534Z"
     }
   ],
-  "canva-pro": [],
+  "canva-pro": [
+    {
+      "code": "Username: sutaru35@outlook.com Password: emailpw----   077@outlook",
+      "status": "available",
+      "addedAt": "2026-07-28T01:36:36.589071Z",
+      "username": "sutaru35@outlook.com",
+      "password": "emailpw----   077@outlook"
+    },
+    {
+      "code": "Username: varen854@outlook.com Password: emailpw-----   077@outlook",
+      "status": "available",
+      "addedAt": "2026-07-28T01:37:02.684226Z",
+      "username": "varen854@outlook.com",
+      "password": "emailpw-----   077@outlook"
+    }
+  ],
   "canva-teams": [],
   "capcut-pro": [],
   "capcut-std": [
