@@ -1,5 +1,118 @@
 [
   {
+    "id": "PH94C7194AF7",
+    "email": "michaelbalbuenalea@gmail.com",
+    "name": "Michael Lea",
+    "currency": "PHP",
+    "items": [
+      {
+        "id": "supergrok-1m",
+        "name": "SuperGrok 1 Month Shared Account",
+        "monogram": "S1",
+        "brand": "xAI",
+        "category": "AI",
+        "qty": 1,
+        "price": 549.0,
+        "priceBase": "PHP",
+        "duration": "1 month access",
+        "delivery": "Instant access code",
+        "description": "SuperGrok monthly plan - a full 1 Month of SuperGrok at PHP 549. Ideal for heavy research, coding help, and daily use.",
+        "includes": [
+          "SuperGrok model access",
+          "1 Month full access",
+          "Higher rate limits",
+          "Priority responses",
+          "Instant digital code"
+        ],
+        "accountType": "",
+        "validity": "",
+        "howToRedeem": "1. Open the official website or app for this product.\n2. Sign in with the Username and Password from your delivery package.\n3. Do not change the password, email, or billing details.\n4. Use the account only as provided for the full access period.\n5. If login fails, contact support with your Order ID before trying other fixes.",
+        "importantNotes": "Do not change the username, email, password, billing address, or subscription plan.\nDo not share, resell, or post the login publicly.\nPersonal use only — follow the official service terms.\nBreaking these rules voids refunds and support.\nRefunds only if the product is defective or not delivered.",
+        "finePrint": "Not affiliated with xAI. Fixed PHP 549 base price (converts when you change currency).",
+        "codes": [
+          "Username: grok.19@friendlyshare.com.ua  Password: Premium@123"
+        ],
+        "credentials": [
+          {
+            "username": "grok.19@friendlyshare.com.ua",
+            "password": "Premium@123",
+            "raw": "Username: grok.19@friendlyshare.com.ua Password: Premium@123",
+            "code": ""
+          }
+        ]
+      }
+    ],
+    "cart": [
+      {
+        "id": "supergrok-1m",
+        "qty": 1
+      }
+    ],
+    "status": "paid",
+    "paymentMode": "manual_ewallet",
+    "method": "manual_gcash",
+    "providerRef": "manual-PH94C7194AF7",
+    "amountPhp": 549.0,
+    "amountFormatted": "₱549.00",
+    "payTo": {
+      "wallet": "GCash",
+      "name": "SubSaverPH",
+      "qrUrl": "/assets/qr/gcash-qr.jpg"
+    },
+    "paymentInstructions": {
+      "steps": [
+        "Open your GCash app.",
+        "Scan the QR code below (or use Scan QR in GCash).",
+        "Pay exactly ₱549.00 (SubSaverPH).",
+        "Put Order ID PH94C7194AF7 in the message / notes field if asked.",
+        "After paying, paste your payment reference below and submit.",
+        "Stock is not held until you submit your payment reference.",
+        "Delivery of login codes: usually 10–30 minutes after we verify payment."
+      ],
+      "note": "Scan the QR with your e-wallet app. Pay the exact amount and put your Order ID in the message. Codes unlock after we confirm payment.",
+      "qrUrl": "/assets/qr/gcash-qr.jpg",
+      "deliveryEta": "10–30 minutes"
+    },
+    "paymentReference": "6043356908829",
+    "paymentProofNote": "",
+    "createdAt": "2026-07-28T06:09:49.540325Z",
+    "delivery": "instant",
+    "deliveryEta": "10–30 minutes",
+    "stockHeld": true,
+    "countsAsPending": false,
+    "isIncompleteCheckout": false,
+    "message": "Payment confirmed. Login details delivered on-site and emailed to michaelbalbuenalea@gmail.com (Order ID + Payment ID included).",
+    "emailSent": true,
+    "paymentSubmittedAt": "2026-07-28T06:13:24.555513Z",
+    "ackEmailSent": true,
+    "ackEmailDetail": "{\"id\":\"4e0a91c9-97b8-4607-b879-3f23f7b74534\"}",
+    "ackEmailProvider": "resend",
+    "ackEmailSentAt": "2026-07-28T06:13:25.524402Z",
+    "ownerAlertOk": true,
+    "ownerAlertEmail": {
+      "ok": true,
+      "provider": "resend",
+      "detail": "subsaver@outlook.com: {\"id\":\"b921ffe4-e588-4bba-8bfd-58b540b4007e\"}",
+      "to": [
+        "subsaver@outlook.com",
+        "bjnkmeu5yrytilg@gmail.com"
+      ],
+      "skipped": false
+    },
+    "ownerAlertDetail": "subsaver@outlook.com: {\"id\":\"b921ffe4-e588-4bba-8bfd-58b540b4007e\"}",
+    "ownerAlertAt": "2026-07-28T06:13:25.524418Z",
+    "paidAt": "2026-07-28T06:14:15.822777Z",
+    "confirmedBy": "admin",
+    "emailProvider": "resend",
+    "emailDetail": "{\"id\":\"53f24de5-13db-47b7-937b-3004b90e2ee5\"}",
+    "emailNotified": true,
+    "emailNotifyTo": [
+      "bjnkmeu5yrytilg@gmail.com"
+    ],
+    "emailTo": "michaelbalbuenalea@gmail.com",
+    "emailSentAt": "2026-07-28T06:14:15.921304Z"
+  },
+  {
     "id": "PHB1CB5445BE",
     "email": "hold@test.com",
     "name": "H",
@@ -26,7 +139,7 @@
         "qty": 1
       }
     ],
-    "status": "payment_submitted",
+    "status": "cancelled",
     "paymentMode": "manual_ewallet",
     "method": "manual_gcash",
     "providerRef": "manual-PHB1CB5445BE",
@@ -59,9 +172,10 @@
     "stockHeld": false,
     "countsAsPending": true,
     "isIncompleteCheckout": false,
-    "message": "Payment reference received. We are verifying your transfer. Login codes are usually delivered within 10–30 minutes after confirmation. Stock is reserved when we confirm your payment.",
+    "message": "Order cancelled.",
     "emailSent": false,
-    "paymentSubmittedAt": "2026-07-23T08:44:59.284191Z"
+    "paymentSubmittedAt": "2026-07-23T08:44:59.284191Z",
+    "cancelledAt": "2026-07-28T05:00:49.437413Z"
   },
   {
     "id": "PH5A43BB4695",
@@ -90,7 +204,7 @@
         "qty": 1
       }
     ],
-    "status": "payment_submitted",
+    "status": "cancelled",
     "paymentMode": "manual_ewallet",
     "method": "manual_gcash",
     "providerRef": "manual-PH5A43BB4695",
@@ -117,9 +231,10 @@
     "paymentProofNote": "",
     "createdAt": "2026-07-23T08:38:41.008626Z",
     "delivery": "after_confirm",
-    "message": "Payment reference received. We are verifying your transfer. Codes will unlock once payment is confirmed.",
+    "message": "Order cancelled.",
     "emailSent": false,
-    "paymentSubmittedAt": "2026-07-23T08:42:31.108306Z"
+    "paymentSubmittedAt": "2026-07-23T08:42:31.108306Z",
+    "cancelledAt": "2026-07-28T05:00:54.973971Z"
   },
   {
     "id": "PH4A8F23262F",
@@ -378,7 +493,7 @@
         "qty": 1
       }
     ],
-    "status": "payment_submitted",
+    "status": "cancelled",
     "paymentMode": "manual_ewallet",
     "method": "manual_gcash",
     "providerRef": "manual-PHF1F3392F96",
@@ -404,8 +519,9 @@
     "paymentProofNote": "",
     "createdAt": "2026-07-23T04:46:45.194862Z",
     "delivery": "after_confirm",
-    "message": "Payment reference received. We are verifying your transfer. Codes will unlock once payment is confirmed.",
+    "message": "Order cancelled.",
     "emailSent": false,
-    "paymentSubmittedAt": "2026-07-23T04:46:45.203876Z"
+    "paymentSubmittedAt": "2026-07-23T04:46:45.203876Z",
+    "cancelledAt": "2026-07-28T05:00:53.156208Z"
   }
 ]
