@@ -1,1 +1,65 @@
-{}
+{
+  "PH39625EED9C": {
+    "id": "PH39625EED9C",
+    "email": "michaelbalbuenalea@gmail.com",
+    "name": "Michael Lea",
+    "currency": "PHP",
+    "items": [
+      {
+        "id": "supergrok-1m",
+        "name": "SuperGrok 1 Month Shared Account",
+        "monogram": "S1",
+        "brand": "xAI",
+        "category": "AI",
+        "qty": 1,
+        "price": 549.0,
+        "priceBase": "PHP",
+        "duration": "1 month access",
+        "delivery": "Instant access code",
+        "codes": [],
+        "credentials": []
+      }
+    ],
+    "cart": [
+      {
+        "id": "supergrok-1m",
+        "qty": 1
+      }
+    ],
+    "status": "awaiting_payment",
+    "paymentMode": "manual_ewallet",
+    "method": "manual_gcash",
+    "providerRef": "manual-PH39625EED9C",
+    "amountPhp": 549.0,
+    "amountFormatted": "₱549.00",
+    "payTo": {
+      "wallet": "GCash",
+      "name": "SubSaverPH",
+      "qrUrl": "/assets/qr/gcash-qr.jpg"
+    },
+    "paymentInstructions": {
+      "steps": [
+        "Open your GCash app.",
+        "Scan the QR code below (or use Scan QR in GCash).",
+        "Pay exactly ₱549.00 (SubSaverPH).",
+        "Put Order ID PH39625EED9C in the message / notes field if asked.",
+        "After paying, paste your payment reference below and submit.",
+        "Stock is not held until you submit your payment reference.",
+        "Delivery of login codes: usually 10–30 minutes after we verify payment."
+      ],
+      "note": "Scan the QR with your e-wallet app. Pay the exact amount and put your Order ID in the message. Codes unlock after we confirm payment.",
+      "qrUrl": "/assets/qr/gcash-qr.jpg",
+      "deliveryEta": "10–30 minutes"
+    },
+    "paymentReference": "",
+    "paymentProofNote": "",
+    "createdAt": "2026-07-28T04:22:57.040900Z",
+    "delivery": "after_confirm",
+    "deliveryEta": "10–30 minutes",
+    "stockHeld": false,
+    "countsAsPending": false,
+    "isIncompleteCheckout": true,
+    "message": "Scan the GCash QR and pay ₱549.00. Use Order ID PH39625EED9C as reference. Product stock is not held until you submit your payment reference. Login codes are delivered in about 10–30 minutes after payment is verified.",
+    "emailSent": false
+  }
+}
