@@ -1,5 +1,13 @@
 {
-  "supergrok-7d": [],
+  "supergrok-7d": [
+    {
+      "code": "Username: grok.21@friendlyshare.com.ua Password: bF6yw3zQ15",
+      "status": "available",
+      "addedAt": "2026-07-28T09:11:01.641429Z",
+      "username": "grok.21@friendlyshare.com.ua",
+      "password": "bF6yw3zQ15"
+    }
+  ],
   "supergrok-1m": [
     {
       "code": "Username: grok.19@friendlyshare.com.ua Password: Premium@123",
